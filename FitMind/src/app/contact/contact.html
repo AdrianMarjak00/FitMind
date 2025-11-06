@@ -1,0 +1,28 @@
+<div class="contact-container">
+    <mat-card>
+        <mat-card-header>
+            <mat-card-title>Kontaktujte nás</mat-card-title>
+            <mat-card-subtitle>Radi odpovieme na akékoľvek otázky.</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+            <form (ngSubmit)="onSubmitContact()">
+                <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Meno</mat-label>
+                    <input matInput [(ngModel)]="contactData.name" name="name" required>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Email</mat-label>
+                    <input matInput type="email" [(ngModel)]="contactData.email" name="email" required>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Vaša správa</mat-label>
+                    <textarea matInput [(ngModel)]="contactData.message" name="message" rows="5" required></textarea>
+                </mat-form-field>
+
+                <button mat-raised-button color="primary" type="submit" class="full-width">Odoslať správu</button>
+            </form>
+        </mat-card-content>
+    </mat-card>
+</div>

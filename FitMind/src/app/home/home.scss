@@ -1,0 +1,31 @@
+/* src/app/home/home.scss */
+
+.home-container {
+    padding: 40px;
+    text-align: center;
+}
+
+h1 {
+    color: #3f51b5; /* Farba Angular Primary */
+    margin-bottom: 20px;
+}
+
+p {
+    font-size: 1.1rem;
+    color: #555;
+    margin-bottom: 30px;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.info-card {
+    max-width: 600px;
+    margin: 20px auto;
+    text-align: left;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}

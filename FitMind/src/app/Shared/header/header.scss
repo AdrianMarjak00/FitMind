@@ -1,0 +1,32 @@
+/* src/app/Shared/header/header.scss */
+
+// Odporúčam zmeniť MatToolbarModule import v header.ts na MatToolbar (ak je to možné) alebo použiť tému
+// Ak máš MatButtonModule a MatIconModule importovaný v header.ts, tento kód bude fungovať.
+
+.mat-toolbar {
+    padding: 0 16px;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-right: 20px;
+    // Farba textu na toolbare (často biela)
+    color: rgb(1, 0, 0); 
+}
+
+.spacer {
+    // Vytlačí nasledujúce prvky na koniec toolbaru
+    flex: 1 1 auto;
+}
+
+// Štýl pre Mat-button, aby vyzeral lepšie v toolbare
+a.mat-button {
+    color: white; // Farba textu
+    margin-left: 10px;
+    
+    // Zarovnanie ikony a textu
+    mat-icon {
+        margin-right: 5px;
+    }
+}
