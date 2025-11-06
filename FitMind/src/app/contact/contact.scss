@@ -1,0 +1,16 @@
+/* src/app/contact/contact.scss */
+.contact-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 50px;
+}
+
+mat-card {
+    max-width: 500px;
+    width: 100%;
+    padding: 20px;
+}
+
+.full-width {
+    width: 100%;
+}
