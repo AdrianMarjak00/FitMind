@@ -2,13 +2,10 @@ import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient } from '@angular/common/http';
-import { importProvidersFrom } from '@angular/core';
-import { AngularFirestoreModule } from '@angular/fire/compat/firestore';
-import { AngularFireModule } from '@angular/fire/compat';
-import { AngularFireAuthModule } from '@angular/fire/compat/auth';
 
-
-
+import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
+import { provideAuth, getAuth } from '@angular/fire/auth';
+import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyArvOFbqncllijGFJPoHNEgtPdZPIuCqjQ",
@@ -20,17 +17,15 @@ const firebaseConfig = {
   measurementId: "G-74VP65JX6H"
 };
 
-
 export const appConfig: ApplicationConfig = {
   providers: [
-    importProvidersFrom(
-      AngularFireModule.initializeApp(firebaseConfig),
-      AngularFireAuthModule,                           
-      AngularFirestoreModule                          
-    ),
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes),
+    provideHttpClient(),
 
-    provideZoneChangeDetection({ eventCoalescing: true }), 
-    provideRouter(routes),                                 
-    provideHttpClient(),                                    
-    ]                              
+    // ✅ Nové API bez "compat"
+    provideFirebaseApp(() => initializeApp(firebaseConfig)),
+    provideAuth(() => getAuth()),
+    provideFirestore(() => getFirestore()),
+  ],
 };
