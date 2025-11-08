@@ -1,0 +1,8 @@
+<div class="reviews">
+  <mat-card *ngFor="let review of reviews | async" class="review-card">
+    <mat-card-title>{{ review.author }}</mat-card-title>
+    <mat-card-subtitle>⭐ {{ review.rating }}/5</mat-card-subtitle>
+    <mat-card-content>{{ review.text }}</mat-card-content>
+    <mat-card-footer>{{ review.date.toDate() | date:'short' }}</mat-card-footer>
+  </mat-card>
+</div>
