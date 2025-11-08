@@ -1,13 +1,21 @@
 <mat-toolbar color="primary">
-    <span class="logo">FitMind</span>
+    <span class="logo" routerLink="/">FitMind</span>
 
     <span class="spacer"></span>
     
-    <a mat-button routerLink="/">Domov</a>
-    
-    <a mat-button routerLink="/profile">
-        <mat-icon>account_circle</mat-icon>
-        Profil
+    <a mat-button routerLink="/">
+        <mat-icon>home</mat-icon>
+        Domov
+    </a>
+
+    <a mat-button routerLink="/login">
+        <mat-icon>login</mat-icon> 
+        Prihlás sa
+    </a>
+
+    <a mat-button routerLink="/register">
+        <mat-icon>person_add</mat-icon> 
+        Zaregistruj sa
     </a>
     
     <a mat-button routerLink="/contact">

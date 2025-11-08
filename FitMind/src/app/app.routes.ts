@@ -1,11 +1,16 @@
 import { Routes } from '@angular/router';
-import { home } from './home/home';
-import { Profile } from './profile/profile'; // Predpokladám názov komponentu
-import { Contact } from './contact/contact'; // Predpokladám názov komponentu
+import { HomeComponent } from './home/home';
+import { Contact } from './contact/contact';
+import { RegisterComponent } from './register/register';
+import { LoginComponent } from './login/login';
 
 export const routes: Routes = [
-    { path: '', component: home },
-    { path: 'profile', component: Profile }, 
+    { path: '', component: HomeComponent },
     { path: 'contact', component: Contact },
+    { path: 'register', component: RegisterComponent },
+    { path: 'login', component: LoginComponent },
+
+
     // { path: '**', redirectTo: '' } // Voliteľné: presmerovanie na Domov pri neznámej ceste
+
 ];
