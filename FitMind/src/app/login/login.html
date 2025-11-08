@@ -13,7 +13,10 @@
     </mat-form-field>
 
     <button mat-raised-button color="primary" type="submit">Prihlásiť sa</button>
+    <p *ngIf="errorMsg" class="error">{{ errorMsg }}</p>
+
   </form>
+  
 
   <p class="link">
     Nemáte účet?

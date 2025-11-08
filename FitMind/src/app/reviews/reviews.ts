@@ -1,16 +1,22 @@
-import { Injectable } from '@angular/core';
+import { Component, Injectable } from '@angular/core';
 import { Firestore, collectionData, collection } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Review } from '../models/review.interface';
+import { ReviewsService } from '../services/review.service';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
 
-@Injectable({
-  providedIn: 'root'
+@Component({
+  selector: 'app-reviews',
+  standalone: true,
+  imports: [CommonModule, MatCardModule],
+  templateUrl: './reviews.html',
+  styleUrls: ['./reviews.scss']
 })
-export class ReviewsService {
-  constructor(private firestore: Firestore) {}
+export class ReviewsComponent {
+  reviews: Observable<Review[]>;
 
-  getReviews(): Observable<Review[]> {
-    const reviewsRef = collection(this.firestore, 'reviews');
-    return collectionData(reviewsRef, { idField: 'id' }) as Observable<Review[]>;
+  constructor(private reviewsService: ReviewsService) {
+    this.reviews = this.reviewsService.getReviews();
   }
 }

@@ -13,6 +13,8 @@
     </mat-form-field>
 
     <button mat-raised-button color="accent" type="submit">Registrovať sa</button>
+    <p *ngIf="errorMsg" class="error">{{ errorMsg }}</p>
+
   </form>
 
   <p class="link">
