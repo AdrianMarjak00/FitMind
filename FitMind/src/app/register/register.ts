@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../services/auth.service';
+import { AngularFireAuthModule } from '@angular/fire/compat/auth';
 
 @Component({
   selector: 'app-register',
@@ -15,15 +17,21 @@ import { RouterModule } from '@angular/router';
     FormsModule,
     MatButtonModule,
     MatInputModule,
-    RouterModule
+    RouterModule,
   ]
 })
 export class RegisterComponent {
   email = '';
   password = '';
+  errorMsg = '';
+
+  constructor(private auth: AuthService, private router: Router) {}
 
   register() {
-    console.log('📝 Register attempt:', this.email, this.password);
-    // Sem neskôr pridáš Firebase Auth registráciu
+    this.errorMsg = '';
+    this.auth.register(this.email, this.password).subscribe({
+      next: user => this.router.navigate(['/login']),
+      error: err => this.errorMsg = 'Chyba pri registrácii. Skontrolujte údaje.'
+    });
   }
 }

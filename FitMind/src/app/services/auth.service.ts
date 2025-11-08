@@ -1,39 +1,32 @@
-import { inject, Injectable } from "@angular/core";
-import { AngularFireAuth } from "@angular/fire/compat/auth";
-import { from, map, Observable } from "rxjs";
+import { Injectable } from '@angular/core';
+import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, authState, User } from '@angular/fire/auth';
+import { from, map, Observable } from 'rxjs';
 
-
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
+  constructor(private auth: Auth) {}
 
-  constructor(
-    private authFire: AngularFireAuth
-  ) { }
-
-  register(email: string, password: string): Observable<any> {
-    return from(this.authFire.createUserWithEmailAndPassword(email, password)).pipe(
+  register(email: string, password: string): Observable<User> {
+    return from(createUserWithEmailAndPassword(this.auth, email, password)).pipe(
+      map(res => res.user)
     );
   }
 
-  login(email: string, password: string): Observable<any> {
-    return from(this.authFire.signInWithEmailAndPassword(email, password)).pipe(
+  login(email: string, password: string): Observable<User> {
+    return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
+      map(res => res.user)
     );
   }
 
   logout(): Observable<void> {
-    return from(this.authFire.signOut()).pipe(
-    );
+    return from(signOut(this.auth));
   }
 
-  getCurrentUser(): Observable<firebase.default.User | null> {
-    return this.authFire.authState;
+  getCurrentUser(): Observable<User | null> {
+    return authState(this.auth);
   }
 
   isAuthenticated(): Observable<boolean> {
-    return this.authFire.authState.pipe(
-      map(user => !!user)
-    );
+    return authState(this.auth).pipe(map(user => !!user));
   }
 }

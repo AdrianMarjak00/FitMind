@@ -1,6 +1,7 @@
-export interface Review {      
-  author: string;
-  rating: number;        
-  text: string;
-  date: any;      
+export interface Review {
+    id?: string;
+    author: string;
+    rating: number;
+    text: string;
+    date: any;
 }

@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -21,9 +22,15 @@ import { RouterModule } from '@angular/router';
 export class LoginComponent {
   email = '';
   password = '';
+  errorMsg = '';
+
+  constructor(private auth: AuthService, private router: Router) {}
 
   login() {
-    console.log('🔐 Login attempt:', this.email, this.password);
-    // Sem neskôr pridáš Firebase Auth login
+    this.errorMsg = '';
+    this.auth.login(this.email, this.password).subscribe({
+      next: () => this.router.navigate(['/']),
+      error: () => (this.errorMsg = 'Neplatné prihlasovacie údaje.'),
+    });
   }
 }

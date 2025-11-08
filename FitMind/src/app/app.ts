@@ -1,12 +1,12 @@
 // src/app/app.ts
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { Header } from './Shared/header/header'; // <-- PRIDANÝ IMPORT
+import { Header } from './Shared/header/header'; 
 
 @Component({
   selector: 'app-root',
-  standalone: true, // <-- Ak je standalone komponent, mal by to mať
-  imports: [RouterOutlet, Header], // <-- PRIDANÝ IMPORT KOMPONENTU Header
+  standalone: true,
+  imports: [RouterOutlet, Header],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
