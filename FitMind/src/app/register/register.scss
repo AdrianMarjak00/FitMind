@@ -1,0 +1,28 @@
+.auth {
+  max-width: 400px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #2b2d42;
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  button {
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .link {
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+}

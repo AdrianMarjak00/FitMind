@@ -1,27 +1,25 @@
-// src/app/home/home.ts
 import { Component, OnInit } from '@angular/core';
-import { CommonModule, NgFor, NgOptimizedImage } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card'; 
+import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 
 @Component({
-  selector: 'app-home',
-  templateUrl: './home.html', // <-- OPRAVENÉ: Cesta k home.html je správna
-  styleUrls: ['./home.scss'], // <-- OPRAVENÉ: Zmenené z './home.css' na './home.scss'
-  standalone: true, 
-  imports: [
-    CommonModule,
-    MatButtonModule,
-    MatCardModule, 
-    MatIconModule, 
-    RouterModule,
-    RouterLink,
-  ]
+  selector: 'app-home',
+  standalone: true,
+  templateUrl: './home.html',
+  styleUrls: ['./home.scss'],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule,
+    RouterModule
+  ]
 })
-export class home implements OnInit {
-  ngOnInit(): void {
-    // throw new Error('Method not implemented.'); // <-- Odporúčam odstrániť toto vyvolanie chyby, ak tam nemá byť!
-  } 
+export class HomeComponent implements OnInit {
+  ngOnInit(): void {
+    // Ak potrebuješ inicializačný kód, pridaj ho sem.
+  }
 }
