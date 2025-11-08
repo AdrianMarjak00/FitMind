@@ -1,0 +1,85 @@
+/* reviews.component.scss alebo vložené do rodičovského štýlu */
+
+// Definícia základných farieb, ak nie sú dostupné z globálnych premenných
+$primary-color: #2b2d42; // Tmavá, dominantná farba
+$accent-color: #ef233c;  // Akcentová farba (červená)
+$text-color: #333;       // Farba textu
+$star-color: #ffc107;    // Farba hviezdičiek (žltá/zlatá)
+
+
+.reviews {
+    // Kontajner pre všetky recenzie
+    display: flex;
+    flex-wrap: wrap; // Umožní prechodu na nový riadok na menších obrazovkách
+    justify-content: center; // Zarovnanie kariet do stredu
+    gap: 20px; // Priestor medzi kartami
+    padding: 30px 20px;
+    background-color: #f8f8f8; // Ľahké pozadie sekcie
+    
+    // Štýly pre jednotlivú kartu recenzie
+    .review-card {
+        width: 100%; // Predvolená šírka pre mobilné zariadenia
+        max-width: 350px; // Maximálna šírka pre desktop
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); // Jemný tieň
+        border-radius: 10px; // Zaoblené rohy
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        display: flex;
+        flex-direction: column;
+
+        // Efekt pri hoveri pre lepší dojem
+        &:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+        }
+
+        mat-card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: $primary-color;
+            margin-bottom: 5px;
+        }
+
+        mat-card-subtitle {
+            font-size: 0.95rem;
+            color: $star-color;
+            margin-bottom: 15px;
+
+            // Štýl pre hviezdičku a hodnotenie
+            &::before {
+                content: ''; // Pre Angular Material ikony sa toto môže líšiť
+                color: $star-color;
+            }
+        }
+
+        mat-card-content {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: $text-color;
+            flex-grow: 1; // Zabezpečí, že obsah vytlačí footer na koniec
+            margin-bottom: 15px;
+            font-style: italic; // Recenzie zvyčajne vyzerajú dobre kurzívou
+        }
+
+        mat-card-footer {
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            color: #888;
+            font-size: 0.8rem;
+            text-align: right; // Zarovnať dátum doprava
+        }
+    }
+}
+
+// Responzívne úpravy: Na väčších obrazovkách zobraziť viac stĺpcov
+@media (min-width: 768px) {
+    .reviews {
+        // Obmedzte šírku kontajnera pre lepší stredový efekt
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .review-card {
+        width: calc(33.33% - 20px); // Tri karty v rade mínus medzery
+    }
+}
