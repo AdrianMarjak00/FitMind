@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@angular/build": "^20.3.9",
+    "@angular/core": "^20.3.10"
+  }
+}
