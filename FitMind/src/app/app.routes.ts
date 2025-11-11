@@ -4,6 +4,7 @@ import { Contact } from './contact/contact';
 import { RegisterComponent } from './register/register';
 import { LoginComponent } from './login/login';
 import { ReviewsComponent } from './reviews/reviews';
+import { ChartComponent } from './chart/chart';
 
 
 export const routes: Routes = [
@@ -12,6 +13,9 @@ export const routes: Routes = [
     { path: 'register', component: RegisterComponent },
     { path: 'login', component: LoginComponent },
     { path: 'review', component: ReviewsComponent },
+    { path: 'chart', component: ChartComponent },
+
+
 
 
     // { path: '**', redirectTo: '' } // Voliteľné: presmerovanie na Domov pri neznámej ceste
