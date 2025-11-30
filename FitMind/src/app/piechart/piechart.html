@@ -1,0 +1,22 @@
+<div class="piechart-container">
+    <h2>Analýza tréningových aktivít</h2>
+    <p>Rozdelenie času stráveného jednotlivými typmi aktivít za posledný mesiac.</p>
+    
+    <mat-card>
+        <div class="chart-wrapper">
+            <canvas 
+                baseChart
+                [data]="pieChartData"
+                [options]="pieChartOptions"
+                [type]="pieChartType">
+            </canvas>
+        </div>
+
+        <mat-card-actions>
+            <button mat-raised-button color="accent" (click)="randomize()">
+                <mat-icon>autorenew</mat-icon>
+                Generovať náhodné dáta
+            </button>
+        </mat-card-actions>
+    </mat-card>
+</div>
