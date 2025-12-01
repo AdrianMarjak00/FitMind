@@ -1,1 +1,20 @@
-<p>ollama-ai works!</p>
+<div class="ollama-container">
+
+  <h2>Ollama AI Chat</h2>
+
+  <textarea
+    [(ngModel)]="prompt"
+    placeholder="Zadaj prompt pre AI..."
+  ></textarea>
+
+  <button (click)="sendPrompt()" [disabled]="loading">
+    {{ loading ? 'Spracúvam...' : 'Odoslať' }}
+  </button>
+
+  <div class="result" *ngIf="response">
+    <h3>Odpoveď:</h3>
+    <pre>{{ response }}</pre>
+  </div>
+
+</div>
+;

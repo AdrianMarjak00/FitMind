@@ -4,6 +4,7 @@ import { Contact } from './contact/contact';
 import { RegisterComponent } from './register/register';
 import { LoginComponent } from './login/login';
 import { PiechartComponent } from './piechart/piechart';
+import { OllamaAi } from './ollama-ai/ollama-ai';
 
 
 
@@ -14,5 +15,6 @@ export const routes: Routes = [
     { path: 'contact', component: Contact },
     { path: 'piechart', component: PiechartComponent },
     { path: 'review', component: PiechartComponent },
+     { path: 'ai-chat', component: OllamaAi }, 
 
 ];
