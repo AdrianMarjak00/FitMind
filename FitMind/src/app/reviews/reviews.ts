@@ -1,5 +1,4 @@
 import { Component, Injectable } from '@angular/core';
-import { Firestore, collectionData, collection } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { Review } from '../models/review.interface';
 import { ReviewsService } from '../services/review.service';
