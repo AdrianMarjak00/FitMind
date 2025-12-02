@@ -26,7 +26,13 @@ export class AuthService {
     return authState(this.auth);
   }
 
-  isAuthenticated(): Observable<boolean> {
-    return authState(this.auth).pipe(map(user => !!user));
+  isAdmin(): Observable<boolean> {
+    return authState(this.auth).pipe(
+      map(user => {
+        if (!user) return false;          // nie je prihlásený
+        return user.email === 'adrianmarjak2156165@gmail.com'; // iba tento email je admin
+      })
+    );
   }
+  
 }
