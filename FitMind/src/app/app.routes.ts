@@ -5,7 +5,8 @@ import { RegisterComponent } from './register/register';
 import { LoginComponent } from './login/login';
 import { PiechartComponent } from './piechart/piechart';
 import { OllamaAi } from './ollama-ai/ollama-ai';
-
+import { AdminGuard } from '../guards/admin.guard';
+import { ReviewsComponent } from './reviews/reviews';
 
 
 export const routes: Routes = [
@@ -13,8 +14,20 @@ export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
     { path: 'contact', component: Contact },
-    { path: 'piechart', component: PiechartComponent },
-    { path: 'review', component: PiechartComponent },
-     { path: 'ai-chat', component: OllamaAi }, 
+    { path: 'ai-chat', component: OllamaAi }, 
+
+    { 
+        path: 'piechart',
+        component: PiechartComponent, 
+        canActivate: [AdminGuard],
+         
+    },
+
+    { path: 'review', component: ReviewsComponent, 
+    },
+
+
+
+
 
 ];
