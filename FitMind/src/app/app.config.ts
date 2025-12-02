@@ -2,29 +2,40 @@ import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient } from '@angular/common/http';
-
+import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideAuth, getAuth } from '@angular/fire/auth';
-import { provideFirestore, getFirestore } from '@angular/fire/firestore';
+import { provideFirestore, getFirestore } from '@angular/fire/firestore'; 
+
+
+
 
 const firebaseConfig = {
-  apiKey: "AIzaSyArvOFbqncllijGFJPoHNEgtPdZPIuCqjQ",
-  authDomain: "fitmind-dba6a.firebaseapp.com",
-  projectId: "fitmind-dba6a",
-  storageBucket: "fitmind-dba6a.firebasestorage.app",
-  messagingSenderId: "981233336315",
-  appId: "1:981233336315:web:3334043ac9fc1d6a11955e",
-  measurementId: "G-74VP65JX6H"
+    apiKey: "AIzaSyArvOFbqncllijGFJPoHNEgtPdZPIuCqjQ",
+    authDomain: "fitmind-dba6a.firebaseapp.com",
+    projectId: "fitmind-dba6a",
+    storageBucket: "fitmind-dba6a.firebasestorage.app",
+    messagingSenderId: "981233336315",
+    appId: "1:981233336315:web:3334043ac9fc1d6a11955e",
+    measurementId: "G-74VP65JX6H"
 };
 
 export const appConfig: ApplicationConfig = {
-  providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
-    provideHttpClient(),
+    providers: [
+        // Základné Angular poskytovatelia
+        provideZoneChangeDetection({ eventCoalescing: true }),
+        provideRouter(routes),
+        provideHttpClient(),
+        provideAnimations(), // Pre Angular animácie
 
-    provideFirebaseApp(() => initializeApp(firebaseConfig)),
-    provideAuth(() => getAuth()),
-    provideFirestore(() => getFirestore()),
-  ],
+        // Poskytovatelia pre Firebase (AngularFire)
+        // Inicializácia hlavnej aplikácie Firebase
+        provideFirebaseApp(() => initializeApp(firebaseConfig)),
+        
+        // Inicializácia jednotlivých služieb
+        provideAuth(() => getAuth()),
+        provideFirestore(() => getFirestore()),
+        
+       
+    ],
 };

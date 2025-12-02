@@ -8,14 +8,14 @@
         Domov
     </a>
 
-    <a mat-button routerLink="/login">
-        <mat-icon>login</mat-icon> 
-        Prihlás sa
+    <a mat-button routerLink="/piechart">
+        <mat-icon>pie_chart</mat-icon>
+        Analýza
     </a>
 
-    <a mat-button routerLink="/register">
-        <mat-icon>person_add</mat-icon> 
-        Zaregistruj sa
+    <a mat-button routerLink="/review">
+        <mat-icon>rate_review</mat-icon> 
+        Recenzie
     </a>
     
     <a mat-button routerLink="/contact">
@@ -23,8 +23,22 @@
         Kontakt
     </a>
 
-        <a mat-button routerLink="/review">
-        <mat-icon>review</mat-icon>
-        Recenzie
+        <a mat-button routerLink="/ai-chat">
+        <mat-icon>mmmm</mat-icon>
+        Ollama AI Chat
     </a>
+
+    <ng-container *ngIf="!isLoggedIn">
+        <a mat-button routerLink="/login">
+            <mat-icon>login</mat-icon> 
+            Prihlás sa
+        </a>
+        <a mat-flat-button color="accent" routerLink="/register">
+            <mat-icon>person_add</mat-icon> 
+            Registrácia
+        </a>
+
+        
+    </ng-container>
+    
 </mat-toolbar>

@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../services/auth.service';
-import { AngularFireAuthModule } from '@angular/fire/compat/auth';
 
 @Component({
   selector: 'app-register',
