@@ -3,12 +3,10 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
-import { provideAuth, getAuth } from '@angular/fire/auth';
-import { provideFirestore, getFirestore } from '@angular/fire/firestore'; 
 
-
-
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: "AIzaSyArvOFbqncllijGFJPoHNEgtPdZPIuCqjQ",
@@ -20,22 +18,16 @@ const firebaseConfig = {
     measurementId: "G-74VP65JX6H"
 };
 
+
+export const firebaseApp = initializeApp(firebaseConfig);
+export const firebaseAuth = getAuth(firebaseApp);
+export const firebaseDB = getFirestore(firebaseApp);
+
 export const appConfig: ApplicationConfig = {
     providers: [
-        // Základné Angular poskytovatelia
         provideZoneChangeDetection({ eventCoalescing: true }),
         provideRouter(routes),
         provideHttpClient(),
-        provideAnimations(), // Pre Angular animácie
-
-        // Poskytovatelia pre Firebase (AngularFire)
-        // Inicializácia hlavnej aplikácie Firebase
-        provideFirebaseApp(() => initializeApp(firebaseConfig)),
-        
-        // Inicializácia jednotlivých služieb
-        provideAuth(() => getAuth()),
-        provideFirestore(() => getFirestore()),
-        
-       
+        provideAnimations()
     ],
 };

@@ -1,44 +1,57 @@
 import { Component } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
-
+import { NgxEchartsModule } from 'ngx-echarts';
+import { StatsService } from '../services/stats.service';
+import { Stats } from '../models/stats.interface';
 @Component({
-  selector: 'app-piechart',
+  selector: 'app-graph',
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, BaseChartDirective],
+  imports: [NgxEchartsModule],
   templateUrl: './piechart.html',
-  styleUrls: ['./piechart.scss']
+  styleUrls: ['./piechart.scss'],
 })
-export class PiechartComponent {
+export class Piechart {
+  
+  chartOptions: any = {};
+  loading = true;
 
-  public pieChartType: ChartType = 'pie';
+  constructor(private statsService: StatsService) {}
 
-  public pieChartData: ChartData<'pie', number[], string | string[]> = {
-    labels: ['Kardio (35%)', 'Silový tréning (45%)', 'Relax/Jóga (20%)'],
-    datasets: [
-      {
-        data: [35, 45, 20],
-        backgroundColor: ['#ef233c', '#8d99ae', '#2b2d42'],
-        hoverBackgroundColor: ['#d90429', '#7f8a9e', '#1e1f2b']
-      }
-    ]
-  };
+  ngOnInit(): void {
+    this.statsService.getStats().subscribe((data: Stats[]) => {
+      this.setChartOptions(data);
+      this.loading = false;
+    });
+  }
 
-  public pieChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    plugins: {
-      legend: { display: true, position: 'top' }
-    }
-  };
-
-  public randomize(): void {
-    this.pieChartData.datasets[0].data = [
-      Math.round(Math.random() * 100),
-      Math.round(Math.random() * 100),
-      Math.round(Math.random() * 100)
-    ];
+  setChartOptions(data: Stats[]) {
+    this.chartOptions = {
+      tooltip: {
+        trigger: 'item'
+      },
+      legend: {
+        top: 'bottom'
+      },
+      series: [
+        {
+          name: 'Pie Stats',
+          type: 'pie',
+          radius: ['40%', '70%'],     // donut
+          avoidLabelOverlap: false,
+          itemStyle: {
+            borderRadius: 10,
+            borderColor: '#000',
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            formatter: '{b}: {c}'
+          },
+          emphasis: {
+            scale: true
+          },
+          data: data   // Firestore data priamo v 'name'/'value'
+        }
+      ]
+    };
   }
 }
