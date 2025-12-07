@@ -3,8 +3,8 @@
     echarts
     [options]="chartOptions"
     class="echart"
-    *ngIf="!loading"
+    ngIf="!loading"
   ></div>
 
-  <p *ngIf="loading">Loading...</p>
+  <p ngIf="loading">Loading...</p>
 </div>
