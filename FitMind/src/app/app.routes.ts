@@ -1,11 +1,12 @@
 import { Routes } from '@angular/router';
-
 import { HomeComponent } from './home/home';
 import { Contact } from './contact/contact';
 import { RegisterComponent } from './register/register';
 import { LoginComponent } from './login/login';
 import { OllamaAi } from './ollama-ai/ollama-ai';
 import { Piechart } from './piechart/piechart';
+import { Training } from './training/training';
+import { Jedalnicek} from './jedalnicek/jedalnicek';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -14,6 +15,8 @@ export const routes: Routes = [
     { path: 'contact', component: Contact },
     { path: 'ai-chat', component: OllamaAi },
     { path: 'piechart', component: Piechart },
+    { path: 'training', component: Training },
+    { path: 'jedalnicek', component: Jedalnicek },
 
     // fallback
     { path: '**', redirectTo: '' }

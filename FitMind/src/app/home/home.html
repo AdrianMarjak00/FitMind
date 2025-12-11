@@ -6,31 +6,26 @@
   </p>
 
   <div class="cards">
-    <mat-card class="home-card">
-      <mat-icon>login</mat-icon>
-      <h3>Prihlásenie</h3>
-      <p>Prihlás sa a sleduj svoj pokrok.</p>
-      <button mat-raised-button color="primary" routerLink="/login">
-        Prihlásiť sa
+
+    <!-- Tréningové plány -->
+    <mat-card class="home-card" routerLink="/training">
+      <mat-icon>fitness_center</mat-icon>
+      <h3>Tréningové plány</h3>
+      <p>Personalizované tréningové programy pre každý cieľ.</p>
+      <button mat-raised-button color="primary">
+        Zobraziť plány
       </button>
     </mat-card>
 
-    <mat-card class="home-card">
-      <mat-icon>person_add</mat-icon>
-      <h3>Registrácia</h3>
-      <p>Vytvor si účet a začni svoju cestu k zdravšiemu JA.</p>
-      <button mat-raised-button color="accent" routerLink="/register">
-        Registrovať sa
+    <!-- Jedálniček -->
+    <mat-card class="home-card" routerLink="/jedalnicek">
+      <mat-icon>restaurant_menu</mat-icon>
+      <h3>Jedálniček</h3>
+      <p>Nutrične vyvážené jedlá pre podporu tvojho progressu.</p>
+      <button mat-raised-button color="accent">
+        Zobraziť jedlá
       </button>
     </mat-card>
 
-    <mat-card class="home-card">
-      <mat-icon>contact_mail</mat-icon>
-      <h3>Kontakt</h3>
-      <p>Máte otázky? Radi vám pomôžeme!</p>
-      <button mat-stroked-button color="warn" routerLink="/contact">
-        Kontaktujte nás
-      </button>
-    </mat-card>
   </div>
 </section>
