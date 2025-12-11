@@ -1,32 +1,51 @@
-/* src/app/Shared/header/header.scss */
-
-// Odporúčam zmeniť MatToolbarModule import v header.ts na MatToolbar (ak je to možné) alebo použiť tému
-// Ak máš MatButtonModule a MatIconModule importovaný v header.ts, tento kód bude fungovať.
-
-.mat-toolbar {
-    padding: 0 16px;
+/* HEADER - DARK GREEN NEO STYLE */
+mat-toolbar {
+  background: rgba(0, 0, 0, 0.75) !important;
+  border-bottom: 1px solid rgba(50, 255, 106, 0.25);
+  backdrop-filter: blur(8px);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  height: 70px;
 }
 
 .logo {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-right: 20px;
-    // Farba textu na toolbare (často biela)
-    color: rgb(1, 0, 0); 
+  color: #32ff6a;
+  font-size: 1.8rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .spacer {
-    // Vytlačí nasledujúce prvky na koniec toolbaru
-    flex: 1 1 auto;
+  flex: 1;
 }
 
-// Štýl pre Mat-button, aby vyzeral lepšie v toolbare
-a.mat-button {
-    color: white; // Farba textu
-    margin-left: 10px;
-    
-    // Zarovnanie ikony a textu
-    mat-icon {
-        margin-right: 5px;
-    }
+/* ODKAZY */
+a[mat-button], a[mat-flat-button] {
+  color: #d8ffd8 !important;
+  font-weight: 500;
+  transition: 0.25s;
+  margin: 0 5px;
+}
+
+a[mat-button]:hover {
+  color: #32ff6a !important;
+  text-shadow: 0 0 6px rgba(50,255,106,0.6);
+}
+
+mat-icon {
+  color: #32ff6a;
+  margin-right: 6px;
+}
+
+/* GET STARTED BUTTON */
+a[mat-flat-button][color="accent"] {
+  background: #32ff6a !important;
+  color: black !important;
+  font-weight: 600;
+}
+
+a[mat-flat-button][color="accent"]:hover {
+  background: #51ff89 !important;
+  box-shadow: 0 0 12px rgba(50,255,106,0.7);
 }
