@@ -10,5 +10,5 @@
   },
   "include": [
     "src/**/*.ts"
-  ]
+, "src/app/services/..ts", "src/app/services/ai.service.ts.spec"  ]
 }
