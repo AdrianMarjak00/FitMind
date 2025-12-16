@@ -7,6 +7,7 @@ import { OllamaAi } from './ollama-ai/ollama-ai';
 import { Piechart } from './piechart/piechart';
 import { Training } from './training/training';
 import { Jedalnicek} from './jedalnicek/jedalnicek';
+import { ReviewsComponent } from './reviews/reviews';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -17,6 +18,8 @@ export const routes: Routes = [
     { path: 'piechart', component: Piechart },
     { path: 'training', component: Training },
     { path: 'jedalnicek', component: Jedalnicek },
+    { path: 'review', component: ReviewsComponent },
+
 
     // fallback
     { path: '**', redirectTo: '' }
