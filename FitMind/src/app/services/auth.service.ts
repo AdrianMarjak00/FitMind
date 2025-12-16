@@ -4,8 +4,7 @@ import { from, map, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  constructor(private auth: Auth) {}
-
+constructor(private auth: Auth) {}
   register(email: string, password: string): Observable<User> {
     return from(createUserWithEmailAndPassword(this.auth, email, password)).pipe(
       map(res => res.user)
