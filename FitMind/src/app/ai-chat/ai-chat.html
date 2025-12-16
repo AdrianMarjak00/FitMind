@@ -1,0 +1,31 @@
+<div class="ai-chat-container">
+  <div class="chat-header">
+    <h3>🤖 FitMind AI Coach</h3>
+    <button (click)="clearChat()" class="clear-btn">🗑️ Vyčistiť</button>
+  </div>
+
+  <div class="messages-container">
+    <div *ngFor="let msg of aiService.messages$ | async" 
+         [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
+      <div class="message-bubble">
+        <strong *ngIf="msg.role === 'user'">👤 Ty:</strong>
+        <strong *ngIf="msg.role === 'assistant'">🤖 AI:</strong>
+        <div class="message-content">{{ msg.content }}</div>
+        <small class="timestamp">{{ msg.timestamp | date:'short' }}</small>
+      </div>
+    </div>
+
+    <div *ngIf="isLoading" class="loading">AI píše...</div>
+  </div>
+
+  <div class="input-container">
+    <input 
+      [(ngModel)]="message" 
+      (keyup.enter)="sendMessage()" 
+      placeholder="Napíš AI coachovi..." 
+      [disabled]="isLoading">
+    <button (click)="sendMessage()" [disabled]="isLoading || !message.trim()">
+      {{ isLoading ? '⏳' : '📤' }}
+    </button>
+  </div>
+</div>
