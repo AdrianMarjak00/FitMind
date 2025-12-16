@@ -4,6 +4,7 @@ import { Contact } from './contact/contact';
 import { RegisterComponent } from './register/register';
 import { LoginComponent } from './login/login';
 import { OllamaAi } from './ollama-ai/ollama-ai';
+import { AdminGuard } from '../guards/admin.guard';
 import { Piechart } from './piechart/piechart';
 import { Training } from './training/training';
 import { Jedalnicek} from './jedalnicek/jedalnicek';
@@ -14,13 +15,10 @@ export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
     { path: 'contact', component: Contact },
+    { path: 'piechart', component: Piechart, canActivate: [AdminGuard] },
+    { path: 'review', component: ReviewsComponent },
     { path: 'ai-chat', component: OllamaAi },
     { path: 'piechart', component: Piechart },
-    { path: 'training', component: Training },
-    { path: 'jedalnicek', component: Jedalnicek },
-    { path: 'review', component: ReviewsComponent },
 
-
-    // fallback
     { path: '**', redirectTo: '' }
 ];
