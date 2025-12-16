@@ -8,6 +8,7 @@
     "echarts": "^6.0.0",
     "ng2-charts": "^8.0.0",
     "ngx-echarts": "^21.0.0",
+    "sweetalert2": "^11.26.10",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
