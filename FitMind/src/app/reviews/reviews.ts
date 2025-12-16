@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 
 @Component({
-  selector: 'app-reviews',
+  selector: 'reviews',
   standalone: true,
   imports: [CommonModule, MatCardModule],
   templateUrl: './reviews.html',
