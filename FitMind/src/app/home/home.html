@@ -1,36 +1,47 @@
-<section class="home">
-  <h2>Vitaj vo FitMind!</h2>
-  <p>
-    FitMind je moderná fitness aplikácia zameraná na prepojenie fyzického a mentálneho zdravia.
-    Sleduj svoj progres, plánuj tréningy a staraj sa o svoje telo i myseľ.
-  </p>
+<section class="hero">
+  <div class="hero-content">
+    <span class="badge">TRANSFORMUJ SVOJ ŽIVOT</span>
 
-  <div class="cards">
-    <mat-card class="home-card">
-      <mat-icon>login</mat-icon>
-      <h3>Prihlásenie</h3>
-      <p>Prihlás sa a sleduj svoj pokrok.</p>
-      <button mat-raised-button color="primary" routerLink="/login">
-        Prihlásiť sa
-      </button>
-    </mat-card>
+    <h1>
+      Fit<span>Mind</span>
+    </h1>
 
-    <mat-card class="home-card">
-      <mat-icon>person_add</mat-icon>
-      <h3>Registrácia</h3>
-      <p>Vytvor si účet a začni svoju cestu k zdravšiemu JA.</p>
-      <button mat-raised-button color="accent" routerLink="/register">
-        Registrovať sa
-      </button>
-    </mat-card>
+    <h2>Tvoje telo, tvoja myseľ, tvoj progres</h2>
 
-    <mat-card class="home-card">
-      <mat-icon>contact_mail</mat-icon>
-      <h3>Kontakt</h3>
-      <p>Máte otázky? Radi vám pomôžeme!</p>
-      <button mat-stroked-button color="warn" routerLink="/contact">
-        Kontaktujte nás
+    <p class="subtitle">
+      Moderná fitness platforma, ktorá spája tréningy
+      a jedálničky do jedného ekosystému
+    </p>
+
+    <div class="cta-buttons">
+      <button mat-flat-button color="primary" routerLink="/register">
+        Začať
       </button>
-    </mat-card>
+    </div>
+
+    <div class="feature-buttons">
+      <button mat-stroked-button routerLink="/jedalnicek">
+        Jedálničky na mieru
+      </button>
+
+      <button mat-stroked-button routerLink="/training">
+        Tréningové plány
+      </button>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span>10K+</span>
+        <p>Používateľov</p>
+      </div>
+      <div class="stat">
+        <span>500+</span>
+        <p>Plánov</p>
+      </div>
+      <div class="stat">
+        <span>98%</span>
+        <p>Spokojnosť</p>
+      </div>
+    </div>
   </div>
 </section>

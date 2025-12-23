@@ -1,53 +1,105 @@
-.home {
-  text-align: center;
-  margin: 2rem auto;
-  padding: 2rem;
-
-  h2 {
-    font-size: 2.2rem;
-    margin-bottom: 0.5rem;
-    color: #2b2d42;
-  }
-
-  p {
-    max-width: 600px;
-    margin: 0 auto 2rem;
-    color: #555;
-    line-height: 1.6;
-  }
-
-  .cards {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 2rem;
-  }
-
-  .home-card {
-    width: 260px;
-    padding: 1rem;
-    text-align: center;
-
-    mat-icon {
-      font-size: 48px;
-      color: #ef233c;
-      margin-bottom: 0.5rem;
-    }
-
-    h3 {
-      margin-bottom: 0.5rem;
-      color: #2b2d42;
-    }
-
-    p {
-      font-size: 0.95rem;
-      margin-bottom: 1rem;
-    }
-
-    button {
-      width: 100%;
-    }
-  }
+.hero {
+  min-height: calc(100vh - 64px);
+  background: radial-gradient(circle at top, #0f2f1f, #050505);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+  color: #ffffff;
 }
 
+.hero-content {
+  max-width: 900px;
+  text-align: center;
+}
 
+.badge {
+  display: inline-block;
+  color: #3ddc84;
+  border-left: 4px solid #3ddc84;
+  padding: 0.4rem 1rem;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+h1 {
+  font-size: 4rem;
+  margin: 0;
+}
+
+h1 span {
+  color: #3ddc84;
+}
+
+h2 {
+  font-weight: 400;
+  margin: 1rem 0;
+  opacity: 0.9;
+}
+
+.subtitle {
+  max-width: 650px;
+  margin: 1.5rem auto 2.5rem;
+  line-height: 1.7;
+  color: #cfcfcf;
+}
+
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.cta-buttons button {
+  padding: 0.8rem 2.2rem;
+  font-size: 1rem;
+}
+
+.feature-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+}
+
+.feature-buttons button {
+  padding: 0.8rem 2rem;
+  font-size: 1rem;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat span {
+  font-size: 2.2rem;
+  color: #3ddc84;
+  font-weight: 700;
+}
+
+.stat p {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  color: #aaaaaa;
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 3rem;
+  }
+
+  .stats {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}

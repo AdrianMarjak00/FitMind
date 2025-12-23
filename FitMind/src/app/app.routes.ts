@@ -8,6 +8,8 @@ import { OllamaAi } from './ollama-ai/ollama-ai';
 import { AdminGuard } from '../guards/admin.guard';
 import { ReviewsComponent } from './reviews/reviews';
 import { Piechart } from './piechart/piechart';
+import { Jedalnicek } from './jedalnicek/jedalnicek';
+import { Training } from './training/training';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -16,7 +18,9 @@ export const routes: Routes = [
     { path: 'contact', component: Contact },
     { path: 'piechart', component: Piechart, canActivate: [AdminGuard] },
     { path: 'review', component: ReviewsComponent },
-    { path: 'ai-chat', component: OllamaAi },
+    { path: 'jedalnicek', component: Jedalnicek  },
+    { path: 'training', component: Training },
+
 
     { path: '**', redirectTo: '' }
 ];
