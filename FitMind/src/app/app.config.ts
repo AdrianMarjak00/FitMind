@@ -8,6 +8,10 @@ import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { provideAuth, getAuth } from '@angular/fire/auth';
 import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 
+// ngx-echarts provider
+import { NGX_ECHARTS_CONFIG } from 'ngx-echarts';
+import * as echarts from 'echarts';
+
 const firebaseConfig = {
     apiKey: "AIzaSyArvOFbqncllijGFJPoHNEgtPdZPIuCqjQ",
     authDomain: "fitmind-dba6a.firebaseapp.com",
@@ -25,9 +29,15 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     provideAnimations(),
 
-    // 🔥 Toto je to, čo ti chýbalo
+    // 🔥 Firebase
     provideFirebaseApp(() => initializeApp(firebaseConfig)),
     provideAuth(() => getAuth()),
-    provideFirestore(() => getFirestore())
+    provideFirestore(() => getFirestore()),
+
+    // 📊 ngx-echarts
+    {
+      provide: NGX_ECHARTS_CONFIG,
+      useFactory: () => ({ echarts: () => import('echarts') })
+    }
   ],
 };

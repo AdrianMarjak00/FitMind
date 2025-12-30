@@ -4,6 +4,23 @@
     <button (click)="clearChat()" class="clear-btn">🗑️ Vyčistiť</button>
   </div>
 
+  <!-- Notifikácie o uložených záznamoch -->
+  <div *ngIf="savedEntries.length > 0" class="saved-entries-notification">
+    <div *ngFor="let entry of savedEntries" class="saved-entry-badge">
+      {{ entry }}
+    </div>
+  </div>
+
+  <!-- Varovanie ak nie je prihlásený -->
+  <div *ngIf="!userId" class="warning-message">
+    ⚠️ Pre použitie AI coacha sa musíte prihlásiť
+  </div>
+
+  <!-- Varovanie ak backend nebeží -->
+  <div *ngIf="!backendRunning && userId" class="warning-message backend-warning">
+    ⚠️ Backend server nebeží! Spusti backend v termináli: <code>cd backend && python main.py</code>
+  </div>
+
   <div class="messages-container">
     <div *ngFor="let msg of aiService.messages$ | async" 
          [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
@@ -22,9 +39,9 @@
     <input 
       [(ngModel)]="message" 
       (keyup.enter)="sendMessage()" 
-      placeholder="Napíš AI coachovi..." 
-      [disabled]="isLoading">
-    <button (click)="sendMessage()" [disabled]="isLoading || !message.trim()">
+      placeholder="Napíš AI coachovi (napr. 'Zjedol som raňajky: 2 vajíčka, 200 kcal')..." 
+      [disabled]="isLoading || !userId">
+    <button (click)="sendMessage()" [disabled]="isLoading || !message.trim() || !userId">
       {{ isLoading ? '⏳' : '📤' }}
     </button>
   </div>
