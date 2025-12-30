@@ -1,0 +1,42 @@
+========================================
+FitMind Backend - Spustenie
+========================================
+
+METODA 1: Použitie skriptov (ODPORUČANÉ)
+----------------------------------------
+
+Windows PowerShell:
+    .\start.ps1
+
+Windows CMD:
+    start.bat
+
+Alebo dvojklikom na start.bat alebo start.ps1
+
+
+METODA 2: Manuálne spustenie
+----------------------------
+
+PowerShell (v adresári backend):
+    python main.py
+
+CMD (v adresári backend):
+    python main.py
+
+POZNÁMKA: V PowerShell NEPOUŽÍVAJ && operátor!
+    ❌ cd backend && python main.py  (NEFUNGUJE!)
+    ✅ cd backend; python main.py    (FUNGUJE)
+    ✅ alebo len: python main.py     (ak už si v backend adresári)
+
+
+POŽIADAVKY:
+-----------
+- Python 3.8+ nainštalovaný
+- firebase-service-account.json v backend adresári
+- .env súbor s OPENAI_API_KEY=...
+
+
+PORT:
+-----
+Backend beží na: http://localhost:8000
+
