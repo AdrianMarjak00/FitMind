@@ -1,16 +1,23 @@
-"""
-Jednoduchý skript na vytvorenie základnej štruktúry databázy pre používateľa
-"""
+# Setup Database Script
+# Tento skript vytvorí základnú štruktúru databázy pre používateľa
+# Spustenie: python setup_database.py
+
 import firebase_admin
 from firebase_admin import credentials, firestore
 import sys
 import os
 
 def init_firebase():
-    """Inicializuje Firebase"""
+    """
+    Inicializuje Firebase pripojenie
+    Vráti Firestore klienta alebo None ak sa nepodarilo pripojiť
+    """
     try:
+        # Skontroluj, či Firebase už nie je inicializovaný
         if not firebase_admin._apps:
             cred_path = "firebase-service-account.json"
+            
+            # Skontroluj, či súbor existuje
             if not os.path.exists(cred_path):
                 print(f"[ERROR] {cred_path} neexistuje!")
                 print("[INFO] Stiahni service account z Firebase Console")
@@ -20,7 +27,7 @@ def init_firebase():
                 print("  4. Generate new private key")
                 return None
             
-            # Skontroluj súbor
+            # Skontroluj, či súbor je platný JSON
             try:
                 import json
                 with open(cred_path, 'r') as f:
@@ -33,11 +40,15 @@ def init_firebase():
                 print(f"[ERROR] {cred_path} nie je platny JSON!")
                 return None
             
+            # Inicializuj Firebase s credentials
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
+        
+        # Vráť Firestore klienta
         return firestore.client()
     except Exception as e:
         error_msg = str(e)
+        # Špeciálna kontrola pre "Invalid JWT Signature" chybu
         if "Invalid JWT Signature" in error_msg or "invalid_grant" in error_msg:
             print(f"[ERROR] Firebase service account je neplatny!")
             print("[RIESENIE] Stiahni NOVY service account:")
@@ -52,17 +63,27 @@ def init_firebase():
         return None
 
 def create_user_profile(db, user_id: str, email: str = None):
-    """Vytvorí základný používateľský profil"""
+    """
+    Vytvorí základný používateľský profil v databáze
+    
+    Args:
+        db: Firestore klient
+        user_id: Firebase Auth User ID
+        email: Email používateľa (voliteľné)
+    """
     if not db:
         print("[ERROR] Firebase nie je pripojeny!")
         return False
     
     try:
         user_ref = db.collection('userFitnessProfiles').document(user_id)
+        
+        # Skontroluj, či profil už existuje
         if user_ref.get().exists:
             print(f"[SKIP] Profil pre {user_id} uz existuje")
             return True
         
+        # Vytvor nový profil
         data = {
             'userId': user_id,
             'createdAt': firestore.SERVER_TIMESTAMP,
@@ -84,13 +105,23 @@ def create_user_profile(db, user_id: str, email: str = None):
         return False
 
 def create_admin(db, user_id: str, email: str):
-    """Vytvorí admin dokument"""
+    """
+    Vytvorí admin dokument v databáze
+    
+    Args:
+        db: Firestore klient
+        user_id: Firebase Auth User ID
+        email: Email admina
+    """
     try:
         admin_ref = db.collection('admins').document(user_id)
+        
+        # Skontroluj, či admin už existuje
         if admin_ref.get().exists:
             print(f"[SKIP] Admin {email} uz existuje")
             return True
         
+        # Vytvor nového admina
         data = {
             'userId': user_id,
             'email': email,
@@ -106,6 +137,7 @@ def create_admin(db, user_id: str, email: str):
         return False
 
 def main():
+    """Hlavná funkcia skriptu"""
     print("=" * 60)
     print("FitMind Database Setup")
     print("=" * 60)
@@ -122,7 +154,7 @@ def main():
     print("[OK] Firebase inicializovany")
     print()
     
-    # Získaj vstup
+    # Získaj vstup od používateľa
     user_id = input("Zadaj User ID (Firebase Auth UID): ").strip()
     if not user_id:
         print("[ERROR] User ID je povinny!")
@@ -135,6 +167,7 @@ def main():
     print("[INFO] Vytvaram pouzivatelsky profil...")
     create_user_profile(db, user_id, email)
     
+    # Ak používateľ chce, vytvor aj admin účet
     if is_admin and email:
         print()
         print("[INFO] Vytvaram admin ucet...")
