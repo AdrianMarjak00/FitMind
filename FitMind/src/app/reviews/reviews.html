@@ -1,9 +1,14 @@
-
-<div class="reviews">
+<section class="reviews">
   <mat-card *ngFor="let review of reviews | async" class="review-card">
-    <mat-card-title>{{ review.author }}</mat-card-title>
-    <mat-card-subtitle>⭐ {{ review.rating }}/5</mat-card-subtitle>
-    <mat-card-content>{{ review.text }}</mat-card-content>
-    <mat-card-footer>{{ review.date.toDate() | date:'short' }}</mat-card-footer>
+    <div class="review-header">
+      <h3>{{ review.author }}</h3>
+      <span class="rating">⭐ {{ review.rating }}/5</span>
+    </div>
+
+    <p class="review-text">{{ review.text }}</p>
+
+    <span class="review-date">
+      {{ review.date.toDate() | date:'short' }}
+    </span>
   </mat-card>
-</div>
+</section>

@@ -1,6 +1,22 @@
+<<<<<<< HEAD
 /* GLOBAL FITMIND THEME – DARK GREEN NEO STYLE */
+=======
+@use '@angular/material' as mat;
 
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$green-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+>>>>>>> origin/AI-posun-trenovanie
+
+html,
 body {
+<<<<<<< HEAD
   margin: 0;
   background: #0d0d0d;
   font-family: 'Poppins', sans-serif;
@@ -57,9 +73,91 @@ h1, h2, h3 {
 /* LINKS */
 a {
   color: var(--green);
+=======
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+body {
+  color-scheme: dark;
+  background-color: #050505;
+  color: #eaeaea;
+  font: var(--mat-sys-body-medium);
+  overflow-x: hidden;
+}
+
+a {
+  color: #3ddc84;
+>>>>>>> origin/AI-posun-trenovanie
   text-decoration: none;
 }
 
 a:hover {
+<<<<<<< HEAD
   text-shadow: 0 0 6px rgba(50,255,106,0.6);
+=======
+  text-decoration: underline;
+}
+
+.mat-toolbar {
+  background-color: #0b0b0b !important;
+  color: #ffffff;
+}
+
+.mat-mdc-button,
+.mat-mdc-stroked-button {
+  color: #eaeaea;
+}
+
+.mat-mdc-flat-button.mat-primary {
+  background-color: #3ddc84 !important;
+  color: #000 !important;
+  font-weight: 600;
+}
+
+.mat-mdc-card {
+  background-color: #0f0f0f;
+  color: #eaeaea;
+  border-radius: 14px;
+}
+
+.mat-mdc-text-field-wrapper {
+  background-color: #1a1a1a;
+}
+
+.mat-icon {
+  color: #3ddc84;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b0b0b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3ddc84;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2fbf6d;
+}
+
+.text-accent {
+  color: #3ddc84;
+}
+
+.bg-dark {
+  background-color: #0b0b0b;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+>>>>>>> origin/AI-posun-trenovanie
 }

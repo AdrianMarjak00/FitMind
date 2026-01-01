@@ -1,0 +1,49 @@
+<div class="dashboard-container">
+  <h2>📊 Môj Dashboard</h2>
+
+  <div *ngIf="!userId" class="warning">
+    ⚠️ Pre zobrazenie dát sa musíte prihlásiť
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    Načítavam dáta...
+  </div>
+
+  <div *ngIf="userId && !loading" class="charts-grid">
+    <!-- Kalórie -->
+    <div class="chart-card">
+      <div echarts [options]="caloriesChart" class="chart"></div>
+    </div>
+
+    <!-- Cvičenie -->
+    <div class="chart-card">
+      <div echarts [options]="exerciseChart" class="chart"></div>
+    </div>
+
+    <!-- Nálada -->
+    <div class="chart-card">
+      <div echarts [options]="moodChart" class="chart"></div>
+    </div>
+
+    <!-- Stres -->
+    <div class="chart-card">
+      <div echarts [options]="stressChart" class="chart"></div>
+    </div>
+
+    <!-- Spánok -->
+    <div class="chart-card">
+      <div echarts [options]="sleepChart" class="chart"></div>
+    </div>
+
+    <!-- Váha -->
+    <div class="chart-card">
+      <div echarts [options]="weightChart" class="chart"></div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
