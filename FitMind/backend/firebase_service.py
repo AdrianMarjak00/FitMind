@@ -1,13 +1,21 @@
+# Firebase Service - Komunikácia s Firebase databázou
+# Tento súbor obsahuje všetky funkcie na prácu s Firebase Firestore
+
 from typing import Optional, Dict, List
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, firestore
 
 class FirebaseService:
+    """
+    Singleton trieda pre Firebase operácie
+    Singleton znamená, že existuje len jedna inštancia tejto triedy
+    """
     _instance = None
     _db = None
     
     def __new__(cls):
+        """Vytvorí novú inštanciu len ak ešte neexistuje"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._init_firebase()
@@ -15,7 +23,9 @@ class FirebaseService:
     
     @classmethod
     def _init_firebase(cls):
+        """Inicializuje Firebase pripojenie"""
         try:
+            # Načítaj Firebase credentials zo súboru
             cred = credentials.Certificate("firebase-service-account.json")
             firebase_admin.initialize_app(cred)
             cls._db = firestore.client()
@@ -26,26 +36,40 @@ class FirebaseService:
     
     @property
     def db(self):
+        """Vráti Firestore databázový klient"""
         return self._db
     
     def is_connected(self) -> bool:
+        """Kontroluje, či je Firebase pripojený"""
         return self._db is not None
     
     def get_user_profile(self, user_id: str) -> Optional[Dict]:
+        """Získa profil používateľa z databázy"""
         if not self.is_connected():
             return None
         try:
+            # Získaj dokument používateľa z kolekcie 'userFitnessProfiles'
             doc = self._db.collection('userFitnessProfiles').document(user_id).get()
+            # Ak dokument existuje, vráť jeho dáta, inak None
             return doc.to_dict() if doc.exists else None
         except Exception as e:
             print(f"[ERROR] Chyba pri nacitani profilu: {e}")
             return None
     
     def get_entries(self, user_id: str, entry_type: str, days: int = 30, limit: int = 100) -> List[Dict]:
-        """Získa záznamy pre používateľa"""
+        """
+        Získa záznamy pre používateľa (jedlo, cvičenie, nálada, atď.)
+        
+        Args:
+            user_id: ID používateľa
+            entry_type: Typ záznamu ('food', 'exercise', 'mood', 'stress', 'sleep', 'weight')
+            days: Počet dní späť (default 30)
+            limit: Maximálny počet záznamov (default 100)
+        """
         if not self.is_connected():
             return []
         
+        # Mapovanie typov záznamov na názvy kolekcií v databáze
         collection_map = {
             'food': 'foodEntries',
             'exercise': 'exerciseEntries',
@@ -60,23 +84,27 @@ class FirebaseService:
             return []
         
         try:
-            # Bez timestamp filtra - jednoduchšie
+            # Získaj kolekciu záznamov pre používateľa
             coll_ref = self._db.collection('userFitnessProfiles').document(user_id).collection(coll_name)
+            # Zoraď podľa timestampu zostupne a obmedz počet
             query = coll_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
             docs = list(query.stream())
-            # Filtruj podľa dní manuálne
+            
+            # Filtruj záznamy podľa počtu dní
             cutoff_date = datetime.now() - timedelta(days=days)
             results = []
             for doc in docs:
                 data = doc.to_dict()
                 if 'timestamp' in data:
                     ts = data['timestamp']
+                    # Konvertuj timestamp na datetime
                     if hasattr(ts, 'timestamp'):
                         doc_date = datetime.fromtimestamp(ts.timestamp())
                     elif isinstance(ts, datetime):
                         doc_date = ts
                     else:
                         continue
+                    # Pridaj len záznamy z posledných 'days' dní
                     if doc_date >= cutoff_date:
                         results.append(data)
                 else:
@@ -87,10 +115,18 @@ class FirebaseService:
             return []
     
     def save_entry(self, user_id: str, entry_type: str, data: Dict) -> bool:
-        """Uloží záznam"""
+        """
+        Uloží záznam do databázy
+        
+        Args:
+            user_id: ID používateľa
+            entry_type: Typ záznamu ('food', 'exercise', atď.)
+            data: Dáta záznamu (slovník)
+        """
         if not self.is_connected():
             return False
         
+        # Mapovanie typov záznamov na názvy kolekcií
         collection_map = {
             'food': 'foodEntries',
             'exercise': 'exerciseEntries',
@@ -105,19 +141,21 @@ class FirebaseService:
             return False
         
         try:
-            # Zabezpeč že profil existuje
+            # Zabezpeč, že profil používateľa existuje
             user_ref = self._db.collection('userFitnessProfiles').document(user_id)
             if not user_ref.get().exists:
+                # Ak profil neexistuje, vytvor ho
                 user_ref.set({
                     'userId': user_id,
                     'createdAt': firestore.SERVER_TIMESTAMP,
                     'updatedAt': firestore.SERVER_TIMESTAMP
                 })
             
-            # Pridaj timestamp
+            # Pridaj timestamp ak chýba
             if 'timestamp' not in data:
                 data['timestamp'] = firestore.SERVER_TIMESTAMP
             
+            # Pridaj záznam do kolekcie
             user_ref.collection(coll_name).add(data)
             return True
         except Exception as e:
@@ -125,11 +163,19 @@ class FirebaseService:
             return False
     
     def update_profile(self, user_id: str, updates: Dict) -> bool:
-        """Aktualizuje profil"""
+        """
+        Aktualizuje profil používateľa
+        
+        Args:
+            user_id: ID používateľa
+            updates: Slovník s dátami na aktualizáciu
+        """
         if not self.is_connected():
             return False
         try:
+            # Pridaj timestamp aktualizácie
             updates['updatedAt'] = firestore.SERVER_TIMESTAMP
+            # Aktualizuj dokument v databáze
             self._db.collection('userFitnessProfiles').document(user_id).update(updates)
             return True
         except Exception as e:
@@ -141,9 +187,11 @@ class FirebaseService:
         if not self.is_connected():
             return False
         try:
+            # Získaj admin dokument
             admin_doc = self._db.collection('admins').document(user_id).get()
             if admin_doc.exists:
                 admin_data = admin_doc.to_dict()
+                # Vráť True ak je isAdmin == True
                 return admin_data.get('isAdmin', False) if admin_data else False
             return False
         except Exception as e:
@@ -200,8 +248,8 @@ class FirebaseService:
         try:
             admins_ref = self._db.collection('admins')
             query = admins_ref.where('isAdmin', '==', True)
+            # Vráť zoznam všetkých admin dokumentov ako slovníky
             return [doc.to_dict() for doc in query.stream()]
         except Exception as e:
             print(f"[ERROR] Chyba pri nacitani adminov: {e}")
             return []
-

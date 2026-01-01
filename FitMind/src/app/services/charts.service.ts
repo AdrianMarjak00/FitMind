@@ -1,3 +1,4 @@
+
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -37,6 +38,8 @@ export class ChartsService {
     return this.http.get(`${this.apiUrl}/entries/${userId}/${entryType}?days=${days}&limit=${limit}`);
   }
 }
+
+
 
 
 

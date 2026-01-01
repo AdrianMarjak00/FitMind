@@ -40,3 +40,5 @@ PORT:
 -----
 Backend beží na: http://localhost:8000
 
+
+

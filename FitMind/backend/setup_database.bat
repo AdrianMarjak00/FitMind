@@ -29,3 +29,5 @@ echo.
 echo [OK] Setup dokonceny!
 pause
 
+
+

@@ -1,21 +1,42 @@
+# Stats Service - Výpočet štatistík a dát pre grafy
+# Tento súbor obsahuje funkcie na výpočet štatistík z dát používateľa
+
 from typing import Dict, List
 from datetime import datetime, timedelta
 
+# Import FirebaseService - pokúsi sa relatívny import, ak zlyhá, použije absolútny
 try:
     from .firebase_service import FirebaseService
 except ImportError:
     from firebase_service import FirebaseService
 
 class StatsService:
+    """
+    Service pre výpočet štatistík
+    Obsahuje funkcie na výpočet súhrnov a trendov z dát používateľa
+    """
+    
     def __init__(self):
+        """Inicializuje FirebaseService pre prístup k dátam"""
         self.firebase = FirebaseService()
     
     def get_calories_summary(self, user_id: str, days: int = 7) -> Dict:
+        """
+        Vypočíta súhrn kalórií za obdobie
+        
+        Args:
+            user_id: ID používateľa
+            days: Počet dní späť (default 7)
+        """
+        # Získaj všetky záznamy o jedle
         entries = self.firebase.get_entries(user_id, 'food', days)
         if not entries:
-            return {"total": 0, "average": 0, "by_meal": {}}
+            return {"total": 0, "average": 0, "by_meal": {}, "count": 0}
         
+        # Vypočítaj celkové kalórie
         total = sum(e.get('calories', 0) for e in entries)
+        
+        # Zoskup kalórie podľa typu jedla (raňajky, obed, večera, snack)
         by_meal = {}
         for entry in entries:
             meal = entry.get('mealType', 'other')
@@ -29,13 +50,22 @@ class StatsService:
         }
     
     def get_exercise_summary(self, user_id: str, days: int = 7) -> Dict:
-        """Súhrn cvičenia"""
+        """
+        Vypočíta súhrn cvičenia za obdobie
+        
+        Args:
+            user_id: ID používateľa
+            days: Počet dní späť (default 7)
+        """
         entries = self.firebase.get_entries(user_id, 'exercise', days)
         if not entries:
-            return {"total_minutes": 0, "total_calories": 0, "by_type": {}}
+            return {"total_minutes": 0, "total_calories": 0, "by_type": {}, "count": 0}
         
+        # Vypočítaj celkový čas a spálené kalórie
         total_minutes = sum(e.get('duration', 0) for e in entries)
         total_calories = sum(e.get('caloriesBurned', 0) for e in entries)
+        
+        # Zoskup cvičenie podľa typu (beh, posilňovanie, atď.)
         by_type = {}
         for entry in entries:
             ex_type = entry.get('type', 'other')
@@ -49,8 +79,15 @@ class StatsService:
         }
     
     def get_mood_trend(self, user_id: str, days: int = 30) -> List[Dict]:
-        """Trend nálady"""
+        """
+        Získa trend nálady (záznamy zoradené podľa času)
+        
+        Args:
+            user_id: ID používateľa
+            days: Počet dní späť (default 30)
+        """
         entries = self.firebase.get_entries(user_id, 'mood', days)
+        # Zoraď záznamy podľa timestampu a vráť ako zoznam slovníkov
         return [
             {
                 "date": e.get('timestamp'),
@@ -61,7 +98,13 @@ class StatsService:
         ]
     
     def get_stress_trend(self, user_id: str, days: int = 30) -> List[Dict]:
-        """Trend stresu"""
+        """
+        Získa trend stresu (záznamy zoradené podľa času)
+        
+        Args:
+            user_id: ID používateľa
+            days: Počet dní späť (default 30)
+        """
         entries = self.firebase.get_entries(user_id, 'stress', days)
         return [
             {
@@ -73,12 +116,21 @@ class StatsService:
         ]
     
     def get_sleep_summary(self, user_id: str, days: int = 7) -> Dict:
-        """Súhrn spánku"""
+        """
+        Vypočíta súhrn spánku za obdobie
+        
+        Args:
+            user_id: ID používateľa
+            days: Počet dní späť (default 7)
+        """
         entries = self.firebase.get_entries(user_id, 'sleep', days)
         if not entries:
-            return {"average_hours": 0, "by_quality": {}}
+            return {"average_hours": 0, "total_hours": 0, "by_quality": {}, "count": 0}
         
+        # Vypočítaj celkový počet hodín
         total_hours = sum(e.get('hours', 0) for e in entries)
+        
+        # Zoskup spánok podľa kvality
         by_quality = {}
         for entry in entries:
             quality = entry.get('quality', 'unknown')
@@ -92,7 +144,13 @@ class StatsService:
         }
     
     def get_weight_trend(self, user_id: str, days: int = 90) -> List[Dict]:
-        """Trend váhy"""
+        """
+        Získa trend váhy (záznamy zoradené podľa času)
+        
+        Args:
+            user_id: ID používateľa
+            days: Počet dní späť (default 90)
+        """
         entries = self.firebase.get_entries(user_id, 'weight', days)
         return [
             {
@@ -103,7 +161,15 @@ class StatsService:
         ]
     
     def get_chart_data(self, user_id: str, chart_type: str, days: int = 30) -> Dict:
-        """Získa dáta pre konkrétny graf"""
+        """
+        Získa dáta pre konkrétny typ grafu
+        
+        Args:
+            user_id: ID používateľa
+            chart_type: Typ grafu ('calories', 'exercise', 'mood', 'stress', 'sleep', 'weight')
+            days: Počet dní späť (default 30)
+        """
+        # Mapovanie typov grafov na funkcie
         chart_map = {
             'calories': lambda: self.get_calories_summary(user_id, days),
             'exercise': lambda: self.get_exercise_summary(user_id, days),
@@ -113,6 +179,6 @@ class StatsService:
             'weight': lambda: {"trend": self.get_weight_trend(user_id, days)}
         }
         
+        # Zavolaj príslušnú funkciu alebo vráť prázdny slovník
         func = chart_map.get(chart_type)
         return func() if func else {}
-

@@ -44,3 +44,5 @@ Write-Host ""
 Write-Host "[OK] Setup dokonceny!" -ForegroundColor Green
 pause
 
+
+

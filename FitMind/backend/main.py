@@ -1,3 +1,6 @@
+# FitMind Backend - Hlavný API server
+# Tento súbor obsahuje všetky API endpointy pre frontend
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -5,9 +8,9 @@ from typing import Optional
 import json
 import os
 from dotenv import load_dotenv
-from datetime import datetime
 from firebase_admin import firestore
 
+# Import služieb - pokúsi sa najprv relatívny import, ak zlyhá, použije absolútny
 try:
     from .firebase_service import FirebaseService
     from .ai_service import AIService
@@ -17,21 +20,27 @@ except ImportError:
     from ai_service import AIService
     from stats_service import StatsService
 
+# Načítaj premenné prostredia z .env súboru
 load_dotenv()
 
+# Vytvor FastAPI aplikáciu
 app = FastAPI(title="FitMind AI Backend")
 
+# Povol CORS (Cross-Origin Resource Sharing) - umožní frontendu komunikovať s backendom
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=["http://localhost:4200"],  # Angular dev server
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Povolí všetky HTTP metódy (GET, POST, atď.)
+    allow_headers=["*"],  # Povolí všetky hlavičky
 )
 
+# Inicializuj služby (Firebase, AI, Stats)
 firebase = FirebaseService()
 ai_service = AIService()
 stats_service = StatsService()
+
+# Definície dátových modelov pre API requesty
 class ChatRequest(BaseModel):
     user_id: str
     message: str
@@ -53,8 +62,11 @@ class ProfileRequest(BaseModel):
     targetWeight: Optional[float] = None
     targetCalories: Optional[int] = None
 
+# API Endpointy
+
 @app.get("/")
 async def root():
+    """Kontrola, či backend beží"""
     return {
         "message": "FitMind AI Backend bezi!",
         "firebase": "pripojene" if firebase.is_connected() else "odpojene"
@@ -62,17 +74,18 @@ async def root():
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    """AI Chat endpoint"""
+    """AI Chat endpoint - spracuje správu od používateľa a vráti odpoveď od AI"""
     user_id = request.user_id
     message = request.message
     
+    # Skús bezpečne vytlačiť správu (bez emoji pre Windows)
     try:
         safe_msg = message.encode("ascii", "ignore").decode()
         print(f"[USER] {user_id}: {safe_msg}")
     except Exception:
         print(f"[USER] {user_id}: <message>")
     
-    # Načítaj dáta
+    # Načítaj profil a záznamy používateľa z databázy
     profile = firebase.get_user_profile(user_id)
     entries = {
         'food': firebase.get_entries(user_id, 'food', days=7, limit=5),
@@ -82,23 +95,23 @@ async def chat(request: ChatRequest):
         'sleep': firebase.get_entries(user_id, 'sleep', days=7, limit=1)
     }
     
-    # Vytvor prompt
+    # Vytvor systémový prompt pre AI s informáciami o používateľovi
     system_prompt = ai_service.create_system_prompt(profile or {}, entries)
     
     try:
-        # Volaj AI
+        # Pošli správu do OpenAI a získaj odpoveď
         message_response = ai_service.chat(message, system_prompt)
         ai_odpoved = message_response.content
         saved_entries = []
         
-        # Spracuj function calls
+        # Ak AI chce zavolať funkciu (napr. uložiť jedlo), spracuj to
         if message_response.function_call:
             function_name = message_response.function_call.name
             function_args = json.loads(message_response.function_call.arguments)
             
             print(f"[AI] Vola funkciu: {function_name}")
             
-            # Mapovanie funkcií (bez emoji pre Windows)
+            # Mapovanie názvov funkcií na typy záznamov
             function_map = {
                 'save_food_entry': ('food', 'Jedlo ulozene'),
                 'save_exercise_entry': ('exercise', 'Cvicenie ulozene'),
@@ -108,6 +121,7 @@ async def chat(request: ChatRequest):
                 'save_weight_entry': ('weight', 'Vaha ulozena')
             }
             
+            # Ulož záznam do databázy
             if function_name in function_map:
                 entry_type, msg = function_map[function_name]
                 if firebase.save_entry(user_id, entry_type, function_args):
@@ -116,7 +130,7 @@ async def chat(request: ChatRequest):
                 if firebase.update_profile(user_id, function_args):
                     saved_entries.append('Profil aktualizovany')
             
-            # Finálna odpoveď
+            # Získaj finálnu odpoveď od AI po uložení dát
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": message},
@@ -125,12 +139,14 @@ async def chat(request: ChatRequest):
             ]
             ai_odpoved = ai_service.get_final_response(messages) or ai_odpoved
         
+        # Vytlač preview odpovede
         try:
             preview = (ai_odpoved or "").encode("ascii", "ignore").decode()[:100]
         except Exception:
             preview = "<non-ascii>"
         print(f"[AI] {preview if preview else 'Function call'}...")
         
+        # Vráť odpoveď frontendu
         return {
             "odpoved": ai_odpoved or "Data ulozene!",
             "saved_entries": saved_entries,
@@ -143,6 +159,7 @@ async def chat(request: ChatRequest):
 
 @app.get("/api/stats/{user_id}")
 async def get_stats(user_id: str, days: Optional[int] = 30):
+    """Získa všetky štatistiky pre používateľa"""
     try:
         return {
             "calories": stats_service.get_calories_summary(user_id, days),
@@ -157,6 +174,7 @@ async def get_stats(user_id: str, days: Optional[int] = 30):
 
 @app.get("/api/chart/{user_id}/{chart_type}")
 async def get_chart_data(user_id: str, chart_type: str, days: Optional[int] = 30):
+    """Získa dáta pre konkrétny graf (kalórie, cvičenie, nálada, atď.)"""
     try:
         data = stats_service.get_chart_data(user_id, chart_type, days)
         return {"chart_type": chart_type, "data": data, "days": days}
@@ -165,6 +183,7 @@ async def get_chart_data(user_id: str, chart_type: str, days: Optional[int] = 30
 
 @app.get("/api/entries/{user_id}/{entry_type}")
 async def get_entries(user_id: str, entry_type: str, days: Optional[int] = 30, limit: Optional[int] = 100):
+    """Získa záznamy pre používateľa (jedlo, cvičenie, atď.)"""
     try:
         entries = firebase.get_entries(user_id, entry_type, days, limit)
         return {"entry_type": entry_type, "entries": entries, "count": len(entries)}
@@ -173,6 +192,7 @@ async def get_entries(user_id: str, entry_type: str, days: Optional[int] = 30, l
 
 @app.get("/api/admin/check/{user_id}")
 async def check_admin(user_id: str):
+    """Kontroluje, či je používateľ admin"""
     try:
         is_admin = firebase.is_admin(user_id)
         return {"user_id": user_id, "isAdmin": is_admin}
@@ -190,6 +210,7 @@ async def check_admin_by_email(email: str):
 
 @app.post("/api/admin/add")
 async def add_admin(request: AddAdminRequest):
+    """Pridá admina do databázy"""
     try:
         success = firebase.add_admin(request.user_id, request.email)
         if success:
@@ -201,6 +222,7 @@ async def add_admin(request: AddAdminRequest):
 
 @app.get("/api/admin/list")
 async def list_admins():
+    """Získa zoznam všetkých adminov"""
     try:
         admins = firebase.get_all_admins()
         return {"admins": admins, "count": len(admins)}
@@ -209,6 +231,7 @@ async def list_admins():
 
 @app.get("/api/profile/{user_id}")
 async def get_profile(user_id: str):
+    """Získa profil používateľa"""
     try:
         profile = firebase.get_user_profile(user_id)
         if not profile:
@@ -219,11 +242,15 @@ async def get_profile(user_id: str):
 
 @app.post("/api/profile")
 async def save_profile(request: ProfileRequest):
+    """Uloží alebo aktualizuje profil používateľa (používa sa pri onboarding)"""
     try:
+        # Vytvor slovník s dátami profilu
         profile_data = {
             "userId": request.user_id,
             "updatedAt": firestore.SERVER_TIMESTAMP
         }
+        
+        # Pridaj len tie polia, ktoré boli zadané
         if request.name:
             profile_data["name"] = request.name
         if request.age:
@@ -245,13 +272,13 @@ async def save_profile(request: ProfileRequest):
         if request.targetCalories:
             profile_data["targetCalories"] = request.targetCalories
         
-        # Skontroluj či profil existuje
+        # Skontroluj či profil už existuje
         existing = firebase.get_user_profile(request.user_id)
         if existing:
-            # Aktualizuj
+            # Aktualizuj existujúci profil
             success = firebase.update_profile(request.user_id, profile_data)
         else:
-            # Vytvor nový
+            # Vytvor nový profil
             profile_data["createdAt"] = firestore.SERVER_TIMESTAMP
             user_ref = firebase.db.collection('userFitnessProfiles').document(request.user_id)
             user_ref.set(profile_data, merge=True)
@@ -264,20 +291,22 @@ async def save_profile(request: ProfileRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Spustenie servera
 if __name__ == "__main__":
     import uvicorn
     import socket
     import subprocess
     import platform
     
+    # Nastavenia z environment premenných alebo default hodnoty
     port = int(os.getenv("PORT", 8000))
     reload = os.getenv("ENV", "production") == "development"
     
-    # Kontrola a ukončenie procesu na porte 8000
     def kill_process_on_port(port_num):
-        """Ukončí proces používajúci daný port"""
+        """Ukončí proces používajúci daný port (ak je port obsadený)"""
         try:
             if platform.system() == "Windows":
+                # Windows: nájdi a ukonči proces na porte
                 result = subprocess.run(
                     ["netstat", "-ano"],
                     capture_output=True,
@@ -296,6 +325,7 @@ if __name__ == "__main__":
                             except:
                                 pass
             else:
+                # Linux/Mac: nájdi a ukonči proces
                 result = subprocess.run(
                     ["lsof", "-ti", f":{port_num}"],
                     capture_output=True,
@@ -308,16 +338,19 @@ if __name__ == "__main__":
         except Exception:
             pass
     
+    # Skontroluj či je port voľný
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = sock.connect_ex(('127.0.0.1', port))
     sock.close()
     
+    # Ak je port obsadený, ukonči starý proces
     if result == 0:
         print(f"[WARNING] Port {port} je obsadeny, pokusam sa ukoncit proces...")
         kill_process_on_port(port)
         import time
-        time.sleep(1)
+        time.sleep(1)  # Počkaj sekundu
     
+    # Spusti server
     print(f"[START] Spustam FitMind Backend na porte {port}")
     print(f"[INFO] URL: http://localhost:{port}")
     print(f"[INFO] Rezim: {'Vyvoj' if reload else 'Produkcia'}")
