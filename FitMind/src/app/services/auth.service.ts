@@ -1,10 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, authState, User } from '@angular/fire/auth';
-import { from, map, Observable } from 'rxjs';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
+import { from, map, Observable, switchMap, of } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  constructor(private auth: Auth) {}
+  private auth = inject(Auth);
+  private firestore = inject(Firestore);
 
   register(email: string, password: string): Observable<User> {
     return from(createUserWithEmailAndPassword(this.auth, email, password)).pipe(
@@ -23,10 +25,34 @@ export class AuthService {
   }
 
   getCurrentUser(): Observable<User | null> {
+    // authState musí byť volaný v injection contexte
     return authState(this.auth);
   }
 
+<<<<<<< HEAD
   isAuthenticated(): Observable<boolean> {
     return authState(this.auth).pipe(map(user => !!user));
+=======
+  isAdmin(): Observable<boolean> {
+    return authState(this.auth).pipe(
+      switchMap(user => {
+        if (!user || !user.uid) {
+          return of(false);
+        }
+        
+        // Kontrola v Firestore kolekcii 'admins'
+        const adminRef = doc(this.firestore, 'admins', user.uid);
+        return from(getDoc(adminRef)).pipe(
+          map(adminDoc => {
+            if (adminDoc.exists()) {
+              const adminData = adminDoc.data();
+              return adminData['isAdmin'] === true;
+            }
+            return false;
+          })
+        );
+      })
+    );
+>>>>>>> origin/AI-posun-trenovanie
   }
 }

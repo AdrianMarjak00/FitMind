@@ -10,6 +10,10 @@ import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 
 
 
+// ngx-echarts provider
+import { NGX_ECHARTS_CONFIG } from 'ngx-echarts';
+import * as echarts from 'echarts';
+
 const firebaseConfig = {
     apiKey: "AIzaSyArvOFbqncllijGFJPoHNEgtPdZPIuCqjQ",
     authDomain: "fitmind-dba6a.firebaseapp.com",
@@ -28,6 +32,7 @@ export const appConfig: ApplicationConfig = {
         provideHttpClient(),
         provideAnimations(), // Pre Angular animácie
 
+<<<<<<< HEAD
         // Poskytovatelia pre Firebase (AngularFire)
         // Inicializácia hlavnej aplikácie Firebase
         provideFirebaseApp(() => initializeApp(firebaseConfig)),
@@ -39,3 +44,17 @@ export const appConfig: ApplicationConfig = {
        
     ],
 };
+=======
+    // 🔥 Firebase
+    provideFirebaseApp(() => initializeApp(firebaseConfig)),
+    provideAuth(() => getAuth()),
+    provideFirestore(() => getFirestore()),
+
+    // 📊 ngx-echarts
+    {
+      provide: NGX_ECHARTS_CONFIG,
+      useFactory: () => ({ echarts: () => import('echarts') })
+    }
+  ],
+};
+>>>>>>> origin/AI-posun-trenovanie

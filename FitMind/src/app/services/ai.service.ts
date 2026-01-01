@@ -23,7 +23,7 @@ export class AiService {
     return this.http.post<any>(this.apiUrl, { user_id: userId, message }).pipe(
       tap(response => {
         const userMsg: ChatMessage = { role: 'user', content: message, timestamp: new Date() };
-        const aiMsg: ChatMessage = { role: 'assistant', content: response.odpoved, timestamp: new Date() };
+        const aiMsg: ChatMessage = { role: 'assistant', content: response.odpoved || response.message || 'Odpoveď pripravená', timestamp: new Date() };
         
         const currentMessages = this.messagesSubject.value;
         this.messagesSubject.next([...currentMessages, userMsg, aiMsg]);
