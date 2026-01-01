@@ -1,14 +1,32 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { ChartsService } from '../services/charts.service';
 import { AuthService } from '../services/auth.service';
+import { AiService } from '../services/ai.service';
+import { StatsService } from '../services/stats.service';
 import { User } from '@angular/fire/auth';
+import { Activity } from '../models/activity.model';
+import { MatCard } from "@angular/material/card";
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgxEchartsModule],
+  imports: [
+    CommonModule,
+    NgxEchartsModule,
+    FormsModule,
+    MatButtonModule,
+    MatInputModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatCard
+],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss']
 })
@@ -16,8 +34,12 @@ export class DashboardComponent implements OnInit {
   currentUser: User | null = null;
   userId = '';
   loading = true;
-  
-  // Grafové dáta
+  isProcessingAi = false;
+  aiInputText = '';
+  errorMessage = '';
+  recentActivities: Activity[] = [];
+
+  // Chart data
   caloriesChart: any = {};
   exerciseChart: any = {};
   moodChart: any = {};
@@ -27,7 +49,9 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private chartsService: ChartsService,
-    private authService: AuthService
+    private authService: AuthService,
+    private aiService: AiService,
+    private statsService: StatsService
   ) {}
 
   ngOnInit(): void {
@@ -35,46 +59,98 @@ export class DashboardComponent implements OnInit {
       this.currentUser = user;
       this.userId = user?.uid || '';
       if (this.userId) {
-        this.loadCharts();
+        this.loadDashboardData();
+      }
+    });
+  }
+
+  loadDashboardData(): void {
+    this.loading = true;
+    this.errorMessage = '';
+
+    // Load charts
+    this.loadCharts();
+    
+    // Load recent activities
+    this.statsService.getRecentActivities(this.userId).subscribe({
+      next: data => {
+        this.recentActivities = data;
+        this.loading = false;
+      },
+      error: err => {
+        this.errorMessage = 'Failed to load activities.';
+        this.loading = false;
       }
     });
   }
 
   loadCharts(): void {
-    this.loading = true;
-    
-    // Kalórie Pie Chart
+    // Calories Pie Chart
     this.chartsService.getChartData(this.userId, 'calories', 7).subscribe(data => {
-      this.caloriesChart = this.createPieChart(data.data.by_meal, 'Kalórie podľa jedla');
+      this.caloriesChart = this.createPieChart(data.data.by_meal, 'Calories by Meal');
     });
 
-    // Cvičenie Pie Chart
+    // Exercise Pie Chart
     this.chartsService.getChartData(this.userId, 'exercise', 7).subscribe(data => {
-      this.exerciseChart = this.createPieChart(data.data.by_type, 'Cvičenie podľa typu');
+      this.exerciseChart = this.createPieChart(data.data.by_type, 'Exercise by Type');
     });
 
-    // Nálada Line Chart
+    // Mood Line Chart
     this.chartsService.getChartData(this.userId, 'mood', 30).subscribe(data => {
-      this.moodChart = this.createLineChart(data.data.trend, 'Nálada', 'score');
+      this.moodChart = this.createLineChart(data.data.trend, 'Mood', 'score');
     });
 
-    // Stres Line Chart
+    // Stress Line Chart
     this.chartsService.getChartData(this.userId, 'stress', 30).subscribe(data => {
-      this.stressChart = this.createLineChart(data.data.trend, 'Stres', 'level');
+      this.stressChart = this.createLineChart(data.data.trend, 'Stress', 'level');
     });
 
-    // Spánok Bar Chart
+    // Sleep Bar Chart
     this.chartsService.getChartData(this.userId, 'sleep', 7).subscribe(data => {
-      this.sleepChart = this.createBarChart(data.data.by_quality, 'Kvalita spánku');
+      this.sleepChart = this.createBarChart(data.data.by_quality, 'Sleep Quality');
     });
 
-    // Váha Line Chart
+    // Weight Line Chart
     this.chartsService.getChartData(this.userId, 'weight', 90).subscribe(data => {
-      this.weightChart = this.createLineChart(data.data.trend, 'Váha', 'weight');
+      this.weightChart = this.createLineChart(data.data.trend, 'Weight', 'weight');
     });
-
-    this.loading = false;
   }
+  
+  processAiInput(): void {
+    if (!this.userId || !this.aiInputText) return;
+
+    this.isProcessingAi = true;
+    this.errorMessage = '';
+    const rawInput = this.aiInputText;
+
+    this.aiService.processInputForActivity(this.userId, rawInput).subscribe({
+      next: (activity: Activity | null) => {
+        if (activity) {
+          // Save the processed activity to the database
+          this.statsService.saveActivity(this.userId, activity).subscribe({
+            next: () => {
+              this.aiInputText = ''; // Clear input
+              this.isProcessingAi = false;
+              this.loadDashboardData(); // Reload charts and activities
+            },
+            error: err => {
+              this.errorMessage = 'AI processed the data, but failed to save it.';
+              this.isProcessingAi = false;
+            }
+          });
+        } else {
+          this.errorMessage = 'AI could not extract valid activity data from your input.';
+          this.isProcessingAi = false;
+        }
+      },
+      error: err => {
+        this.errorMessage = 'Failed to connect to AI service.';
+        this.isProcessingAi = false;
+      }
+    });
+  }
+
+  // Chart creation helper methods (Kept existing logic, only changed title strings)
 
   createPieChart(data: any, title: string): any {
     if (!data || Object.keys(data).length === 0) {
@@ -146,6 +222,3 @@ export class DashboardComponent implements OnInit {
     };
   }
 }
-
-
-

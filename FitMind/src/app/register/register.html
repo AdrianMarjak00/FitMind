@@ -1,6 +1,6 @@
 <section class="auth">
   <div class="auth-card">
-    <h2>Vytvor si účet</h2>
+    <h2>Create Your Account</h2>
 
     <form (ngSubmit)="register()">
       <mat-form-field appearance="fill" class="full-width">
@@ -9,20 +9,44 @@
       </mat-form-field>
 
       <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Heslo</mat-label>
+        <mat-label>Password</mat-label>
         <input matInput type="password" [(ngModel)]="password" name="password" required />
       </mat-form-field>
 
+      <mat-form-field appearance="fill" class="full-width">
+        <mat-label>Weight (kg)</mat-label>
+        <input matInput type="number" [(ngModel)]="weight" name="weight" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full-width">
+        <mat-label>Your Goal</mat-label>
+        <mat-select [(ngModel)]="goal" name="goal" required>
+          <mat-option value="lose_weight">Lose Weight</mat-option>
+          <mat-option value="gain_muscle">Gain Muscle</mat-option>
+          <mat-option value="stay_fit">Stay Fit</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full-width">
+        <mat-label>Exercise Frequency</mat-label>
+        <mat-select [(ngModel)]="frequency" name="frequency" required>
+          <mat-option value="daily">Daily</mat-option>
+          <mat-option value="3_times">3 times a week</mat-option>
+          <mat-option value="weekly">Weekly</mat-option>
+          <mat-option value="rarely">Rarely</mat-option>
+        </mat-select>
+      </mat-form-field>
+
       <button mat-flat-button color="primary" type="submit">
-        Registrovať sa
+        Register
       </button>
 
       <p *ngIf="errorMsg" class="error">{{ errorMsg }}</p>
     </form>
 
     <p class="link">
-      Už máš účet?
-      <a routerLink="/login">Prihlás sa</a>
+      Already have an account?
+      <a routerLink="/login">Log In</a>
     </p>
   </div>
 </section>
