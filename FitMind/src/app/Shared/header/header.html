@@ -5,36 +5,33 @@
     
     <a mat-button routerLink="/">
         <mat-icon>home</mat-icon>
-        Domov
+        Home
     </a>
 
-    <a mat-button routerLink="/piechart">
+    <a mat-button routerLink="/dashboard">
         <mat-icon>pie_chart</mat-icon>
-        Analýza
+        Analysis
     </a>
 
     <a mat-button routerLink="/review">
         <mat-icon>rate_review</mat-icon> 
-        Recenzie
+        Reviews
     </a>
     
     <a mat-button routerLink="/contact">
         <mat-icon>email</mat-icon>
-        Kontakt
+        Contact
     </a>
-
-       
-    <ng-container *ngIf="!isLoggedIn">
+        
+    <ng-container >
         <a mat-button routerLink="/login">
             <mat-icon>login</mat-icon> 
-            Prihlás sa
+            Login
         </a>
         <a mat-flat-button color="accent" routerLink="/register">
             <mat-icon>person_add</mat-icon> 
-            Registrácia
+            Register
         </a>
-
-        
     </ng-container>
     
 </mat-toolbar>
