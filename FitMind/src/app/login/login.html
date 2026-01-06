@@ -17,7 +17,9 @@
         Prihlásiť sa
       </button>
 
-      <p *ngIf="errorMsg" class="error">{{ errorMsg }}</p>
+      @if (errorMsg) {
+        <p class="error">{{ errorMsg }}</p>
+      }
     </form>
 
     <p class="link">

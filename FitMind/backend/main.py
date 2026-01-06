@@ -15,16 +15,18 @@ try:
     from .firebase_service import FirebaseService
     from .ai_service import AIService
     from .stats_service import StatsService
+    from .coach_service import CoachService
 except ImportError:
     from firebase_service import FirebaseService
     from ai_service import AIService
     from stats_service import StatsService
+    from coach_service import CoachService
 
 # Načítaj premenné prostredia z .env súboru
 load_dotenv()
 
 # Vytvor FastAPI aplikáciu
-app = FastAPI(title="FitMind AI Backend")
+app = FastAPI(title="FitMind AI Backend - Personal Coach Edition")
 
 # Povol CORS (Cross-Origin Resource Sharing) - umožní frontendu komunikovať s backendom
 app.add_middleware(
@@ -35,10 +37,30 @@ app.add_middleware(
     allow_headers=["*"],  # Povolí všetky hlavičky
 )
 
-# Inicializuj služby (Firebase, AI, Stats)
+# Inicializuj služby (Firebase, AI, Stats, Coach)
 firebase = FirebaseService()
 ai_service = AIService()
 stats_service = StatsService()
+
+# #region agent log
+try:
+    import json
+    from datetime import datetime
+    with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+        f.write(json.dumps({"location":"main.py:44","message":"Before CoachService init","data":{"firebase_connected":firebase.is_connected()},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H2,H3"}) + '\n')
+except: pass
+# #endregion
+
+coach_service = CoachService(firebase)
+
+# #region agent log
+try:
+    import json
+    from datetime import datetime
+    with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+        f.write(json.dumps({"location":"main.py:44","message":"After CoachService init","data":{"coach_service_created":coach_service is not None},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H2"}) + '\n')
+except: pass
+# #endregion
 
 # Definície dátových modelov pre API requesty
 class ChatRequest(BaseModel):
@@ -74,7 +96,10 @@ async def root():
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    """AI Chat endpoint - spracuje správu od používateľa a vráti odpoveď od AI"""
+    """
+    AI Chat endpoint - pokročilý personalizovaný kouč s pamäťou konverzácie
+    Automaticky zaznamenáva údaje a poskytuje personalizované rady
+    """
     user_id = request.user_id
     message = request.message
     
@@ -88,19 +113,22 @@ async def chat(request: ChatRequest):
     # Načítaj profil a záznamy používateľa z databázy
     profile = firebase.get_user_profile(user_id)
     entries = {
-        'food': firebase.get_entries(user_id, 'food', days=7, limit=5),
-        'exercise': firebase.get_entries(user_id, 'exercise', days=7, limit=5),
-        'mood': firebase.get_entries(user_id, 'mood', days=7, limit=1),
-        'stress': firebase.get_entries(user_id, 'stress', days=7, limit=1),
-        'sleep': firebase.get_entries(user_id, 'sleep', days=7, limit=1)
+        'food': firebase.get_entries(user_id, 'food', days=7, limit=10),
+        'exercise': firebase.get_entries(user_id, 'exercise', days=7, limit=10),
+        'mood': firebase.get_entries(user_id, 'mood', days=7, limit=5),
+        'stress': firebase.get_entries(user_id, 'stress', days=7, limit=5),
+        'sleep': firebase.get_entries(user_id, 'sleep', days=7, limit=5)
     }
     
-    # Vytvor systémový prompt pre AI s informáciami o používateľovi
-    system_prompt = ai_service.create_system_prompt(profile or {}, entries)
+    # Získaj konverzačnú históriu (posledných 10 správ)
+    conversation_history = firebase.get_chat_history(user_id, limit=10)
+    
+    # Vytvor systémový prompt pre AI s informáciami o používateľovi a históriou
+    system_prompt = ai_service.create_system_prompt(profile or {}, entries, conversation_history)
     
     try:
-        # Pošli správu do OpenAI a získaj odpoveď
-        message_response = ai_service.chat(message, system_prompt)
+        # Pošli správu do OpenAI s históriou konverzácie
+        message_response = ai_service.chat(message, system_prompt, conversation_history)
         ai_odpoved = message_response.content
         saved_entries = []
         
@@ -113,12 +141,12 @@ async def chat(request: ChatRequest):
             
             # Mapovanie názvov funkcií na typy záznamov
             function_map = {
-                'save_food_entry': ('food', 'Jedlo ulozene'),
-                'save_exercise_entry': ('exercise', 'Cvicenie ulozene'),
-                'save_stress_entry': ('stress', 'Stres ulozeny'),
-                'save_mood_entry': ('mood', 'Nalada ulozena'),
-                'save_sleep_entry': ('sleep', 'Spanok ulozeny'),
-                'save_weight_entry': ('weight', 'Vaha ulozena')
+                'save_food_entry': ('food', '🍽️ Jedlo ulozene'),
+                'save_exercise_entry': ('exercise', '💪 Cvicenie ulozene'),
+                'save_stress_entry': ('stress', '😰 Stres ulozeny'),
+                'save_mood_entry': ('mood', '😊 Nalada ulozena'),
+                'save_sleep_entry': ('sleep', '😴 Spanok ulozeny'),
+                'save_weight_entry': ('weight', '⚖️ Vaha ulozena')
             }
             
             # Ulož záznam do databázy
@@ -128,16 +156,23 @@ async def chat(request: ChatRequest):
                     saved_entries.append(msg)
             elif function_name == 'update_profile':
                 if firebase.update_profile(user_id, function_args):
-                    saved_entries.append('Profil aktualizovany')
+                    saved_entries.append('✅ Profil aktualizovany')
             
             # Získaj finálnu odpoveď od AI po uložení dát
             messages = [
                 {"role": "system", "content": system_prompt},
+                *conversation_history,
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": ai_odpoved, "function_call": message_response.function_call},
                 {"role": "function", "name": function_name, "content": json.dumps({"success": True})}
             ]
             ai_odpoved = ai_service.get_final_response(messages) or ai_odpoved
+        
+        # Ulož správy do histórie
+        firebase.save_chat_message(user_id, 'user', message)
+        if ai_odpoved:
+            firebase.save_chat_message(user_id, 'assistant', ai_odpoved, 
+                                      metadata={'saved_entries': saved_entries})
         
         # Vytlač preview odpovede
         try:
@@ -290,6 +325,132 @@ async def save_profile(request: ProfileRequest):
             raise HTTPException(status_code=500, detail="Nepodarilo sa ulozit profil")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# === PERSONALIZOVANÉ KOUČ ENDPOINTY ===
+
+@app.get("/api/coach/weekly-report/{user_id}")
+async def get_weekly_report(user_id: str):
+    """Získa týždenný report pre používateľa s analýzou pokroku"""
+    # #region agent log
+    try:
+        import json
+        from datetime import datetime
+        with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"location":"main.py:313","message":"weekly-report endpoint called","data":{"user_id":user_id},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H4,H5"}) + '\n')
+    except: pass
+    # #endregion
+    try:
+        report = coach_service.generate_weekly_report(user_id)
+        return {"user_id": user_id, "report": report}
+    except Exception as e:
+        # #region agent log
+        try:
+            import json
+            from datetime import datetime
+            with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json.dumps({"location":"main.py:318","message":"weekly-report error","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H5"}) + '\n')
+        except: pass
+        # #endregion
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/coach/monthly-report/{user_id}")
+async def get_monthly_report(user_id: str):
+    """Získa mesačný report pre používateľa s dlhodobými trendmi"""
+    try:
+        report = coach_service.generate_monthly_report(user_id)
+        return {"user_id": user_id, "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/coach/recommendations/{user_id}")
+async def get_recommendations(user_id: str):
+    """Získa personalizované odporúčania pre používateľa"""
+    # #region agent log
+    try:
+        import json
+        from datetime import datetime
+        with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"location":"main.py:330","message":"recommendations endpoint called","data":{"user_id":user_id},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H4,H5"}) + '\n')
+    except: pass
+    # #endregion
+    try:
+        recommendations = coach_service.get_personalized_recommendations(user_id)
+        return {
+            "user_id": user_id,
+            "recommendations": recommendations,
+            "count": len(recommendations)
+        }
+    except Exception as e:
+        # #region agent log
+        try:
+            import json
+            from datetime import datetime
+            with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json.dumps({"location":"main.py:341","message":"recommendations error","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H5"}) + '\n')
+        except: pass
+        # #endregion
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/coach/goal-progress/{user_id}")
+async def get_goal_progress(user_id: str):
+    """Kontroluje pokrok k stanoveným cieľom"""
+    # #region agent log
+    try:
+        import json
+        from datetime import datetime
+        with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+            f.write(json.dumps({"location":"main.py:343","message":"goal-progress endpoint called","data":{"user_id":user_id},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H4,H5"}) + '\n')
+    except: pass
+    # #endregion
+    try:
+        progress = coach_service.check_goal_progress(user_id)
+        return progress
+    except Exception as e:
+        # #region agent log
+        try:
+            import json
+            from datetime import datetime
+            with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+                f.write(json.dumps({"location":"main.py:350","message":"goal-progress error","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H5"}) + '\n')
+        except: pass
+        # #endregion
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chat/history/{user_id}")
+async def get_chat_history(user_id: str, limit: Optional[int] = 50):
+    """Získa históriu konverzácie s AI"""
+    try:
+        history = firebase.get_chat_history(user_id, limit)
+        return {
+            "user_id": user_id,
+            "messages": history,
+            "count": len(history)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/chat/history/{user_id}")
+async def clear_chat_history(user_id: str):
+    """Vymaže históriu konverzácie"""
+    try:
+        success = firebase.clear_chat_history(user_id)
+        if success:
+            return {"success": True, "message": "Chat historia vymazana", "user_id": user_id}
+        else:
+            raise HTTPException(status_code=500, detail="Nepodarilo sa vymazat historiu")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# #region agent log
+try:
+    import json
+    from datetime import datetime
+    route_paths = [route.path for route in app.routes]
+    coach_routes = [p for p in route_paths if '/api/coach/' in p]
+    with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
+        f.write(json.dumps({"location":"main.py:377","message":"All routes registered","data":{"total_routes":len(route_paths),"coach_routes":coach_routes},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H1,H2"}) + '\n')
+except: pass
+# #endregion
 
 # Spustenie servera
 if __name__ == "__main__":

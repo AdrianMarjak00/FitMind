@@ -10,6 +10,7 @@ import { Piechart } from './piechart/piechart';
 import { Jedalnicek } from './jedalnicek/jedalnicek';
 import { Training } from './training/training';
 import { DashboardComponent } from './dashboard/dashboard';
+import { AiChatComponent } from './ai-chat/ai-chat';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -19,9 +20,9 @@ export const routes: Routes = [
     { path: 'dashboard', component: DashboardComponent },
     { path: 'piechart', component: Piechart, canActivate: [AdminGuard] },
     { path: 'review', component: ReviewsComponent },
-    { path: 'jedalnicek', component: Jedalnicek  },
+    { path: 'jedalnicek', component: Jedalnicek },
     { path: 'training', component: Training },
-
+    { path: 'ai-chat', component: AiChatComponent },
 
     { path: '**', redirectTo: '' }
 ];

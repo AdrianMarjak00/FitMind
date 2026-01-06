@@ -1,15 +1,45 @@
 import { Injectable } from '@angular/core';
-import { Firestore, collection, doc, getDoc, setDoc, updateDoc, collectionData, query, where, orderBy, limit, Timestamp, addDoc } from '@angular/fire/firestore';
+import { Firestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, collectionData, query, where, orderBy, limit, Timestamp, addDoc } from '@angular/fire/firestore';
 import { Observable, from, map, switchMap } from 'rxjs';
 import { UserFitnessProfile, FoodEntry, ExerciseEntry, StressEntry, MoodEntry, SleepEntry, WeightEntry } from '../models/user-fitness-data.interface';
+import { UserProfile } from '../models/user-profile.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserFitnessService {
   private readonly COLLECTION_NAME = 'userFitnessProfiles';
+  private readonly USERS_COLLECTION = 'users';
 
   constructor(private firestore: Firestore) {}
+
+  // ===== NOVÉ - PROFIL POUŽÍVATEĽA =====
+  
+  // Vytvoriť používateľský profil
+  createUserProfile(profile: UserProfile): Observable<void> {
+    const userDoc = doc(this.firestore, this.USERS_COLLECTION, profile.userId);
+    const dataToSave = {
+      ...profile,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
+    return from(setDoc(userDoc, dataToSave));
+  }
+
+  // Získať používateľský profil (nový formát)
+  getUserProfileNew(userId: string): Observable<UserProfile | null> {
+    const userDoc = doc(this.firestore, this.USERS_COLLECTION, userId);
+    return from(getDoc(userDoc)).pipe(
+      map(docSnap => {
+        if (docSnap.exists()) {
+          return { ...docSnap.data(), userId } as UserProfile;
+        }
+        return null;
+      })
+    );
+  }
+
+  // ===== STARÝ FORMÁT (KOMPATIBILITA) =====
 
   // Získať alebo vytvoriť profil používateľa
   getUserProfile(userId: string): Observable<UserFitnessProfile | null> {
@@ -223,6 +253,38 @@ export class UserFitnessService {
       ...updates,
       updatedAt: Timestamp.now()
     }));
+  }
+
+  // ===== DELETE FUNKCIE =====
+  
+  deleteFoodEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'foodEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  deleteExerciseEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'exerciseEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  deleteStressEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'stressEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  deleteMoodEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'moodEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  deleteSleepEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'sleepEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  deleteWeightEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'weightEntries', entryId);
+    return from(deleteDoc(entryDoc));
   }
 }
 

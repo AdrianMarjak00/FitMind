@@ -1,740 +1,303 @@
-# 🧠 FitMind - AI-Powered Fitness & Mental Health Coach
+# 🏋️ FitMind - Fitness & Wellness Platform
 
-<div align="center">
-
-![FitMind Logo](https://img.shields.io/badge/FitMind-AI%20Coach-3ddc84?style=for-the-badge)
-
-**Personalizovaný AI fitness coach, ktorý sleduje tvoju stravu, cvičenie, stres a náladu**
-
-[Features](#-features) • [Tech Stack](#-tech-stack) • [Installation](#-installation) • [Usage](#-usage) • [Contributing](#-contributing)
-
-</div>
+**FitMind** je moderná webová aplikácia pre fitness a wellness, ktorá kombinuje tréningové plány, jedálničky a **pokročilý AI coaching** do jedného komplexného ekosystému.
 
 ---
 
-## 📖 O Projekte
+## 🆕 Verzia 2.0 - Personal Coach Edition
 
-FitMind je moderná webová aplikácia, ktorá kombinuje AI technológie s fitness trackingom. Aplikácia používa OpenAI GPT-4o-mini na poskytovanie personalizovaných rád a automatické sledovanie používateľských dát prostredníctvom prirodzenej konverzácie.
+**Nové funkcie AI Coacha:**
+- 🧠 **Konverzačná pamäť** - AI si pamätá celú históriu vašich konverzácií
+- 📊 **Týždenné & mesačné reporty** - Automatické vyhodnocovanie pokroku
+- 🎯 **Sledovanie cieľov** - Real-time monitoring vašich fitness cieľov
+- 💡 **Personalizované odporúčania** - Rady šité presne na vašu situáciu
+- 📈 **Analýza trendov** - Inteligentné rozpoznávanie vašich pokrokov
 
-### Hlavné Funkcie
-
-- 🤖 **AI Coach** - Konverzácia s AI, ktorá rozumie tvojmu životnému štýlu
-- 📊 **Automatické Sledovanie** - AI automaticky rozpozná a uloží jedlo, cvičenie, stres, náladu, spánok
-- 🔥 **Firebase Integrácia** - Bezpečné ukladanie dát v cloude
-- 📈 **Personalizácia** - AI používa tvoju históriu na lepšie rady
-- 🔐 **Autentifikácia** - Bezpečné prihlásenie cez Firebase Auth
-
----
-
-## ✨ Features
-
-### 🎯 Fitness Tracking
-- **Jedlo**: Automatické sledovanie kalórií, bielkovín, sacharidov, tukov
-- **Cvičenie**: Typ, trvanie, intenzita, spálené kalórie
-- **Váha**: Historické záznamy váhy
-
-### 🧘 Wellness Tracking
-- **Stres**: Úroveň stresu (1-10) s poznámkami
-- **Nálada**: Denné hodnotenie nálady (1-5)
-- **Spánok**: Hodiny spánku a kvalita
-
-### 🤖 AI Capabilities
-- Rozpozná dáta z prirodzenej konverzácie
-- Automaticky ukladá záznamy do databázy
-- Poskytuje personalizované rady na základe histórie
-- Empatické a motivujúce odpovede
+➡️ **[Pozri detailný AI Coach Guide](AI_COACH_GUIDE.md)**
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ Funkcie
+
+### 🎯 Hlavné funkcie
+- **Dashboard** - Personalizovaný prehľad vašich fitness dát
+- **AI Coach 2.0** - Pokročilý osobný tréner s pamäťou konverzácií 🆕
+- **Tréningové plány** - Prispôsobené tréningy pre rôzne úrovne
+- **Jedálničky** - Nutričné plány na mieru
+- **Analýza** - Vizualizácia štatistík a pokroku
+- **Recenzie** - Hodnotenia od používateľov
+
+### 🔐 Autentifikácia
+- Firebase Authentication
+- Registrácia a prihlásenie
+- Admin guard pre chránené stránky
+
+---
+
+## 🚀 Technológie
 
 ### Frontend
-- **Angular 20** - Moderný webový framework
-- **TypeScript** - Type-safe JavaScript
-- **SCSS** - Styling
+- **Angular 19** (standalone components)
 - **Angular Material** - UI komponenty
-- **RxJS** - Reactive programming
-- **Chart.js** - Grafy a vizualizácie
+- **NgxEcharts** - Grafy a vizualizácie
+- **Firebase** - Autentifikácia a databáza
+- **RxJS** - Reaktívne programovanie
+- **SCSS** - Styling
 
 ### Backend
-- **FastAPI** - Moderný Python web framework
-- **OpenAI GPT-4o-mini** - AI model
-- **Uvicorn** - ASGI server
-
-### Database & Services
-- **Firebase Firestore** - NoSQL databáza
-- **Firebase Authentication** - User management
-- **Firebase Admin SDK** - Backend Firebase prístup
+- **Python FastAPI** - REST API
+- **Firebase Admin SDK** - Databázové operácie
+- **Firestore** - NoSQL databáza
 
 ---
 
-## 📋 Požiadavky
+## 📦 Inštalácia
 
-### Frontend
-- Node.js 18+ 
+### Požiadavky
+- Node.js (v18+)
 - npm alebo yarn
-- Angular CLI (voliteľné)
-
-### Backend
 - Python 3.9+
-- pip
-- OpenAI API kľúč
-- Firebase Service Account JSON
+- Firebase projekt
 
----
-
-## 🚀 Installation
-
-### 1. Clone Repository
-
+### 1. Klonovanie projektu
 ```bash
-git clone https://github.com/yourusername/fitmind.git
-cd fitmind
+git clone <repository-url>
+cd FitMind
 ```
 
-### 2. Frontend Setup
-
+### 2. Inštalácia frontend závislostí
 ```bash
-# Inštalácia závislostí
 npm install
-
-# Spustenie development servera
-ng serve
-# alebo
-npm start
 ```
 
-Frontend bude dostupný na `http://localhost:4200`
-
-### 3. Backend Setup
-
+### 3. Inštalácia backend závislostí
 ```bash
 cd backend
-
-# Vytvorenie virtual environment (odporúčané)
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Inštalácia závislostí
-pip install -r requirements.txt
-
-# Vytvorenie .env súboru
-echo "OPENAI_API_KEY=your_api_key_here" > .env
-
-# Umiestnenie Firebase Service Account
-# Skopíruj firebase-service-account.json do backend/ priečinka
-
-# Spustenie servera
-python main.py
+pip install -r ../requirements.txt
 ```
 
-Backend bude dostupný na `http://localhost:8000`
+### 4. Firebase konfigurácia
 
-### 4. Firebase Configuration
-
-1. Vytvor Firebase projekt na [Firebase Console](https://console.firebase.google.com/)
-2. Povoľ Firebase Authentication (Email/Password)
-3. Vytvor Firestore databázu
-4. Stiahni Service Account Key a umiestni do `backend/firebase-service-account.json`
-5. Aktualizuj `src/app/app.config.ts` s tvojimi Firebase credentials
-
----
-
-## 💻 Usage
-
-### Spustenie Aplikácie
-
-#### Development Mode
-
-**Terminál 1 - Frontend:**
-```bash
-npm start
-```
-
-**Terminál 2 - Backend:**
-```bash
-cd backend
-python main.py
-```
-
-#### Production Mode (Backend)
-
-**PM2 (Odporúčané):**
-```bash
-npm install -g pm2
-cd backend
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
-```
-
-**Windows Service:**
-```bash
-# Spusti ako Administrator
-cd backend
-install_service.bat
-```
-
-### Použitie AI Coacha
-
-1. **Registrácia/Prihlásenie**: Vytvor účet alebo sa prihlás
-2. **AI Chat**: Otvor AI chat a začni konverzáciu
-3. **Automatické Sledovanie**: Jednoducho povedz AI čo si zjedol, aké cvičenie si robil, atď.
-
-#### Príklady správ:
-
-```
-"Zjedol som raňajky: 2 vajíčka, toast, 350 kcal"
-"Cvičil som 30 minút beh, stredná intenzita"
-"Mám stres úroveň 7 z práce"
-"Moja nálada je 4/5, cítim sa dobre"
-"Spal som 7 hodín, kvalita dobrá"
-"Moja váha je 75 kg"
-```
-
-AI automaticky rozpozná a uloží tieto informácie!
-
----
-
-## 📁 Project Structure
-
-```
-fitmind/
-├── src/                      # Angular frontend
-│   ├── app/
-│   │   ├── ai-chat/          # AI chat komponent
-│   │   ├── home/             # Domovská stránka
-│   │   ├── login/            # Prihlásenie
-│   │   ├── register/         # Registrácia
-│   │   ├── services/         # Business logika
-│   │   │   ├── ai.service.ts
-│   │   │   ├── auth.service.ts
-│   │   │   └── user-fitness.service.ts
-│   │   ├── models/          # TypeScript interfaces
-│   │   └── Shared/          # Zdieľané komponenty
-│   └── environments/         # Environment config
-├── backend/                  # FastAPI backend
-│   ├── main.py              # Hlavný API server
-│   ├── ecosystem.config.js   # PM2 config
-│   └── requirements.txt     # Python dependencies
-├── scripts/                  # Seed skripty
-└── public/                   # Statické súbory
-```
-
----
-
-## 🔧 Configuration
-
-### Environment Variables
-
-**Backend** (`.env` v `backend/`):
-```env
-OPENAI_API_KEY=sk-your-api-key-here
-PORT=8000
-ENV=production
-```
-
-**Frontend** (`src/environments/environment.development.ts`):
+#### Frontend (`src/app/app.config.ts`)
+Skontrolujte, či máte správne Firebase credentials:
 ```typescript
-export const environment = {
-    llamaApiUrl: 'http://localhost:11434/api/generate',
-    llamaModel: 'llama3.2:3b'
+const firebaseConfig = {
+    apiKey: "your-api-key",
+    authDomain: "your-app.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-app.firebasestorage.app",
+    messagingSenderId: "your-sender-id",
+    appId: "your-app-id",
+    measurementId: "your-measurement-id"
 };
 ```
 
-### Firebase Security Rules
-
-Nastav Firestore security rules v Firebase Console:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /userFitnessProfiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      match /{subcollection=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-  }
-}
-```
+#### Backend (`backend/firebase-service-account.json`)
+Pridajte váš Firebase service account JSON súbor.
 
 ---
 
-## 🧪 Testing
-
-```bash
-# Frontend tests
-ng test
-
-# Backend tests (ak existujú)
-cd backend
-pytest
-```
-
----
-
-## 🐛 Troubleshooting
-
-### CORS Errors
-- Skontroluj či backend beží na porte 8000
-- Over `allow_origins` v `backend/main.py`
-
-### Firebase Errors
-- Skontroluj či `firebase-service-account.json` existuje
-- Over Firebase credentials v `app.config.ts`
-
-### Port Already in Use
-```bash
-# Windows
-netstat -ano | findstr :8000
-taskkill /PID [číslo] /F
-
-# Linux/Mac
-lsof -ti:8000 | xargs kill
-```
-
-### Module Not Found
-```bash
-# Frontend
-npm install
-
-# Backend
-pip install -r requirements.txt
-```
-
----
-
-## 🤝 Contributing
-
-Contributions sú vítané! Pre veľké zmeny:
-
-1. Forkni projekt
-2. Vytvor feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commitni zmeny (`git commit -m 'Add some AmazingFeature'`)
-4. Pushni do branchu (`git push origin feature/AmazingFeature`)
-5. Otvor Pull Request
-
----
-
-## 📄 License
-
-Tento projekt je licencovaný pod MIT License - pozri [LICENSE](LICENSE) súbor pre detaily.
-
----
-
-## 👤 Author
-
-**Adrian Marjak**
-
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: adrianmarjak2156165@gmail.com
-
----
-
-## 🙏 Acknowledgments
-
-- [OpenAI](https://openai.com/) za GPT-4o-mini API
-- [Firebase](https://firebase.google.com/) za backend služby
-- [Angular](https://angular.io/) za framework
-- [FastAPI](https://fastapi.tiangolo.com/) za backend framework
-
----
-
-## 📊 Project Status
-
-✅ **Aktívny vývoj**
-
-- [x] AI integrácia
-- [x] Firebase autentifikácia
-- [x] Fitness tracking
-- [x] Automatické ukladanie dát
-- [ ] Mobile app (plánované)
-- [ ] Analytics dashboard (plánované)
-
----
-
-<div align="center">
-
-**Made with ❤️ using Angular, FastAPI, and OpenAI**
-
-⭐ Ak sa ti projekt páči, daj mu hviezdu!
-
-</div>
-
-
-
-
-
-
-<div align="center">
-
-![FitMind Logo](https://img.shields.io/badge/FitMind-AI%20Coach-3ddc84?style=for-the-badge)
-
-**Personalizovaný AI fitness coach, ktorý sleduje tvoju stravu, cvičenie, stres a náladu**
-
-[Features](#-features) • [Tech Stack](#-tech-stack) • [Installation](#-installation) • [Usage](#-usage) • [Contributing](#-contributing)
-
-</div>
-
----
-
-## 📖 O Projekte
-
-FitMind je moderná webová aplikácia, ktorá kombinuje AI technológie s fitness trackingom. Aplikácia používa OpenAI GPT-4o-mini na poskytovanie personalizovaných rád a automatické sledovanie používateľských dát prostredníctvom prirodzenej konverzácie.
-
-### Hlavné Funkcie
-
-- 🤖 **AI Coach** - Konverzácia s AI, ktorá rozumie tvojmu životnému štýlu
-- 📊 **Automatické Sledovanie** - AI automaticky rozpozná a uloží jedlo, cvičenie, stres, náladu, spánok
-- 🔥 **Firebase Integrácia** - Bezpečné ukladanie dát v cloude
-- 📈 **Personalizácia** - AI používa tvoju históriu na lepšie rady
-- 🔐 **Autentifikácia** - Bezpečné prihlásenie cez Firebase Auth
-
----
-
-## ✨ Features
-
-### 🎯 Fitness Tracking
-- **Jedlo**: Automatické sledovanie kalórií, bielkovín, sacharidov, tukov
-- **Cvičenie**: Typ, trvanie, intenzita, spálené kalórie
-- **Váha**: Historické záznamy váhy
-
-### 🧘 Wellness Tracking
-- **Stres**: Úroveň stresu (1-10) s poznámkami
-- **Nálada**: Denné hodnotenie nálady (1-5)
-- **Spánok**: Hodiny spánku a kvalita
-
-### 🤖 AI Capabilities
-- Rozpozná dáta z prirodzenej konverzácie
-- Automaticky ukladá záznamy do databázy
-- Poskytuje personalizované rady na základe histórie
-- Empatické a motivujúce odpovede
-
----
-
-## 🛠️ Tech Stack
+## 🎮 Spustenie aplikácie
 
 ### Frontend
-- **Angular 20** - Moderný webový framework
-- **TypeScript** - Type-safe JavaScript
-- **SCSS** - Styling
-- **Angular Material** - UI komponenty
-- **RxJS** - Reactive programming
-- **Chart.js** - Grafy a vizualizácie
-
-### Backend
-- **FastAPI** - Moderný Python web framework
-- **OpenAI GPT-4o-mini** - AI model
-- **Uvicorn** - ASGI server
-
-### Database & Services
-- **Firebase Firestore** - NoSQL databáza
-- **Firebase Authentication** - User management
-- **Firebase Admin SDK** - Backend Firebase prístup
-
----
-
-## 📋 Požiadavky
-
-### Frontend
-- Node.js 18+ 
-- npm alebo yarn
-- Angular CLI (voliteľné)
-
-### Backend
-- Python 3.9+
-- pip
-- OpenAI API kľúč
-- Firebase Service Account JSON
-
----
-
-## 🚀 Installation
-
-### 1. Clone Repository
-
 ```bash
-git clone https://github.com/yourusername/fitmind.git
-cd fitmind
-```
-
-### 2. Frontend Setup
-
-```bash
-# Inštalácia závislostí
-npm install
-
-# Spustenie development servera
-ng serve
+# Development server
+npm start
 # alebo
-npm start
+ng serve
+
+# Build pre produkciu
+npm run build
 ```
 
-Frontend bude dostupný na `http://localhost:4200`
+Aplikácia beží na `http://localhost:4200`
 
-### 3. Backend Setup
-
+### Backend
 ```bash
+# Z hlavného priečinku
 cd backend
 
-# Vytvorenie virtual environment (odporúčané)
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Inštalácia závislostí
-pip install -r requirements.txt
-
-# Vytvorenie .env súboru
-echo "OPENAI_API_KEY=your_api_key_here" > .env
-
-# Umiestnenie Firebase Service Account
-# Skopíruj firebase-service-account.json do backend/ priečinka
-
-# Spustenie servera
+# Spustenie
 python main.py
+
+# Alebo použite PowerShell skript
+.\start.ps1
 ```
 
-Backend bude dostupný na `http://localhost:8000`
-
-### 4. Firebase Configuration
-
-1. Vytvor Firebase projekt na [Firebase Console](https://console.firebase.google.com/)
-2. Povoľ Firebase Authentication (Email/Password)
-3. Vytvor Firestore databázu
-4. Stiahni Service Account Key a umiestni do `backend/firebase-service-account.json`
-5. Aktualizuj `src/app/app.config.ts` s tvojimi Firebase credentials
+Backend API beží na `http://localhost:8000`
 
 ---
 
-## 💻 Usage
-
-### Spustenie Aplikácie
-
-#### Development Mode
-
-**Terminál 1 - Frontend:**
-```bash
-npm start
-```
-
-**Terminál 2 - Backend:**
-```bash
-cd backend
-python main.py
-```
-
-#### Production Mode (Backend)
-
-**PM2 (Odporúčané):**
-```bash
-npm install -g pm2
-cd backend
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
-```
-
-**Windows Service:**
-```bash
-# Spusti ako Administrator
-cd backend
-install_service.bat
-```
-
-### Použitie AI Coacha
-
-1. **Registrácia/Prihlásenie**: Vytvor účet alebo sa prihlás
-2. **AI Chat**: Otvor AI chat a začni konverzáciu
-3. **Automatické Sledovanie**: Jednoducho povedz AI čo si zjedol, aké cvičenie si robil, atď.
-
-#### Príklady správ:
+## 📁 Štruktúra projektu
 
 ```
-"Zjedol som raňajky: 2 vajíčka, toast, 350 kcal"
-"Cvičil som 30 minút beh, stredná intenzita"
-"Mám stres úroveň 7 z práce"
-"Moja nálada je 4/5, cítim sa dobre"
-"Spal som 7 hodín, kvalita dobrá"
-"Moja váha je 75 kg"
-```
-
-AI automaticky rozpozná a uloží tieto informácie!
-
----
-
-## 📁 Project Structure
-
-```
-fitmind/
-├── src/                      # Angular frontend
+FitMind/
+├── src/
 │   ├── app/
-│   │   ├── ai-chat/          # AI chat komponent
+│   │   ├── ai-chat/          # AI Coach komponenta
+│   │   ├── dashboard/        # Dashboard s grafmi
 │   │   ├── home/             # Domovská stránka
 │   │   ├── login/            # Prihlásenie
 │   │   ├── register/         # Registrácia
-│   │   ├── services/         # Business logika
-│   │   │   ├── ai.service.ts
-│   │   │   ├── auth.service.ts
-│   │   │   └── user-fitness.service.ts
-│   │   ├── models/          # TypeScript interfaces
-│   │   └── Shared/          # Zdieľané komponenty
-│   └── environments/         # Environment config
-├── backend/                  # FastAPI backend
-│   ├── main.py              # Hlavný API server
-│   ├── ecosystem.config.js   # PM2 config
-│   └── requirements.txt     # Python dependencies
-├── scripts/                  # Seed skripty
-└── public/                   # Statické súbory
+│   │   ├── training/         # Tréningové plány
+│   │   ├── jedalnicek/       # Jedálničky
+│   │   ├── reviews/          # Recenzie
+│   │   ├── piechart/         # Admin analýza
+│   │   ├── contact/          # Kontaktný formulár
+│   │   ├── services/         # Angular služby
+│   │   ├── models/           # TypeScript interfaces
+│   │   ├── Shared/           # Zdieľané komponenty (header, footer)
+│   │   └── guards/           # Route guards
+│   ├── environments/         # Environment konfigurácie
+│   └── styles.scss          # Globálne štýly
+├── backend/
+│   ├── main.py              # FastAPI server
+│   ├── ai_service.py        # AI služby
+│   ├── firebase_service.py  # Firebase integrácia
+│   ├── stats_service.py     # Štatistiky
+│   └── logs/                # Logy
+├── scripts/                 # Seed skripty
+└── public/                  # Statické súbory
 ```
 
 ---
 
-## 🔧 Configuration
+## 🎨 Design
 
-### Environment Variables
-
-**Backend** (`.env` v `backend/`):
-```env
-OPENAI_API_KEY=sk-your-api-key-here
-PORT=8000
-ENV=production
-```
-
-**Frontend** (`src/environments/environment.development.ts`):
-```typescript
-export const environment = {
-    llamaApiUrl: 'http://localhost:11434/api/generate',
-    llamaModel: 'llama3.2:3b'
-};
-```
-
-### Firebase Security Rules
-
-Nastav Firestore security rules v Firebase Console:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /userFitnessProfiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      match /{subcollection=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-  }
-}
-```
+Aplikácia používa **tmavý motív** s **zeleným akcentom** (#3ddc84):
+- Moderný, minimalistický dizajn
+- Plne responzívny layout
+- Smooth animácie a prechody
+- Material Design princípy
 
 ---
 
-## 🧪 Testing
+## 🔒 Bezpečnosť
+
+- Firebase Authentication pre zabezpečenie používateľov
+- Admin Guard pre chránené routes
+- Firestore security rules
+- HTTPS v produkcii
+
+---
+
+## 📊 API Endpoints
+
+### Backend API (`http://localhost:8000`)
+
+| Endpoint | Metóda | Popis |
+|----------|--------|-------|
+| `/api/chat` | POST | AI chat s konverzačnou pamäťou 🆕 |
+| `/api/coach/weekly-report/{userId}` | GET | Týždenný report 🆕 |
+| `/api/coach/monthly-report/{userId}` | GET | Mesačný report 🆕 |
+| `/api/coach/recommendations/{userId}` | GET | Personalizované odporúčania 🆕 |
+| `/api/coach/goal-progress/{userId}` | GET | Pokrok k cieľom 🆕 |
+| `/api/chat/history/{userId}` | GET | Chat história 🆕 |
+| `/api/stats/{userId}` | GET | Používateľské štatistiky |
+| `/api/chart/{userId}/{type}` | GET | Dáta pre grafy |
+| `/api/entries/{userId}/{type}` | GET | Záznamy používateľa |
+
+➡️ **[Úplná API dokumentácia](backend/API_DOCUMENTATION.md)**
+
+---
+
+## 🛠️ Vývoj
+
+### Príkazy
 
 ```bash
-# Frontend tests
-ng test
+# Development server
+npm start
 
-# Backend tests (ak existujú)
+# Build
+npm run build
+
+# Testy
+npm test
+
+# Linting
+ng lint
+```
+
+### Nový komponent
+```bash
+ng generate component <názov>
+```
+
+### Nová služba
+```bash
+ng generate service services/<názov>
+```
+
+---
+
+## 📝 Databázová štruktúra (Firestore)
+
+### Collections:
+- **`users`** - Používateľské profily
+- **`admins`** - Admin oprávnenia
+- **`reviews`** - Recenzie
+- **`stats`** - Štatistiky
+- **`userFitnessProfiles/{userId}`** - Fitness profily používateľov 🆕
+  - `goals` - Ciele používateľa
+  - `targetWeight` - Cieľová váha
+  - `targetCalories` - Denný kalorický cieľ
+  - **Subkolekcie:**
+    - `foodEntries` - Jedlo
+    - `exerciseEntries` - Cvičenie
+    - `moodEntries` - Nálada
+    - `stressEntries` - Stres
+    - `sleepEntries` - Spánok
+    - `weightEntries` - Váha
+    - `chatHistory` - Chat história 🆕
+
+---
+
+## 🚧 Riešenie problémov
+
+### Backend server nebeží
+```bash
 cd backend
-pytest
+python main.py
 ```
 
----
+### Firebase chyby
+1. Skontrolujte `firebase-service-account.json`
+2. Overte Firebase config v `app.config.ts`
+3. Skontrolujte Firestore pravidlá
 
-## 🐛 Troubleshooting
-
-### CORS Errors
-- Skontroluj či backend beží na porte 8000
-- Over `allow_origins` v `backend/main.py`
-
-### Firebase Errors
-- Skontroluj či `firebase-service-account.json` existuje
-- Over Firebase credentials v `app.config.ts`
-
-### Port Already in Use
+### Build chyby
 ```bash
-# Windows
-netstat -ano | findstr :8000
-taskkill /PID [číslo] /F
-
-# Linux/Mac
-lsof -ti:8000 | xargs kill
-```
-
-### Module Not Found
-```bash
-# Frontend
+# Vyčistite cache
+rm -rf node_modules package-lock.json
 npm install
-
-# Backend
-pip install -r requirements.txt
 ```
 
 ---
 
-## 🤝 Contributing
+## 📄 Licencia
 
-Contributions sú vítané! Pre veľké zmeny:
-
-1. Forkni projekt
-2. Vytvor feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commitni zmeny (`git commit -m 'Add some AmazingFeature'`)
-4. Pushni do branchu (`git push origin feature/AmazingFeature`)
-5. Otvor Pull Request
+MIT License - Projekt je open-source a voľne použiteľný.
 
 ---
 
-## 📄 License
+## 👨‍💻 Autor
 
-Tento projekt je licencovaný pod MIT License - pozri [LICENSE](LICENSE) súbor pre detaily.
-
----
-
-## 👤 Author
-
-**Adrian Marjak**
-
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: adrianmarjak2156165@gmail.com
+FitMind Development Team
 
 ---
 
-## 🙏 Acknowledgments
+## 🤝 Príspevky
 
-- [OpenAI](https://openai.com/) za GPT-4o-mini API
-- [Firebase](https://firebase.google.com/) za backend služby
-- [Angular](https://angular.io/) za framework
-- [FastAPI](https://fastapi.tiangolo.com/) za backend framework
+Pull requesty sú vítané! Pre väčšie zmeny prosím najskôr otvorte issue.
 
 ---
 
-## 📊 Project Status
+## 📞 Kontakt
 
-✅ **Aktívny vývoj**
-
-- [x] AI integrácia
-- [x] Firebase autentifikácia
-- [x] Fitness tracking
-- [x] Automatické ukladanie dát
-- [ ] Mobile app (plánované)
-- [ ] Analytics dashboard (plánované)
+Pre otázky a podporu použite kontaktný formulár v aplikácii.
 
 ---
 
-<div align="center">
-
-**Made with ❤️ using Angular, FastAPI, and OpenAI**
-
-⭐ Ak sa ti projekt páči, daj mu hviezdu!
-
-</div>
-
-
-
-
-
-
+**Verzia:** 1.0.0  
+**Posledná aktualizácia:** Január 2026

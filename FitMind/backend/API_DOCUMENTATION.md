@@ -5,6 +5,16 @@
 http://localhost:8000
 ```
 
+## 🆕 Verzia 2.0 - Personal Coach Edition
+
+Nové funkcie:
+- 🧠 Konverzačná história a pamäť
+- 📊 Týždenné a mesačné reporty
+- 🎯 Sledovanie pokroku k cieľom
+- 💡 Personalizované odporúčania
+
+---
+
 ## Endpoints
 
 ### 1. Health Check
@@ -21,10 +31,15 @@ GET /
 
 ---
 
-### 2. AI Chat
+### 2. AI Chat (vylepšené)
 ```
 POST /api/chat
 ```
+**Nové vlastnosti:**
+- Automaticky ukladá konverzačnú históriu
+- Používa kontext predchádzajúcich správ
+- Inteligentnejšie odpovede s personalizáciou
+
 **Request Body:**
 ```json
 {
@@ -37,7 +52,7 @@ POST /api/chat
 ```json
 {
   "odpoved": "string",
-  "saved_entries": ["🍽️ Jedlo uložené"],
+  "saved_entries": ["🍽️ Jedlo uložené", "😊 Nálada uložená"],
   "user_id": "string"
 }
 ```
@@ -268,6 +283,184 @@ Importuj do Postman alebo použij cURL príkazy vyššie.
 
 ---
 
+---
+
+## 🆕 Personal Coach Endpoints
+
+### 6. Weekly Report
+```
+GET /api/coach/weekly-report/{user_id}
+```
+**Response:**
+```json
+{
+  "user_id": "abc123",
+  "report": {
+    "period": "weekly",
+    "week_start": "2026-01-01T00:00:00Z",
+    "week_end": "2026-01-08T00:00:00Z",
+    "summary": {
+      "calories": {
+        "total": 14000,
+        "daily_average": 2000,
+        "days_tracked": 7
+      },
+      "exercise": {
+        "total_minutes": 180,
+        "workout_count": 5
+      }
+    },
+    "achievements": [
+      "🎯 Dodržal si kalorický cieľ",
+      "💪 5 tréningov tento týždeň"
+    ],
+    "areas_to_improve": [
+      "⚠️ Nedostatok spánku (6.2h)"
+    ],
+    "recommendations": [
+      "Snaž sa spať aspoň 7-8 hodín denne"
+    ],
+    "goal_progress": {
+      "calories": {
+        "target": 2000,
+        "actual": 2000,
+        "on_track": true
+      }
+    },
+    "overall_rating": "excellent",
+    "overall_message": "🌟 Excelentný týždeň!"
+  }
+}
+```
+
+---
+
+### 7. Monthly Report
+```
+GET /api/coach/monthly-report/{user_id}
+```
+**Response:**
+```json
+{
+  "user_id": "abc123",
+  "report": {
+    "period": "monthly",
+    "summary": {
+      "calories": {
+        "total": 60000,
+        "daily_average": 2000,
+        "consistency": "87%"
+      },
+      "exercise": {
+        "total_minutes": 800,
+        "total_workouts": 20,
+        "avg_per_week": 4.7
+      },
+      "weight": {
+        "current": 75.5,
+        "month_change": -2.5,
+        "trend": "decreasing"
+      }
+    },
+    "achievements": [
+      "💪 20 tréningov za mesiac - si beast!"
+    ]
+  }
+}
+```
+
+---
+
+### 8. Personalized Recommendations
+```
+GET /api/coach/recommendations/{user_id}
+```
+**Response:**
+```json
+{
+  "user_id": "abc123",
+  "recommendations": [
+    "🔥 Pre chudnutie: Kombinácia kardio (3-4x) + silový tréning (2-3x)",
+    "🍎 Calorický deficit 300-500 kcal denne",
+    "💧 Hydratácia: min. 2-3L vody denne"
+  ],
+  "count": 3
+}
+```
+
+---
+
+### 9. Goal Progress
+```
+GET /api/coach/goal-progress/{user_id}
+```
+**Response:**
+```json
+{
+  "user_id": "abc123",
+  "goals": ["schudnúť 5kg", "získať svalovú hmotu"],
+  "progress_items": [
+    {
+      "goal": "Cieľová váha",
+      "target": "75 kg",
+      "current": "77.5 kg",
+      "difference": "-2.5 kg",
+      "percentage": 50,
+      "on_track": true
+    },
+    {
+      "goal": "Denný kalorický cieľ",
+      "target": "2000 kcal",
+      "current": "1950 kcal",
+      "difference": "-50 kcal",
+      "percentage": 97.5,
+      "on_track": true
+    }
+  ]
+}
+```
+
+---
+
+### 10. Chat History
+```
+GET /api/chat/history/{user_id}?limit=50
+```
+**Response:**
+```json
+{
+  "user_id": "abc123",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Zjedol som raňajky"
+    },
+    {
+      "role": "assistant",
+      "content": "Super! Raňajky uložené."
+    }
+  ],
+  "count": 2
+}
+```
+
+---
+
+### 11. Clear Chat History
+```
+DELETE /api/chat/history/{user_id}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Chat historia vymazana",
+  "user_id": "abc123"
+}
+```
+
+---
+
 ## Rate Limiting
 Aktuálne nie je implementované. Pre produkciu odporúčam pridať rate limiting.
 
@@ -275,6 +468,14 @@ Aktuálne nie je implementované. Pre produkciu odporúčam pridať rate limitin
 
 ## Authentication
 Aktuálne používa `user_id` z Firebase Auth. Pre produkciu odporúčam pridať JWT token validáciu.
+
+---
+
+## 📚 Ďalšia Dokumentácia
+
+- [AI Coach Guide](../AI_COACH_GUIDE.md) - Podrobný návod na AI kouča
+- [README.md](../README.md) - Hlavná dokumentácia projektu
+- [Firebase Setup](FIREBASE_SETUP.md) - Nastavenie Firebase
 
 
 

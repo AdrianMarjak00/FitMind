@@ -1,10 +1,36 @@
 .chart-container {
-  width: 100%;
+  min-height: calc(100vh - 64px);
+  background: radial-gradient(circle at top, #0f2f1f, #050505);
+  padding: 3rem 1.5rem;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+
+  h1 {
+    color: #3ddc84;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  p {
+    color: #cfcfcf;
+    font-size: 1.2rem;
+  }
 }
 
 .echart {
-  width: 700px;
-  height: 400px;
+  width: 100%;
+  max-width: 900px;
+  height: 500px;
+  background: #0b0b0b;
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 768px) {
+  .echart {
+    height: 350px;
+  }
 }
