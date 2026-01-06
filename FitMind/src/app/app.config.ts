@@ -16,7 +16,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyArvOFbqncllijGFJPoHNEgtPdZPIuCqjQ",
     authDomain: "fitmind-dba6a.firebaseapp.com",
     projectId: "fitmind-dba6a",
-    storageBucket: "fitmind-dba6a.firebasestorage.app",
+    // storageBucket removed - not using Firebase Storage
     messagingSenderId: "981233336315",
     appId: "1:981233336315:web:3334043ac9fc1d6a11955e",
     measurementId: "G-74VP65JX6H"

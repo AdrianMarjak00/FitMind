@@ -1,12 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, authState, User } from '@angular/fire/auth';
 import { Firestore, doc, getDoc } from '@angular/fire/firestore';
-import { from, map, Observable, switchMap, of } from 'rxjs';
+import { from, map, Observable, switchMap, of, EMPTY } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
+  private currentUser$ = authState(this.auth);
 
   register(email: string, password: string): Observable<User> {
     return from(createUserWithEmailAndPassword(this.auth, email, password)).pipe(
@@ -25,12 +27,11 @@ export class AuthService {
   }
 
   getCurrentUser(): Observable<User | null> {
-    // authState musí byť volaný v injection contexte
-    return authState(this.auth);
+    return this.currentUser$;
   }
 
   isAdmin(): Observable<boolean> {
-    return authState(this.auth).pipe(
+    return this.currentUser$.pipe(
       switchMap(user => {
         if (!user || !user.uid) {
           return of(false);
@@ -45,6 +46,11 @@ export class AuthService {
               return adminData['isAdmin'] === true;
             }
             return false;
+          }),
+          catchError(err => {
+            // If permission denied or any error, user is not admin
+            console.warn('Admin check failed:', err.message);
+            return of(false);
           })
         );
       })

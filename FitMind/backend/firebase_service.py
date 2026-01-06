@@ -253,3 +253,95 @@ class FirebaseService:
         except Exception as e:
             print(f"[ERROR] Chyba pri nacitani adminov: {e}")
             return []
+    
+    # === CHAT HISTÓRIA ===
+    
+    def save_chat_message(self, user_id: str, role: str, content: str, metadata: Optional[Dict] = None) -> bool:
+        """
+        Uloží správu do konverzačnej histórie
+        
+        Args:
+            user_id: ID používateľa
+            role: Rola ('user' alebo 'assistant')
+            content: Obsah správy
+            metadata: Dodatočné metadáta (napr. function_call, saved_entries)
+            
+        Returns:
+            True ak sa podarilo uložiť
+        """
+        if not self.is_connected():
+            return False
+        try:
+            message_data = {
+                'role': role,
+                'content': content,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            }
+            
+            if metadata:
+                message_data['metadata'] = metadata
+            
+            # Ulož do subkolekcie chatHistory
+            self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory').add(message_data)
+            return True
+        except Exception as e:
+            print(f"[ERROR] Chyba pri ukladani chat spravy: {e}")
+            return False
+    
+    def get_chat_history(self, user_id: str, limit: int = 20) -> List[Dict]:
+        """
+        Získa konverzačnú históriu používateľa
+        
+        Args:
+            user_id: ID používateľa
+            limit: Maximálny počet správ (default: 20)
+            
+        Returns:
+            Zoznam správ
+        """
+        if not self.is_connected():
+            return []
+        try:
+            chat_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory')
+            # Zoraď podľa timestampu zostupne a obmedz počet
+            query = chat_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+            docs = list(query.stream())
+            
+            # Reverzuj poradie (chceme chronologické poradie)
+            messages = []
+            for doc in reversed(docs):
+                data = doc.to_dict()
+                # Vráť len role a content pre API
+                messages.append({
+                    'role': data.get('role', 'user'),
+                    'content': data.get('content', '')
+                })
+            
+            return messages
+        except Exception as e:
+            print(f"[ERROR] Chyba pri nacitani chat historie: {e}")
+            return []
+    
+    def clear_chat_history(self, user_id: str) -> bool:
+        """
+        Vymaže konverzačnú históriu používateľa
+        
+        Args:
+            user_id: ID používateľa
+            
+        Returns:
+            True ak sa podarilo vymazať
+        """
+        if not self.is_connected():
+            return False
+        try:
+            chat_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory')
+            docs = chat_ref.stream()
+            
+            for doc in docs:
+                doc.reference.delete()
+            
+            return True
+        except Exception as e:
+            print(f"[ERROR] Chyba pri mazani chat historie: {e}")
+            return False

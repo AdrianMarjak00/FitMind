@@ -1,12 +1,13 @@
 <div class="chart-container">
-  <div
-    echarts
-    [options]="chartOptions"
-    class="echart"
-    ngIf="!loading"
-  ></div>
-
-  <p ngIf="loading">Loading...</p>
+  <h1>📊 Štatistiky používateľov</h1>
+  
+  @if (loading) {
+    <p>Načítavam dáta...</p>
+  } @else {
+    <div
+      echarts
+      [options]="chartOptions"
+      class="echart"
+    ></div>
+  }
 </div>
-w
-2908

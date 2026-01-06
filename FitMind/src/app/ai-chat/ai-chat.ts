@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { AiService, ChatMessage } from '../services/ai.service';
+import { AiService, ChatMessage, WeeklyReport, GoalProgress } from '../services/ai.service';
 import { AuthService } from '../services/auth.service';
 import { BackendStatusService } from '../services/backend-status.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { User } from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-ai-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DatePipe],
   templateUrl: './ai-chat.html',
   styleUrls: ['./ai-chat.scss']
 })
@@ -23,6 +23,15 @@ export class AiChatComponent implements OnInit, OnDestroy {
   private userSubscription?: Subscription;
 
   backendRunning = true;
+
+  // Nové: Insights panel
+  showInsights = false;
+  activeTab: 'recommendations' | 'weekly' | 'goals' = 'recommendations';
+  loadingInsights = false;
+  
+  recommendations: string[] = [];
+  weeklyReport: WeeklyReport | null = null;
+  goalProgress: GoalProgress | null = null;
 
   constructor(
     public aiService: AiService,
@@ -44,6 +53,9 @@ export class AiChatComponent implements OnInit, OnDestroy {
       this.userId = user?.uid || '';
       if (!this.userId) {
         console.warn('⚠️ Používateľ nie je prihlásený');
+      } else {
+        // Automaticky načítaj odporúčania pri prihlásení
+        this.loadRecommendations();
       }
     });
   }
@@ -73,6 +85,14 @@ export class AiChatComponent implements OnInit, OnDestroy {
         this.message = '';
         if (response.saved_entries && response.saved_entries.length > 0) {
           this.savedEntries = response.saved_entries;
+          
+          // Po uložení dát automaticky aktualizuj insights
+          setTimeout(() => {
+            if (this.showInsights) {
+              this.refreshCurrentTab();
+            }
+          }, 1000);
+          
           // Skryť notifikácie po 5 sekundách
           setTimeout(() => {
             this.savedEntries = [];
@@ -97,7 +117,91 @@ export class AiChatComponent implements OnInit, OnDestroy {
   }
 
   clearChat(): void {
-    this.aiService.clearChat();
-    this.savedEntries = [];
+    if (confirm('Vymazať celú konverzáciu vrátane histórie?')) {
+      this.aiService.clearChatHistory(this.userId).subscribe({
+        next: () => {
+          this.aiService.clearChat();
+          this.savedEntries = [];
+          console.log('Chat história vymazaná');
+        },
+        error: (err) => {
+          console.error('Chyba pri mazaní histórie:', err);
+          // Aj tak vyčisti lokálny chat
+          this.aiService.clearChat();
+          this.savedEntries = [];
+        }
+      });
+    }
+  }
+
+  // === INSIGHTS PANEL ===
+
+  toggleInsights(): void {
+    this.showInsights = !this.showInsights;
+    if (this.showInsights && !this.recommendations.length) {
+      this.loadRecommendations();
+    }
+  }
+
+  refreshCurrentTab(): void {
+    switch (this.activeTab) {
+      case 'recommendations':
+        this.loadRecommendations();
+        break;
+      case 'weekly':
+        this.loadWeeklyReport();
+        break;
+      case 'goals':
+        this.loadGoalProgress();
+        break;
+    }
+  }
+
+  loadRecommendations(): void {
+    if (!this.userId) return;
+    
+    this.loadingInsights = true;
+    this.aiService.getPersonalizedRecommendations(this.userId).subscribe({
+      next: (response) => {
+        this.recommendations = response.recommendations;
+        this.loadingInsights = false;
+      },
+      error: (err) => {
+        console.error('Chyba pri načítaní odporúčaní:', err);
+        this.loadingInsights = false;
+      }
+    });
+  }
+
+  loadWeeklyReport(): void {
+    if (!this.userId) return;
+    
+    this.loadingInsights = true;
+    this.aiService.getWeeklyReport(this.userId).subscribe({
+      next: (response) => {
+        this.weeklyReport = response.report;
+        this.loadingInsights = false;
+      },
+      error: (err) => {
+        console.error('Chyba pri načítaní týždenného reportu:', err);
+        this.loadingInsights = false;
+      }
+    });
+  }
+
+  loadGoalProgress(): void {
+    if (!this.userId) return;
+    
+    this.loadingInsights = true;
+    this.aiService.getGoalProgress(this.userId).subscribe({
+      next: (response) => {
+        this.goalProgress = response;
+        this.loadingInsights = false;
+      },
+      error: (err) => {
+        console.error('Chyba pri načítaní pokroku k cieľom:', err);
+        this.loadingInsights = false;
+      }
+    });
   }
 }

@@ -8,10 +8,32 @@
         Domov
     </a>
 
-    <a mat-button routerLink="/piechart">
-        <mat-icon>pie_chart</mat-icon>
-        Analýza
+    <a mat-button routerLink="/training">
+        <mat-icon>fitness_center</mat-icon>
+        Tréningy
     </a>
+
+    <a mat-button routerLink="/jedalnicek">
+        <mat-icon>restaurant_menu</mat-icon>
+        Jedálničky
+    </a>
+
+    @if (currentUser()) {
+        <a mat-button routerLink="/dashboard">
+            <mat-icon>dashboard</mat-icon>
+            Dashboard
+        </a>
+        
+        <a mat-button routerLink="/ai-chat">
+            <mat-icon>smart_toy</mat-icon>
+            AI Coach
+        </a>
+        
+        <a mat-button routerLink="/piechart">
+            <mat-icon>pie_chart</mat-icon>
+            Analýza
+        </a>
+    }
 
     <a mat-button routerLink="/review">
         <mat-icon>rate_review</mat-icon> 
@@ -23,8 +45,7 @@
         Kontakt
     </a>
 
-       
-    <ng-container *ngIf="!isLoggedIn">
+    @if (!currentUser()) {
         <a mat-button routerLink="/login">
             <mat-icon>login</mat-icon> 
             Prihlás sa
@@ -33,8 +54,10 @@
             <mat-icon>person_add</mat-icon> 
             Registrácia
         </a>
-
-        
-    </ng-container>
-    
+    } @else {
+        <button mat-button (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            Odhlásiť sa
+        </button>
+    }
 </mat-toolbar>

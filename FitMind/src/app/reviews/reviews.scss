@@ -1,10 +1,26 @@
 .reviews {
   min-height: calc(100vh - 64px);
   padding: 3rem 1.5rem;
+  background: radial-gradient(circle at top, #0f2f1f, #050505);
+
+  h1 {
+    text-align: center;
+    color: #3ddc84;
+    margin-bottom: 3rem;
+  }
+
+  .no-reviews {
+    text-align: center;
+    color: #888;
+    font-size: 1.2rem;
+    margin-top: 4rem;
+  }
+}
+
+.reviews > :not(h1, .no-reviews) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 2rem;
-  background: radial-gradient(circle at top, #0f2f1f, #050505);
 }
 
 .review-card {
