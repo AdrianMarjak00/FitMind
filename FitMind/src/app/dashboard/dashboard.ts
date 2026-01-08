@@ -143,7 +143,7 @@ export class DashboardComponent implements OnInit {
         this.recentSleepEntries = entries.sleep;
         this.recentStressEntries = entries.stress;
       },
-      error: err => console.error('Error loading recent entries:', err)
+      error: () => {}
     });
   }
 
@@ -157,8 +157,7 @@ export class DashboardComponent implements OnInit {
           this.todayStats.calories.remaining = this.todayStats.calories.target;
         }
       },
-      error: err => {
-        console.error('Error loading user profile:', err);
+      error: () => {
         // Profile might not exist yet or permission denied
         // This is OK for new users
       }
@@ -238,8 +237,7 @@ export class DashboardComponent implements OnInit {
       next: data => {
         this.caloriesChart = this.createPieChart(data.data.by_meal || {}, 'Kalórie podľa jedla');
       },
-      error: err => {
-        console.warn('Could not load calories chart:', err.message);
+      error: () => {
         this.caloriesChart = this.createPieChart({}, 'Kalórie podľa jedla');
       }
     });
@@ -249,8 +247,7 @@ export class DashboardComponent implements OnInit {
       next: data => {
         this.exerciseChart = this.createPieChart(data.data.by_type || {}, 'Cvičenie podľa typu');
       },
-      error: err => {
-        console.warn('Could not load exercise chart:', err.message);
+      error: () => {
         this.exerciseChart = this.createPieChart({}, 'Cvičenie podľa typu');
       }
     });
@@ -260,8 +257,7 @@ export class DashboardComponent implements OnInit {
       next: data => {
         this.moodChart = this.createLineChart(data.data.trend || [], 'Nálada', 'score');
       },
-      error: err => {
-        console.warn('Could not load mood chart:', err.message);
+      error: () => {
         this.moodChart = this.createLineChart([], 'Nálada', 'score');
       }
     });
@@ -271,8 +267,7 @@ export class DashboardComponent implements OnInit {
       next: data => {
         this.stressChart = this.createLineChart(data.data.trend || [], 'Stres', 'level');
       },
-      error: err => {
-        console.warn('Could not load stress chart:', err.message);
+      error: () => {
         this.stressChart = this.createLineChart([], 'Stres', 'level');
       }
     });
@@ -282,8 +277,7 @@ export class DashboardComponent implements OnInit {
       next: data => {
         this.sleepChart = this.createBarChart(data.data.by_quality || {}, 'Kvalita spánku');
       },
-      error: err => {
-        console.warn('Could not load sleep chart:', err.message);
+      error: () => {
         this.sleepChart = this.createBarChart({}, 'Kvalita spánku');
       }
     });
@@ -293,8 +287,7 @@ export class DashboardComponent implements OnInit {
       next: data => {
         this.weightChart = this.createLineChart(data.data.trend || [], 'Váha', 'weight');
       },
-      error: err => {
-        console.warn('Could not load weight chart:', err.message);
+      error: () => {
         this.weightChart = this.createLineChart([], 'Váha', 'weight');
       }
     });
@@ -539,21 +532,19 @@ export class DashboardComponent implements OnInit {
     });
   }
   
-  // 🆕 Načítaj AI návrhy (placeholder - pripojí sa na AI service)
   loadAISuggestions(): void {
     const summary = this.getDailyNutritionSummary();
     const remaining = this.todayStats.calories.remaining;
-    
-    // Jednoduché pravidlá (neskôr nahradiť AI)
+
     this.aiSuggestions = [];
-    
+
     if (remaining > 500) {
       this.aiSuggestions.push('💡 Zostáva veľa kalórií - skúste pridať plnohodnotné jedlo');
-      
+
       if (summary.protein < 50) {
         this.aiSuggestions.push('🥩 Nízky príjem bielkovín - odporúčam kuracie prsia, tuniak alebo cottage cheese');
       }
-      
+
       if (summary.fats < 30) {
         this.aiSuggestions.push('🥑 Málo zdravých tukov - pridajte avokádo, orechy alebo olivový olej');
       }
@@ -563,8 +554,6 @@ export class DashboardComponent implements OnInit {
     } else if (remaining <= 0) {
       this.aiSuggestions.push('⚠️ Prekročili ste denný limit - zajtra to vyrovnajte cvičením');
     }
-    
-    // TODO: Pripojiť na AI service pre inteligentnejšie návrhy
   }
 
   addMoodEntry(): void {

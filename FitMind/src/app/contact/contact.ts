@@ -32,7 +32,7 @@ export class Contact {
   };
 
   onSubmitContact() {
-    console.log('Odosielam kontaktný formulár:', this.contactData);
     alert('Vaša správa bola odoslaná. Ďakujeme!');
+    this.contactData = { name: '', email: '', message: '' };
   }
 }

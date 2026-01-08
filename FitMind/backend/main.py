@@ -29,38 +29,20 @@ load_dotenv()
 app = FastAPI(title="FitMind AI Backend - Personal Coach Edition")
 
 # Povol CORS (Cross-Origin Resource Sharing) - umožní frontendu komunikovať s backendom
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:4200").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],  # Angular dev server
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Povolí všetky HTTP metódy (GET, POST, atď.)
-    allow_headers=["*"],  # Povolí všetky hlavičky
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Inicializuj služby (Firebase, AI, Stats, Coach)
 firebase = FirebaseService()
 ai_service = AIService()
 stats_service = StatsService()
-
-# #region agent log
-try:
-    import json
-    from datetime import datetime
-    with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-        f.write(json.dumps({"location":"main.py:44","message":"Before CoachService init","data":{"firebase_connected":firebase.is_connected()},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H2,H3"}) + '\n')
-except: pass
-# #endregion
-
 coach_service = CoachService(firebase)
-
-# #region agent log
-try:
-    import json
-    from datetime import datetime
-    with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-        f.write(json.dumps({"location":"main.py:44","message":"After CoachService init","data":{"coach_service_created":coach_service is not None},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H2"}) + '\n')
-except: pass
-# #endregion
 
 # Definície dátových modelov pre API requesty
 class ChatRequest(BaseModel):
@@ -331,26 +313,10 @@ async def save_profile(request: ProfileRequest):
 @app.get("/api/coach/weekly-report/{user_id}")
 async def get_weekly_report(user_id: str):
     """Získa týždenný report pre používateľa s analýzou pokroku"""
-    # #region agent log
-    try:
-        import json
-        from datetime import datetime
-        with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({"location":"main.py:313","message":"weekly-report endpoint called","data":{"user_id":user_id},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H4,H5"}) + '\n')
-    except: pass
-    # #endregion
     try:
         report = coach_service.generate_weekly_report(user_id)
         return {"user_id": user_id, "report": report}
     except Exception as e:
-        # #region agent log
-        try:
-            import json
-            from datetime import datetime
-            with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"location":"main.py:318","message":"weekly-report error","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H5"}) + '\n')
-        except: pass
-        # #endregion
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/coach/monthly-report/{user_id}")
@@ -365,14 +331,6 @@ async def get_monthly_report(user_id: str):
 @app.get("/api/coach/recommendations/{user_id}")
 async def get_recommendations(user_id: str):
     """Získa personalizované odporúčania pre používateľa"""
-    # #region agent log
-    try:
-        import json
-        from datetime import datetime
-        with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({"location":"main.py:330","message":"recommendations endpoint called","data":{"user_id":user_id},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H4,H5"}) + '\n')
-    except: pass
-    # #endregion
     try:
         recommendations = coach_service.get_personalized_recommendations(user_id)
         return {
@@ -381,39 +339,15 @@ async def get_recommendations(user_id: str):
             "count": len(recommendations)
         }
     except Exception as e:
-        # #region agent log
-        try:
-            import json
-            from datetime import datetime
-            with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"location":"main.py:341","message":"recommendations error","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H5"}) + '\n')
-        except: pass
-        # #endregion
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/coach/goal-progress/{user_id}")
 async def get_goal_progress(user_id: str):
     """Kontroluje pokrok k stanoveným cieľom"""
-    # #region agent log
-    try:
-        import json
-        from datetime import datetime
-        with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-            f.write(json.dumps({"location":"main.py:343","message":"goal-progress endpoint called","data":{"user_id":user_id},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H4,H5"}) + '\n')
-    except: pass
-    # #endregion
     try:
         progress = coach_service.check_goal_progress(user_id)
         return progress
     except Exception as e:
-        # #region agent log
-        try:
-            import json
-            from datetime import datetime
-            with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-                f.write(json.dumps({"location":"main.py:350","message":"goal-progress error","data":{"error":str(e),"error_type":type(e).__name__},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H5"}) + '\n')
-        except: pass
-        # #endregion
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/chat/history/{user_id}")
@@ -440,17 +374,6 @@ async def clear_chat_history(user_id: str):
             raise HTTPException(status_code=500, detail="Nepodarilo sa vymazat historiu")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# #region agent log
-try:
-    import json
-    from datetime import datetime
-    route_paths = [route.path for route in app.routes]
-    coach_routes = [p for p in route_paths if '/api/coach/' in p]
-    with open(r'c:\Users\adria\Desktop\FitMind\FitMind\.cursor\debug.log', 'a', encoding='utf-8') as f:
-        f.write(json.dumps({"location":"main.py:377","message":"All routes registered","data":{"total_routes":len(route_paths),"coach_routes":coach_routes},"timestamp":datetime.now().timestamp()*1000,"sessionId":"debug-session","hypothesisId":"H1,H2"}) + '\n')
-except: pass
-# #endregion
 
 # Spustenie servera
 if __name__ == "__main__":

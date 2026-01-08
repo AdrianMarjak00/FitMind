@@ -43,17 +43,12 @@ export class AiChatComponent implements OnInit, OnDestroy {
     // Skontroluj backend status
     this.backendStatus.checkBackendStatus().subscribe(isRunning => {
       this.backendRunning = isRunning;
-      if (!isRunning) {
-        console.warn('⚠️ Backend server nebeží na http://localhost:8000');
-      }
     });
 
     this.userSubscription = this.authService.getCurrentUser().subscribe(user => {
       this.currentUser = user;
       this.userId = user?.uid || '';
-      if (!this.userId) {
-        console.warn('⚠️ Používateľ nie je prihlásený');
-      } else {
+      if (this.userId) {
         // Automaticky načítaj odporúčania pri prihlásení
         this.loadRecommendations();
       }
@@ -100,7 +95,6 @@ export class AiChatComponent implements OnInit, OnDestroy {
         }
       },
       error: (err) => {
-        console.error('AI chyba:', err);
         this.isLoading = false;
         
         // Lepšia error handling
@@ -122,10 +116,8 @@ export class AiChatComponent implements OnInit, OnDestroy {
         next: () => {
           this.aiService.clearChat();
           this.savedEntries = [];
-          console.log('Chat história vymazaná');
         },
-        error: (err) => {
-          console.error('Chyba pri mazaní histórie:', err);
+        error: () => {
           // Aj tak vyčisti lokálny chat
           this.aiService.clearChat();
           this.savedEntries = [];
@@ -166,8 +158,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
         this.recommendations = response.recommendations;
         this.loadingInsights = false;
       },
-      error: (err) => {
-        console.error('Chyba pri načítaní odporúčaní:', err);
+      error: () => {
         this.loadingInsights = false;
       }
     });
@@ -182,8 +173,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
         this.weeklyReport = response.report;
         this.loadingInsights = false;
       },
-      error: (err) => {
-        console.error('Chyba pri načítaní týždenného reportu:', err);
+      error: () => {
         this.loadingInsights = false;
       }
     });
@@ -198,8 +188,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
         this.goalProgress = response;
         this.loadingInsights = false;
       },
-      error: (err) => {
-        console.error('Chyba pri načítaní pokroku k cieľom:', err);
+      error: () => {
         this.loadingInsights = false;
       }
     });
