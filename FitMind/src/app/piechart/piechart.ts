@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { StatsService } from '../services/stats.service';
 import { Stats } from '../models/stats.interface';
+
 @Component({
   selector: 'app-graph',
   standalone: true,
@@ -9,7 +10,7 @@ import { Stats } from '../models/stats.interface';
   templateUrl: './piechart.html',
   styleUrls: ['./piechart.scss'],
 })
-export class Piechart {
+export class Piechart implements OnInit {
   
   chartOptions: any = {};
   loading = true;
@@ -17,7 +18,8 @@ export class Piechart {
   constructor(private statsService: StatsService) {}
 
   ngOnInit(): void {
-    this.statsService.getStats().subscribe((data: Stats[]) => {
+    // FIX: Using getOverallStats() as defined in stats.service.ts
+    this.statsService.getOverallStats().subscribe((data: Stats[]) => {
       this.setChartOptions(data);
       this.loading = false;
     });
@@ -35,7 +37,7 @@ export class Piechart {
         {
           name: 'Pie Stats',
           type: 'pie',
-          radius: ['40%', '70%'],     // donut
+          radius: ['40%', '70%'],
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 10,
@@ -49,7 +51,7 @@ export class Piechart {
           emphasis: {
             scale: true
           },
-          data: data   // Firestore data priamo v 'name'/'value'
+          data: data
         }
       ]
     };
