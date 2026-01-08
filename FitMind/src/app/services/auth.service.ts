@@ -47,9 +47,7 @@ export class AuthService {
             }
             return false;
           }),
-          catchError(err => {
-            // If permission denied or any error, user is not admin
-            console.warn('Admin check failed:', err.message);
+          catchError(() => {
             return of(false);
           })
         );

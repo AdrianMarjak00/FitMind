@@ -216,32 +216,32 @@ export class UserFitnessService {
 
       collectionData(foodRef, { idField: 'id' }).subscribe({
         next: (data) => { result.food = data as FoodEntry[]; checkComplete(); },
-        error: (err) => { console.error('Food entries error:', err); checkComplete(); }
+        error: () => { checkComplete(); }
       });
 
       collectionData(exerciseRef, { idField: 'id' }).subscribe({
         next: (data) => { result.exercise = data as ExerciseEntry[]; checkComplete(); },
-        error: (err) => { console.error('Exercise entries error:', err); checkComplete(); }
+        error: () => { checkComplete(); }
       });
 
       collectionData(stressRef, { idField: 'id' }).subscribe({
         next: (data) => { result.stress = data as StressEntry[]; checkComplete(); },
-        error: (err) => { console.error('Stress entries error:', err); checkComplete(); }
+        error: () => { checkComplete(); }
       });
 
       collectionData(moodRef, { idField: 'id' }).subscribe({
         next: (data) => { result.mood = data as MoodEntry[]; checkComplete(); },
-        error: (err) => { console.error('Mood entries error:', err); checkComplete(); }
+        error: () => { checkComplete(); }
       });
 
       collectionData(sleepRef, { idField: 'id' }).subscribe({
         next: (data) => { result.sleep = data as SleepEntry[]; checkComplete(); },
-        error: (err) => { console.error('Sleep entries error:', err); checkComplete(); }
+        error: () => { checkComplete(); }
       });
 
       collectionData(weightRef, { idField: 'id' }).subscribe({
         next: (data) => { result.weight = data as WeightEntry[]; checkComplete(); },
-        error: (err) => { console.error('Weight entries error:', err); checkComplete(); }
+        error: () => { checkComplete(); }
       });
     });
   }
