@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { AiService, ChatMessage, WeeklyReport, GoalProgress } from '../services/ai.service';
-import { AuthService } from '../services/auth.service';
-import { BackendStatusService } from '../services/backend-status.service';
+import { AiService, ChatMessage, WeeklyReport, GoalProgress } from '../../services/ai.service';
+import { AuthService } from '../../services/auth.service';
+import { BackendStatusService } from '../../services/backend-status.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { User } from '@angular/fire/auth';
