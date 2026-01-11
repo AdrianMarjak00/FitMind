@@ -1,16 +1,16 @@
 import { Routes } from '@angular/router';
 
 import { HomeComponent } from './home/home';
-import { Contact } from './contact/contact';
-import { RegisterComponent } from './register/register';
-import { LoginComponent } from './login/login';
+import { Contact } from './components/contact/contact';
+import { RegisterComponent } from './components/register/register';
+import { LoginComponent } from './components/login/login';
 import { AdminGuard } from '../guards/admin.guard';
 import { ReviewsComponent } from './reviews/reviews';
-import { Piechart } from './piechart/piechart';
-import { Jedalnicek } from './jedalnicek/jedalnicek';
-import { Training } from './training/training';
-import { DashboardComponent } from './dashboard/dashboard';
-import { AiChatComponent } from './ai-chat/ai-chat';
+import { Piechart } from './components/piechart/piechart';
+import { Jedalnicek } from './components/jedalnicek/jedalnicek';
+import { Training } from './components/training/training';
+import { DashboardComponent } from './components/dashboard/dashboard';
+import { AiChatComponent } from './components/ai-chat/ai-chat';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },

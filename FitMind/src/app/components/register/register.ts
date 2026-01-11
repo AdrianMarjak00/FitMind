@@ -6,9 +6,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService } from '../services/auth.service';
-import { UserFitnessService } from '../services/user-fitness.service';
-import { UserProfile } from '../models/user-profile.interface';
+import { AuthService } from '../../services/auth.service';
+import { UserFitnessService } from '../../services/user-fitness.service';
+import { UserProfile } from '../../models/user-profile.interface';
 
 @Component({
   selector: 'app-register',

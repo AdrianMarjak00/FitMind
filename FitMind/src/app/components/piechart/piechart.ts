@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { NgxEchartsModule } from 'ngx-echarts';
-import { StatsService } from '../services/stats.service';
-import { Stats } from '../models/stats.interface';
+import { StatsService } from '../../services/stats.service';
+import { Stats } from '../../models/stats.interface';
 
 @Component({
   selector: 'app-graph',

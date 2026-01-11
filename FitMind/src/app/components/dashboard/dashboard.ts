@@ -10,11 +10,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { Observable } from 'rxjs';
-import { AuthService } from '../services/auth.service';
-import { UserFitnessService } from '../services/user-fitness.service';
-import { ChartsService } from '../services/charts.service';
-import { UserProfile } from '../models/user-profile.interface';
-import { FoodEntry, ExerciseEntry, WeightEntry, MoodEntry, SleepEntry, StressEntry } from '../models/user-fitness-data.interface';
+import { AuthService } from '../../services/auth.service';
+import { UserFitnessService } from '../../services/user-fitness.service';
+import { ChartsService } from '../../services/charts.service';
+import { UserProfile } from '../../models/user-profile.interface';
+import { FoodEntry, ExerciseEntry, WeightEntry, MoodEntry, SleepEntry, StressEntry } from '../../models/user-fitness-data.interface';
 import { User } from '@angular/fire/auth';
 
 @Component({
