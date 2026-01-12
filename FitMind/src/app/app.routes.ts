@@ -10,16 +10,18 @@ import { DashboardComponent } from './components/dashboard/dashboard';
 import { ReviewsComponent } from './reviews/reviews';
 import { Jedalnicek } from './components/jedalnicek/jedalnicek';
 import { Training } from './components/training/training';
+import { OnboardingComponent } from './onboarding/onboarding';
 import { AdminGuard } from '../guards/admin.guard';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
+    { path: 'onboarding', component: OnboardingComponent }, 
     { path: 'contact', component: Contact },
     { path: 'dashboard', component: DashboardComponent },
     { path: 'piechart', component: Piechart, canActivate: [AdminGuard] },
-    { path: 'review', component: ReviewsComponent     },
+    { path: 'review', component: ReviewsComponent },
     { path: 'jedalnicek', component: Jedalnicek },
     { path: 'training', component: Training },
     { path: 'ai-chat', component: AiChatComponent },

@@ -3,6 +3,7 @@
 
 from typing import Optional, Dict, List
 from datetime import datetime, timedelta
+import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 
@@ -25,11 +26,34 @@ class FirebaseService:
     def _init_firebase(cls):
         """Inicializuje Firebase pripojenie"""
         try:
-            # Načítaj Firebase credentials zo súboru
-            cred = credentials.Certificate("firebase-service-account.json")
-            firebase_admin.initialize_app(cred)
-            cls._db = firestore.client()
-            print("[OK] Firebase pripojene!")
+            # Skús nájsť Service Account Key v rôznych súboroch
+            key_files = [
+                "serviceAccountKey.json",
+                "firebase-service-account.json",
+                # Hľadaj aj súbory začínajúce na fitmind-
+                *[f for f in os.listdir('.') if f.startswith('fitmind-') and f.endswith('.json')]
+            ]
+            
+            cred = None
+            used_file = None
+            
+            for key_file in key_files:
+                if os.path.exists(key_file):
+                    try:
+                        cred = credentials.Certificate(key_file)
+                        used_file = key_file
+                        break
+                    except:
+                        continue
+            
+            if cred:
+                firebase_admin.initialize_app(cred)
+                cls._db = firestore.client()
+                print(f"[OK] Firebase pripojene! (pouzity subor: {used_file})")
+            else:
+                print("[WARNING] Firebase credentials nenajdene! (skontrolovane: serviceAccountKey.json, firebase-service-account.json a fitmind-*.json)")
+                cls._db = None
+
         except Exception as e:
             print(f"[WARNING] Firebase chyba: {e}")
             cls._db = None

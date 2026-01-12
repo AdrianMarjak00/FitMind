@@ -16,26 +16,59 @@ try:
     from .ai_service import AIService
     from .stats_service import StatsService
     from .coach_service import CoachService
+    from .middleware import (
+        RateLimitMiddleware,
+        SecurityHeadersMiddleware,
+        RequestSizeLimitMiddleware,
+        validate_user_id,
+        sanitize_error_message
+    )
 except ImportError:
     from firebase_service import FirebaseService
     from ai_service import AIService
     from stats_service import StatsService
     from coach_service import CoachService
+    from middleware import (
+        RateLimitMiddleware,
+        SecurityHeadersMiddleware,
+        RequestSizeLimitMiddleware,
+        validate_user_id,
+        sanitize_error_message
+    )
 
 # Načítaj premenné prostredia z .env súboru
 load_dotenv()
 
 # Vytvor FastAPI aplikáciu
-app = FastAPI(title="FitMind AI Backend - Personal Coach Edition")
+app = FastAPI(
+    title="FitMind AI Backend - Personal Coach Edition",
+    docs_url="/docs" if os.getenv("ENV") == "development" else None,  # Disable docs in production
+    redoc_url="/redoc" if os.getenv("ENV") == "development" else None
+)
 
-# Povol CORS (Cross-Origin Resource Sharing) - umožní frontendu komunikovať s backendom
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:4200").split(",")
+# Is production?
+is_production = os.getenv("ENV", "production") == "production"
+
+# Security Middleware
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
+app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)  # 10 MB
+
+# CORS Configuration
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:4200")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+
+# Validate CORS configuration
+if is_production and "*" in allowed_origins:
+    raise ValueError("Wildcard CORS origins not allowed in production!")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 # Inicializuj služby (Firebase, AI, Stats, Coach)
@@ -73,7 +106,16 @@ async def root():
     """Kontrola, či backend beží"""
     return {
         "message": "FitMind AI Backend bezi!",
-        "firebase": "pripojene" if firebase.is_connected() else "odpojene"
+        "firebase": "pripojene" if firebase.is_connected() else "odpojene",
+        "environment": "production" if is_production else "development"
+    }
+
+@app.get("/health")
+async def health():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "firebase": firebase.is_connected()
     }
 
 @app.post("/api/chat")
@@ -82,6 +124,11 @@ async def chat(request: ChatRequest):
     AI Chat endpoint - pokročilý personalizovaný kouč s pamäťou konverzácie
     Automaticky zaznamenáva údaje a poskytuje personalizované rady
     """
+    # Validate input
+    validate_user_id(request.user_id)
+    if not request.message or len(request.message) > 5000:
+        raise HTTPException(status_code=400, detail="Invalid message length")
+    
     user_id = request.user_id
     message = request.message
     
@@ -148,7 +195,15 @@ async def chat(request: ChatRequest):
                 {"role": "assistant", "content": ai_odpoved, "function_call": message_response.function_call},
                 {"role": "function", "name": function_name, "content": json.dumps({"success": True})}
             ]
-            ai_odpoved = ai_service.get_final_response(messages) or ai_odpoved
+            
+            try:
+                ai_odpoved = ai_service.get_final_response(messages) or ai_odpoved
+            except Exception as e:
+                print(f"[WARNING] Nepodarilo sa ziskat finalnu odpoved od AI: {e}")
+                if len(saved_entries) > 0:
+                    ai_odpoved = "Údaje boli úspešne uložené, ale AI je momentálne preťažené. Skontrolujte prosím dashboard."
+                else:
+                    raise e
         
         # Ulož správy do histórie
         firebase.save_chat_message(user_id, 'user', message)
@@ -172,11 +227,15 @@ async def chat(request: ChatRequest):
     
     except Exception as e:
         print(f"[ERROR] CHYBA: {e}")
-        raise HTTPException(status_code=500, detail=f"AI chyba: {str(e)}")
+        error_msg = sanitize_error_message(e, production=is_production)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.get("/api/stats/{user_id}")
 async def get_stats(user_id: str, days: Optional[int] = 30):
     """Získa všetky štatistiky pre používateľa"""
+    validate_user_id(user_id)
+    if days and (days < 1 or days > 365):
+        raise HTTPException(status_code=400, detail="Days must be between 1 and 365")
     try:
         return {
             "calories": stats_service.get_calories_summary(user_id, days),
@@ -187,7 +246,8 @@ async def get_stats(user_id: str, days: Optional[int] = 30):
             "weight_trend": stats_service.get_weight_trend(user_id, days)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = sanitize_error_message(e, production=is_production)
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.get("/api/chart/{user_id}/{chart_type}")
 async def get_chart_data(user_id: str, chart_type: str, days: Optional[int] = 30):

@@ -1,0 +1,84 @@
+\u003c!-- Onboarding Multi-step Form --\u003e
+\u003cdiv class="onboarding-container"\u003e
+  \u003ch1\u003eNastavte si profil\u003c/h1\u003e
+  
+  \u003cmat-horizontal-stepper linear #stepper\u003e
+    \u003c!-- Step 1: Personal Info --\u003e
+    \u003cmat-step [stepControl]="personalInfoForm"\u003e
+      \u003cng-template matStepLabel\u003eOsobné údaje\u003c/ng-template\u003e
+      \u003cform [formGroup]="personalInfoForm"\u003e
+        \u003cmat-form-field appearance="outline"\u003e
+          \u003cmat-label\u003eMeno\u003c/mat-label\u003e
+          \u003cinput matInput formControlName="firstName" required\u003e
+        \u003c/mat-form-field\u003e
+        
+        \u003cmat-form-field appearance="outline"\u003e
+          \u003cmat-label\u003ePriezvisko\u003c/mat-label\u003e
+          \u003cinput matInput formControlName="lastName" required\u003e
+        \u003c/mat-form-field\u003e
+        
+        \u003cmat-form-field appearance="outline"\u003e
+          \u003cmat-label\u003eDátum narodenia\u003c/mat-label\u003e
+          \u003cinput matInput [matDatepicker]="picker" formControlName="dateOfBirth" [max]="maxDate" [min]="minDate" required\u003e
+          \u003cmat-datepicker-toggle matSuffix [for]="picker"\u003e\u003c/mat-datepicker-toggle\u003e
+          \u003cmat-datepicker #picker\u003e\u003c/mat-datepicker\u003e
+        \u003c/mat-form-field\u003e
+        
+        \u003cmat-form-field appearance="outline"\u003e
+          \u003cmat-label\u003ePohlavie\u003c/mat-label\u003e
+          \u003cmat-select formControlName="gender" required\u003e
+            @for (gender of genders; track gender) {
+              \u003cmat-option [value]="gender"\u003e{{ getGenderLabel(gender) }}\u003c/mat-option\u003e
+            }
+          \u003c/mat-select\u003e
+        \u003c/mat-form-field\u003e
+        
+        \u003cdiv class="button-row"\u003e
+          \u003cbutton mat-raised-button color="primary" matStepperNext\u003eĎalej\u003c/button\u003e
+        \u003c/div\u003e
+      \u003c/form\u003e
+    \u003c/mat-step\u003e
+
+    \u003c!-- Step 2: Physical Parameters --\u003e
+    \u003cmat-step [stepControl]="physicalParamsForm"\u003e
+      \u003cng-template matStepLabel\u003eFyzické parametre\u003c/ng-template\u003e
+      \u003cform [formGroup]="physicalParamsForm"\u003e
+        \u003cmat-form-field appearance="outline"\u003e
+          \u003cmat-label\u003eVýška (cm)\u003c/mat-label\u003e
+          \u003cinput matInput type="number" formControlName="height" required\u003e
+        \u003c/mat-form-field\u003e
+        
+        \u003cmat-form-field appearance="outline"\u003e
+          \u003cmat-label\u003eSúčasná váha (kg)\u003c/mat-label\u003e
+          \u003cinput matInput type="number" formControlName="currentWeight" required\u003e
+        \u003c/mat-form-field\u003e
+        
+        @if (calculateBMI()) {
+          \u003cp\u003eBMI: {{ calculateBMI() }}\u003c/p\u003e
+        }
+        
+        \u003cdiv class="button-row"\u003e
+          \u003cbutton mat-button matStepperPrevious\u003eSpäť\u003c/button\u003e
+          \u003cbutton mat-raised-button color="primary" matStepperNext\u003eĎalej\u003c/button\u003e
+        \u003c/div\u003e
+      \u003c/form\u003e
+    \u003c/mat-step\u003e
+
+    \u003c!-- Step 3: Finalize --\u003e
+    \u003cmat-step\u003e
+      \u003cng-template matStepLabel\u003eHotovo\u003c/ng-template\u003e
+      \u003cp\u003eVáš profil je pripravený!\u003c/p\u003e
+      \u003cdiv class="button-row"\u003e
+        \u003cbutton mat-button matStepperPrevious\u003eSpäť\u003c/button\u003e
+        \u003cbutton mat-raised-button color="primary" (click)="onComplete()" [disabled]="isSaving"\u003e
+          @if (isSaving) {
+            \u003cmat-spinner diameter="20"\u003e\u003c/mat-spinner\u003e
+          } @else {
+            Dokončiť
+          }
+        \u003c/button\u003e
+      \u003c/div\u003e
+    \u003c/mat-step\u003e
+  \u003c/mat-horizontal-stepper\u003e
+\u003c/div\u003e
+/
