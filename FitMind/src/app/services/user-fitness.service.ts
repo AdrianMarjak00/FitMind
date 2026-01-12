@@ -17,6 +17,9 @@ export class UserFitnessService {
   
   // Vytvoriť používateľský profil
   createUserProfile(profile: UserProfile): Observable<void> {
+    if (!profile.userId) {
+      throw new Error('User ID is required');
+    }
     const userDoc = doc(this.firestore, this.USERS_COLLECTION, profile.userId);
     const dataToSave = {
       ...profile,
@@ -57,6 +60,9 @@ export class UserFitnessService {
 
   // Vytvoriť alebo aktualizovať profil
   saveUserProfile(profile: UserFitnessProfile): Observable<void> {
+    if (!profile.userId) {
+      throw new Error('User ID is required');
+    }
     const profileRef = doc(this.firestore, this.COLLECTION_NAME, profile.userId);
     const data = {
       ...profile,

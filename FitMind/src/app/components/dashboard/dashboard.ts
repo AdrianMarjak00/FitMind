@@ -152,7 +152,7 @@ export class DashboardComponent implements OnInit {
       next: profile => {
         this.userProfile = profile;
         if (profile) {
-          this.weightForm.weight = profile.currentWeight;
+          this.weightForm.weight = profile.currentWeight || 0;
           this.todayStats.calories.target = profile.targetCalories || 2000;
           this.todayStats.calories.remaining = this.todayStats.calories.target;
         }
@@ -221,7 +221,7 @@ export class DashboardComponent implements OnInit {
   }
 
   calculateBMI(): string {
-    if (this.userProfile) {
+    if (this.userProfile && this.userProfile.height && this.userProfile.currentWeight) {
       const heightInMeters = this.userProfile.height / 100;
       const bmi = this.userProfile.currentWeight / (heightInMeters * heightInMeters);
       return bmi.toFixed(1);

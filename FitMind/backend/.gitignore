@@ -16,8 +16,10 @@ logs/
 .env
 .env.local
 
-# Firebase
-firebase-service-account.json
+# Firebase - all service account files
+firebase-service-account*.json
+*firebase-adminsdk*.json
+*service-account*.json
 
 # IDE
 .vscode/
