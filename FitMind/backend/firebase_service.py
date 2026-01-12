@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
+import json
 
 class FirebaseService:
     """
@@ -34,17 +35,29 @@ class FirebaseService:
                 *[f for f in os.listdir('.') if f.startswith('fitmind-') and f.endswith('.json')]
             ]
             
-            cred = None
-            used_file = None
             
-            for key_file in key_files:
-                if os.path.exists(key_file):
-                    try:
-                        cred = credentials.Certificate(key_file)
-                        used_file = key_file
-                        break
-                    except:
-                        continue
+            # 1. Skús načítať z environment premennej (pre cloud hosting)
+            env_creds = os.getenv("FIREBASE_CREDENTIALS")
+            cred = None
+            used_file = "ENV Variable"
+            
+            if env_creds:
+                try:
+                    cred_dict = json.loads(env_creds)
+                    cred = credentials.Certificate(cred_dict)
+                except Exception as e:
+                    print(f"[ERROR] Chyba pri parsovaní FIREBASE_CREDENTIALS: {e}")
+
+            # 2. Ak nie je v ENV, hľadaj súbory (lokálny vývoj)
+            if not cred:
+                for key_file in key_files:
+                    if os.path.exists(key_file):
+                        try:
+                            cred = credentials.Certificate(key_file)
+                            used_file = key_file
+                            break
+                        except:
+                            continue
             
             if cred:
                 firebase_admin.initialize_app(cred)
