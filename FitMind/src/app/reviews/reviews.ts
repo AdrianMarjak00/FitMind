@@ -4,11 +4,12 @@ import { Review } from '../models/review.interface';
 import { ReviewsService } from '../services/review.service';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
+import { MatIcon } from "@angular/material/icon";
 
 @Component({
   selector: 'app-reviews',
   standalone: true,
-  imports: [CommonModule, MatCardModule],
+  imports: [CommonModule, MatCardModule, MatIcon],
   templateUrl: './reviews.html',
   styleUrls: ['./reviews.scss']
 })
