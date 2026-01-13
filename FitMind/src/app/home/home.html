@@ -1,48 +1,60 @@
 <section class="hero">
-  <div class="hero-content">
-    <span class="badge">TRANSFORMUJ SVOJ ŽIVOT</span>
+  <div class="hero-glow-1"></div>
+  <div class="hero-glow-2"></div>
 
-    <h1>
-      Fit<span>Mind</span>
-    </h1>
+  <div class="container hero-wrapper">
+    <div class="hero-content">
+      <span class="badge">TRANSFORMUJ SVOJ ŽIVOT</span>
 
-    <h2>Tvoje telo, tvoja myseľ, tvoj progres</h2>
+      <h1 class="hero-title">
+        Fit<span>Mind</span>
+      </h1>
 
-    <p class="subtitle">
-      Moderná fitness platforma, ktorá spája tréningy
-      a jedálničky do jedného ekosystému
-    </p>
+      <h2 class="hero-subtitle">Tvoje telo, tvoja myseľ, tvoj progres</h2>
 
-    <div class="cta-buttons">
-      <button mat-flat-button color="primary" routerLink="/register">
-        Začať
-      </button>
+      <p class="hero-description">
+        Moderná fitness platforma, ktorá spája tréningy
+        a jedálničky do jedného ekosystému pre tvoj maximálny progres.
+      </p>
+
+      <div class="hero-actions">
+        <div class="cta-primary">
+          <button mat-flat-button color="primary" routerLink="/register">
+            ZAČAŤ TERAZ
+          </button>
+        </div>
+
+        <div class="cta-secondary">
+          <button mat-stroked-button routerLink="/jedalnicek">
+            Jedálničky
+          </button>
+          <button mat-stroked-button routerLink="/training">
+            Tréningy
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-stats-container">
+        <div class="stat-item">
+          <span class="stat-value">10K+</span>
+          <span class="stat-label">Používateľov</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">500+</span>
+          <span class="stat-label">Plánov</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">98%</span>
+          <span class="stat-label">Spokojnosť</span>
+        </div>
+      </div>
     </div>
 
-    <div class="feature-buttons">
-      <button mat-stroked-button routerLink="/jedalnicek">
-        Jedálničky na mieru
-      </button>
-
-      <button mat-stroked-button routerLink="/training">
-        Tréningové plány
-      </button>
+    <div class="hero-image-box">
+      <img src="assets/fotka1.png" alt="Fitness Progres" class="hero-img">
+      <div class="image-overlay-glow"></div>
     </div>
-
-    <div class="stats">
-      <div class="stat">
-        <span>10K+</span>
-        <p>Používateľov</p>
-      </div>
-      <div class="stat">
-        <span>500+</span>
-        <p>Plánov</p>
-      </div>
-      <div class="stat">
-        <span>98%</span>
-        <p>Spokojnosť</p>
-      </div>
-    </div>
-  
   </div>
 </section>

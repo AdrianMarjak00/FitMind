@@ -1,26 +1,65 @@
-.mat-toolbar {
-    background: #0b0b0b;
-    border-bottom: 1px solid #1e1e1e;
+.main-header {
+  height: 70px !important;
+  background: rgba(5, 5, 5, 0.85) !important; // Priehľadná čierna
+  backdrop-filter: blur(12px); // Rozmazanie pod navigáciou
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 !important;
+
+  .header-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
 }
 
 .logo {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #3ddc84;
-    cursor: pointer;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  cursor: pointer;
+  span { color: #3ddc84; }
 }
 
-a.mat-button,
-a.mat-flat-button {
-    color: #eaeaea;
+.spacer { flex: 1 1 auto; }
 
-    mat-icon {
-        margin-right: 4px;
+.desktop-nav {
+  margin: 0 20px;
+  display: flex;
+  gap: 10px;
+
+  @media (max-width: 992px) {
+    display: none; // Skryje menu na tabletoch/mobiloch
+  }
+
+  a {
+    font-weight: 500;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+    
+    &:hover, &.active-link {
+      opacity: 1;
+      color: #3ddc84;
     }
+  }
 }
 
-a.mat-flat-button {
-    background: #3ddc84;
-    color: #000;
-    font-weight: 600;
+.auth-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+
+  .hide-mobile {
+    @media (max-width: 600px) { display: none; }
+  }
+}
+
+.mobile-menu-btn {
+  display: none;
+  @media (max-width: 992px) { display: block; }
 }
