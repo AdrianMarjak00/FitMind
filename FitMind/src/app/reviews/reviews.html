@@ -1,20 +1,36 @@
-<section class="reviews">
-  <h1>Recenzie našich klientov</h1>
+<section class="reviews-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="badge">KOMUNITA</span>
+      <h1>Recenzie našich klientov</h1>
+      <p class="subtitle">Skutočné výsledky od skutočných ľudí, ktorí zmenili svoj život.</p>
+    </div>
   
-  @for (review of reviews | async; track review.author) {
-    <mat-card class="review-card">
-      <div class="review-header">
-        <h3>{{ review.author }}</h3>
-        <span class="rating">⭐ {{ review.rating }}/5</span>
-      </div>
-
-      <p class="review-text">{{ review.text }}</p>
-
-      <span class="review-date">
-        {{ review.date.toDate() | date:'short' }}
-      </span>
-    </mat-card>
-  } @empty {
-    <p class="no-reviews">Zatiaľ nie sú žiadne recenzie.</p>
-  }
+    <div class="reviews-grid">
+      @for (review of reviews | async; track review.author) {
+        <mat-card class="review-card">
+          <div class="card-glow"></div>
+          <mat-card-content>
+            <div class="review-header">
+              <div class="author-info">
+                <h3>{{ review.author }}</h3>
+                <span class="review-date">{{ review.date.toDate() | date:'mediumDate' }}</span>
+              </div>
+              <div class="rating-badge">
+                <mat-icon>star</mat-icon>
+                <span>{{ review.rating }}</span>
+              </div>
+            </div>
+    
+            <p class="review-text">"{{ review.text }}"</p>
+          </mat-card-content>
+        </mat-card>
+      } @empty {
+        <div class="no-reviews">
+          <mat-icon>sentiment_dissatisfied</mat-icon>
+          <p>Zatiaľ nie sú žiadne recenzie. Buď prvý!</p>
+        </div>
+      }
+    </div>
+  </div>
 </section>

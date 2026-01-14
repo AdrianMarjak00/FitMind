@@ -1,63 +1,35 @@
-<mat-toolbar color="primary">
-    <span class="logo" routerLink="/">FitMind</span>
+<mat-toolbar class="main-header">
+  <div class="header-container">
+    <span class="logo" routerLink="/">Fit<span>Mind</span></span>
 
     <span class="spacer"></span>
-    
-    <a mat-button routerLink="/">
-        <mat-icon>home</mat-icon>
-        Domov
-    </a>
 
-    <a mat-button routerLink="/training">
-        <mat-icon>fitness_center</mat-icon>
-        Tréningy
-    </a>
+    <nav class="desktop-nav">
+      <a mat-button routerLink="/" routerLinkActive="active-link">Domov</a>
+      <a mat-button routerLink="/training">Tréningy</a>
+      <a mat-button routerLink="/jedalnicek">Jedálničky</a>
 
-    <a mat-button routerLink="/jedalnicek">
-        <mat-icon>restaurant_menu</mat-icon>
-        Jedálničky
-    </a>
+      @if (currentUser()) {
+        <a mat-button routerLink="/dashboard">Dashboard</a>
+        <a mat-button routerLink="/ai-chat">AI Coach</a>
+      }
 
-    @if (currentUser()) {
-        <a mat-button routerLink="/dashboard">
-            <mat-icon>dashboard</mat-icon>
-            Dashboard
-        </a>
-        
-        <a mat-button routerLink="/ai-chat">
-            <mat-icon>smart_toy</mat-icon>
-            AI Coach
-        </a>
-        
-        <a mat-button routerLink="/piechart">
-            <mat-icon>pie_chart</mat-icon>
-            Analýza
-        </a>
-    }
+      <a mat-button routerLink="/review">Recenzie</a>
+    </nav>
 
-    <a mat-button routerLink="/review">
-        <mat-icon>rate_review</mat-icon> 
-        Recenzie
-    </a>
-    
-    <a mat-button routerLink="/contact">
-        <mat-icon>email</mat-icon>
-        Kontakt
-    </a>
-
-    @if (!currentUser()) {
-        <a mat-button routerLink="/login">
-            <mat-icon>login</mat-icon> 
-            Prihlás sa
-        </a>
-        <a mat-flat-button color="accent" routerLink="/register">
-            <mat-icon>person_add</mat-icon> 
-            Registrácia
-        </a>
-    } @else {
-        <button mat-button (click)="logout()">
-            <mat-icon>logout</mat-icon>
-            Odhlásiť sa
+    <div class="auth-buttons">
+      @if (!currentUser()) {
+        <a mat-button routerLink="/login" class="hide-mobile">Prihlásiť sa</a>
+        <a mat-flat-button color="primary" routerLink="/register">Registrácia</a>
+      } @else {
+        <button mat-icon-button (click)="logout()" matTooltip="Odhlásiť sa">
+          <mat-icon>logout</mat-icon>
         </button>
-    }
+      }
+      
+      <button mat-icon-button class="mobile-menu-btn">
+        <mat-icon>menu</mat-icon>
+      </button>
+    </div>
+  </div>
 </mat-toolbar>
