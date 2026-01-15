@@ -118,6 +118,10 @@ async def health():
         "firebase": firebase.is_connected()
     }
 
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "service": "FitMind Backend"}
+
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     """

@@ -1,5 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8000/api',
-  backendUrl: 'http://localhost:8000'
+apiUrl: 'https://fitmind-backend-production.up.railway.app',
 };
