@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-home',
@@ -12,14 +13,18 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./home.scss'],
   imports: [
     CommonModule,
+    RouterModule,
     MatButtonModule,
     MatCardModule,
-    MatIconModule,
-    RouterModule
+    MatIconModule
   ]
 })
-export class HomeComponent implements OnInit {
-  ngOnInit(): void {
-    // Ak potrebuješ inicializačný kód, pridaj ho sem.
-  }
+export class HomeComponent {
+  /** Aktuálny rok pre footer */
+  currentYear: number = new Date().getFullYear();
+
+  constructor() {}
+
+  // ⬇️ pripravené na budúce rozšírenia
+  // napr. scroll animácie, A/B testy, feature flags, analytics…
 }
