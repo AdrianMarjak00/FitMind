@@ -53,11 +53,10 @@ is_production = os.getenv("ENV", "production") == "production"
 # 1. CORS musí byť spravidla PRVÝ, aby prehliadač dostal povolenie skôr, než narazí na iné limity
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Povoľuje prístup z Firebase
+    allow_origins=["https://fitmind-dba6a.web.app", "http://localhost:4200"], # Skús radšej konkrétne domény
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
 
 # 2. Ostatné bezpečnostné prvky (SecurityHeadersMiddleware dočasne zakomentuj, ak to stále nepôjde)
