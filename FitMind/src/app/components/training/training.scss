@@ -1,0 +1,170 @@
+// 1. DEFINÍCIA PREMENNÝCH (Musia byť na začiatku súboru)
+$primary: #3ddc84;
+$bg-dark: #050505;
+$surface: rgba(255, 255, 255, 0.04);
+$gold: #ffd700;
+
+// 2. GLOBÁLNE ŠTÝLY SEKCIE
+.training-page {
+  background-color: $bg-dark;
+  min-height: 100vh;
+  padding: 80px 0;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+.hero-glow {
+  position: absolute;
+  top: -100px; left: 50%; transform: translateX(-50%);
+  width: 120%; height: 500px;
+  background: radial-gradient(circle, rgba($primary, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 60px;
+  position: relative;
+  z-index: 1;
+
+  .main-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba($primary, 0.1);
+    padding: 10px 24px;
+    border-radius: 100px;
+    border: 1px solid rgba($primary, 0.2);
+    margin-bottom: 20px;
+    
+    mat-icon { color: $primary; font-size: 20px; width: 20px; height: 20px; }
+    span {
+      color: $primary;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+    }
+  }
+
+  .title-lg {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 900;
+    color: white;
+    margin: 10px 0 20px;
+    letter-spacing: -1px;
+    span { color: $primary; text-shadow: 0 0 20px rgba($primary, 0.4); }
+  }
+
+  .subtitle {
+    max-width: 600px;
+    margin: 0 auto;
+    color: #aaa;
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+}
+
+// 3. GRID A KARTY
+.training-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  align-items: stretch;
+}
+
+.training-card {
+  background: $surface !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 28px !important;
+  backdrop-filter: blur(12px);
+  padding: 24px;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    transform: translateY(-12px);
+    border-color: rgba($primary, 0.5) !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+  }
+
+  &.highlight-card {
+    border: 1px solid rgba($primary, 0.4) !important;
+    background: rgba($primary, 0.02) !important;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    @media (min-width: 992px) { transform: scale(1.05); }
+    &:hover { transform: scale(1.07) translateY(-12px); }
+  }
+
+  .card-tag {
+    position: absolute;
+    top: 20px; right: 20px;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50px;
+    &.gold { background: rgba($gold, 0.2); color: $gold; }
+  }
+
+  .icon-wrapper {
+    background: rgba($primary, 0.1);
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    mat-icon { color: $primary; }
+  }
+
+  mat-card-title { color: white !important; font-weight: 800 !important; font-size: 1.5rem !important; }
+  mat-card-subtitle { color: $primary !important; letter-spacing: 1px; }
+}
+
+// 4. CENY A VÝHODY
+.price-tag {
+  text-align: center;
+  margin: 30px 0;
+  .amount { font-size: 3.5rem; font-weight: 900; color: white; }
+  .currency { font-size: 1.5rem; color: white; margin-right: 5px; }
+  .period { color: #666; font-size: 0.8rem; }
+  
+  &.featured .amount {
+    color: $primary;
+    text-shadow: 0 0 15px rgba($primary, 0.3);
+  }
+}
+
+.benefits-list {
+  margin: 20px 0;
+  flex-grow: 1;
+  .benefit-item {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+    color: #bbb;
+    font-size: 0.9rem;
+    mat-icon { color: $primary; font-size: 18px; width: 18px; height: 18px; }
+    &.disabled { color: #444; mat-icon { color: #333; } span { text-decoration: line-through; } }
+  }
+}
+
+// 5. TLAČIDLÁ
+.buy-btn {
+  width: 100%;
+  padding: 12px !important;
+  border-radius: 14px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+
+  &.primary {
+    background: $primary !important;
+    color: black !important;
+  }
+}
