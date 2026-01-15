@@ -9,14 +9,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Angular
+      - name: Install Dependencies
         working-directory: ./FitMind
-        # Namiesto npx použijeme priamo npm run build
-        run: npm run build
+        # Toto stiahne všetky knižnice potrebné pre build
+        run: npm install
 
       - name: Build Angular
         working-directory: ./FitMind
-        # Použijeme npx, aby robot našiel Angular
+        # Spustíme build cez npx, aby sme mali istotu, že nájde ng
         run: npx ng build --configuration production
 
       - name: Deploy to Firebase
