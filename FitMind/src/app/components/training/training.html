@@ -1,36 +1,153 @@
-<section class="plans">
-  <h1>Tréningové plány</h1>
+<section class="training-page">
+  <div class="hero-glow"></div>
+  
+  <div class="container">
+    <header class="page-header">
+      <div class="main-badge">
+        <mat-icon>payments</mat-icon>
+        <span>INVESTÍCIA DO TVOJHO ZDRAVIA</span>
+      </div>
+      
+      <h1 class="title-lg">Vyber si svoj <span>program</span></h1>
+      <p class="subtitle">
+        Získaj profesionálne zostavený tréningový systém, ktorý ťa dovedie k výsledkom rýchlejšie a bez zbytočných chýb.
+      </p>
+    </header>
 
-  <div class="plan-card">
-    <h2>Začiatočník – Full Body</h2>
-    <ul>
-      <li>Drepy – 3x12</li>
-      <li>Kľuky – 3x10</li>
-      <li>Príťahy v predklone – 3x12</li>
-      <li>Plank – 3x30s</li>
-      <li>Výpady – 3x10</li>
-    </ul>
-  </div>
+    <div class="training-grid">
+      
+      <mat-card class="training-card">
+        <div class="card-tag">BASIC</div>
+        <mat-card-header>
+          <div mat-card-avatar class="icon-wrapper">
+            <mat-icon>bolt</mat-icon>
+          </div>
+          <mat-card-title>Štartovací plán</mat-card-title>
+          <mat-card-subtitle>ZÁKLADY TRANSFORMÁCIE</mat-card-subtitle>
+        </mat-card-header>
 
-  <div class="plan-card">
-    <h2>Stredne pokročilý – Push / Pull</h2>
-    <ul>
-      <li>Bench press – 4x8</li>
-      <li>Tlaky nad hlavu – 3x10</li>
-      <li>Zhyby – 4x max</li>
-      <li>Mŕtvy ťah – 4x6</li>
-      <li>Bicepsový zdvih – 3x12</li>
-    </ul>
-  </div>
+        <mat-card-content>
+          <div class="price-tag">
+            <span class="currency">€</span>
+            <span class="amount">29</span>
+            <span class="period">/ jednorazovo</span>
+          </div>
 
-  <div class="plan-card">
-    <h2>Spalovanie tuku</h2>
-    <ul>
-      <li>Burpees – 4x15</li>
-      <li>Jump squats – 3x20</li>
-      <li>Mountain climbers – 3x30s</li>
-      <li>Plank – 3x45s</li>
-      <li>Beh / bicykel – 20 min</li>
-    </ul>
+          <div class="benefits-list">
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Tréningový plán na 4 týždne</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Videonávody ku cvikom</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Základné tipy k regenerácii</span>
+            </div>
+            <div class="benefit-item disabled">
+              <mat-icon>cancel</mat-icon>
+              <span>Konzultácie s trénerom</span>
+            </div>
+          </div>
+        </mat-card-content>
+
+        <mat-card-actions>
+          <button mat-raised-button class="buy-btn" (click)="buyPlan('basic')">
+            KÚPIŤ PLÁN
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+      <mat-card class="training-card highlight-card">
+        <div class="card-tag gold">MOST POPULAR</div>
+        <mat-card-header>
+          <div mat-card-avatar class="icon-wrapper">
+            <mat-icon>stars</mat-icon>
+          </div>
+          <mat-card-title>Progresívny Split</mat-card-title>
+          <mat-card-subtitle>MAXIMÁLNE VÝSLEDKY</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="price-tag featured">
+            <span class="currency">€</span>
+            <span class="amount">59</span>
+            <span class="period">/ jednorazovo</span>
+          </div>
+
+          <div class="benefits-list">
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Tréningový plán na 12 týždňov</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>E-book: Technika a dýchanie</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Prístup do súkromnej FB skupiny</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Update plánu po 6 týždňoch</span>
+            </div>
+          </div>
+        </mat-card-content>
+
+        <mat-card-actions>
+          <button mat-raised-button class="buy-btn primary" (click)="buyPlan('pro')">
+            KÚPIŤ PLÁN
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+      <mat-card class="training-card">
+        <div class="card-tag">PREMIUM</div>
+        <mat-card-header>
+          <div mat-card-avatar class="icon-wrapper">
+            <mat-icon>workspace_premium</mat-icon>
+          </div>
+          <mat-card-title>Individuálny Koučing</mat-card-title>
+          <mat-card-subtitle>PRÍSTUP 1 NA 1</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="price-tag">
+            <span class="currency">€</span>
+            <span class="amount">149</span>
+            <span class="period">/ mesačne</span>
+          </div>
+
+          <div class="benefits-list">
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Plán na mieru tvojim cieľom</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Týždenný check-in a analýza</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>WhatsApp podpora 24/7</span>
+            </div>
+            <div class="benefit-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>Úprava stravy v cene</span>
+            </div>
+          </div>
+        </mat-card-content>
+
+        <mat-card-actions>
+          <button mat-raised-button class="buy-btn" (click)="buyPlan('premium')">
+            KÚPIŤ PLÁN
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+    </div>
   </div>
 </section>
