@@ -1,10 +1,15 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, authState, User } from '@angular/fire/auth';
-import { from, map, Observable } from 'rxjs';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
+import { from, map, Observable, switchMap, of, EMPTY } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-constructor(private auth: Auth) {}
+  private auth = inject(Auth);
+  private firestore = inject(Firestore);
+  private currentUser$ = authState(this.auth);
+
   register(email: string, password: string): Observable<User> {
     return from(createUserWithEmailAndPassword(this.auth, email, password)).pipe(
       map(res => res.user)
@@ -22,14 +27,30 @@ constructor(private auth: Auth) {}
   }
 
   getCurrentUser(): Observable<User | null> {
-    return authState(this.auth);
+    return this.currentUser$;
   }
 
   isAdmin(): Observable<boolean> {
-    return authState(this.auth).pipe(
-      map(user => {
-        if (!user) return false;          // nie je prihlásený
-        return user.email === 'adrianmarjak2156165@gmail.com'; // iba tento email je admin
+    return this.currentUser$.pipe(
+      switchMap(user => {
+        if (!user || !user.uid) {
+          return of(false);
+        }
+        
+        // Kontrola v Firestore kolekcii 'admins'
+        const adminRef = doc(this.firestore, 'admins', user.uid);
+        return from(getDoc(adminRef)).pipe(
+          map(adminDoc => {
+            if (adminDoc.exists()) {
+              const adminData = adminDoc.data();
+              return adminData['isAdmin'] === true;
+            }
+            return false;
+          }),
+          catchError(() => {
+            return of(false);
+          })
+        );
       })
     );
   }

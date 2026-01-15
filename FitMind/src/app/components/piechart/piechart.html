@@ -1,0 +1,13 @@
+<div class="chart-container">
+  <h1>📊 Štatistiky používateľov</h1>
+  
+  @if (loading) {
+    <p>Načítavam dáta...</p>
+  } @else {
+    <div
+      echarts
+      [options]="chartOptions"
+      class="echart"
+    ></div>
+  }
+</div>

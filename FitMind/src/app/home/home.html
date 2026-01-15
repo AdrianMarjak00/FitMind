@@ -1,47 +1,122 @@
 <section class="hero">
-  <div class="hero-content">
-    <span class="badge">TRANSFORMUJ SVOJ ŽIVOT</span>
+  <div class="hero-glow-1"></div>
+  <div class="hero-glow-2"></div>
 
-    <h1>
-      Fit<span>Mind</span>
-    </h1>
+  <div class="container hero-wrapper">
+    <div class="hero-content">
+      <span class="badge">LIMITS ARE ONLY ILLUSIONS</span>
+      <h1 class="hero-title">Fit<span>Mind</span></h1>
+      <h2 class="hero-subtitle">Posuň svoje hranice za hranicu možného.</h2>
+      <p class="hero-description">
+        Nehľadaj výhovorky, hľadaj výsledky. FitMind ti prináša inteligentné tréningové 
+        systémy a výživu novej generácie v jednej aplikácii.
+      </p>
 
-    <h2>Tvoje telo, tvoja myseľ, tvoj progres</h2>
+      <div class="hero-actions">
+        <button mat-flat-button color="primary" routerLink="/register" class="btn-main">
+          VYTVORIŤ ÚČET ZDARMA
+        </button>
+      </div>
 
-    <p class="subtitle">
-      Moderná fitness platforma, ktorá spája tréningy
-      a jedálničky do jedného ekosystému
-    </p>
-
-    <div class="cta-buttons">
-      <button mat-flat-button color="primary" routerLink="/register">
-        Začať
-      </button>
+      <div class="hero-stats-container">
+        <div class="stat-item">
+          <span class="stat-value">10K+</span>
+          <span class="stat-label">Komunita</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">500+</span>
+          <span class="stat-label">Programov</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">98%</span>
+          <span class="stat-label">Progress</span>
+        </div>
+      </div>
     </div>
 
-    <div class="feature-buttons">
-      <button mat-stroked-button routerLink="/jedalnicek">
-        Jedálničky na mieru
-      </button>
+    <div class="hero-image-box">
+      <img src="/assets/fotka1.png" alt="Fitness Progres" class="hero-img" loading="eager">
+      <div class="image-overlay-glow"></div>
+    </div>
+  </div>
+</section>
 
-      <button mat-stroked-button routerLink="/training">
-        Tréningové plány
-      </button>
+<section class="navigation-section">
+  <div class="container">
+    <div class="section-intro">
+      <h2 class="title-lg">Všetko, čo potrebuješ <span>na jednom mieste</span></h2>
+      <p class="subtitle-md">Klikni na oblasť, ktorú chceš dnes vylepšiť.</p>
     </div>
 
-    <div class="stats">
-      <div class="stat">
-        <span>10K+</span>
-        <p>Používateľov</p>
+    <div class="nav-cards-grid">
+      <div class="nav-card card-training" routerLink="/training">
+        <div class="card-glass-bg"></div>
+        <div class="card-content">
+          <div class="icon-box"><mat-icon>fitness_center</mat-icon></div>
+          <h3>Tréningové Plány</h3>
+          <p>Od spaľovania tukov až po nárast sily. Plány na mieru pre tvoj progres.</p>
+          <span class="card-link">Zobraziť plány <mat-icon>north_east</mat-icon></span>
+        </div>
       </div>
-      <div class="stat">
-        <span>500+</span>
-        <p>Plánov</p>
+
+      <div class="nav-card card-diet" routerLink="/jedalnicek">
+        <div class="card-glass-bg"></div>
+        <div class="card-content">
+          <div class="icon-box"><mat-icon>restaurant</mat-icon></div>
+          <h3>Inteligentná Strava</h3>
+          <p>Veda v každom súste. Optimalizuj svoj výkon správnym palivom.</p>
+          <span class="card-link">Zostaviť menu <mat-icon>north_east</mat-icon></span>
+        </div>
       </div>
-      <div class="stat">
-        <span>98%</span>
-        <p>Spokojnosť</p>
+
+      <div class="nav-card card-reviews" routerLink="/review">
+        <div class="card-glass-bg"></div>
+        <div class="card-content">
+          <div class="icon-box"><mat-icon>groups</mat-icon></div>
+          <h3>Príbehy Úspechu</h3>
+          <p>Inšpiruj sa výsledkami ľudí, ktorí sa rozhodli zmeniť svoj život s nami.</p>
+          <span class="card-link">Recenzie <mat-icon>north_east</mat-icon></span>
+        </div>
       </div>
     </div>
   </div>
 </section>
+<footer class="main-footer">
+  <div class="container footer-container">
+
+    <!-- Left -->
+    <div class="footer-brand">
+      <span class="footer-logo">Fit<span>Mind</span></span>
+      <p class="footer-text">
+        Inteligentná fitness platforma novej generácie.
+      </p>
+    </div>
+
+    <!-- Center -->
+    <div class="footer-payments">
+      <span class="payment-label">Platby čoskoro</span>
+      <div class="payment-icons">
+        <mat-icon>credit_card</mat-icon>
+        <mat-icon>payments</mat-icon>
+        <mat-icon>account_balance_wallet</mat-icon>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="footer-socials">
+      <a href="#" aria-label="Facebook">
+        <mat-icon svgIcon="facebook"></mat-icon>
+      </a>
+      <a href="#" aria-label="Instagram">
+        <mat-icon svgIcon="instagram"></mat-icon>
+      </a>
+    </div>
+
+  </div>
+
+  <div class="footer-bottom">
+    © {{ currentYear }} FitMind. Všetky práva vyhradené.
+  </div>
+</footer>

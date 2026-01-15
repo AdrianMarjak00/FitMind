@@ -1,9 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../services/auth.service';
+import { User } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-header',
@@ -18,10 +20,31 @@ import { CommonModule } from '@angular/common';
   templateUrl: './header.html',
   styleUrl: './header.scss'
 })
-export class Header {
-  isLoggedIn = signal(false);
+export class Header implements OnInit {
+  currentUser = signal<User | null>(null);
+  isMobileMenuOpen = signal<boolean>(false);
+
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  ngOnInit(): void {
+    this.authService.getCurrentUser().subscribe(user => {
+      this.currentUser.set(user);
+    });
+  }
+
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen.update(state => !state);
+  }
 
   logout(): void {
-    this.isLoggedIn.set(false);
+    this.authService.logout().subscribe({
+      next: () => {
+        this.currentUser.set(null);
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }

@@ -1,26 +1,142 @@
-.mat-toolbar {
-  background: #0b0b0b;
-  border-bottom: 1px solid #1e1e1e;
+.main-header {
+  height: 72px !important;
+  background: rgba(5, 5, 5, 0.85) !important;
+  backdrop-filter: blur(14px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.logo {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #3ddc84;
+.header-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 22px;
+}
+
+/* ---------- LOGO ---------- */
+
+.logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
-}
+  position: relative;
 
-a.mat-button,
-a.mat-flat-button {
-  color: #eaeaea;
-
-  mat-icon {
-    margin-right: 4px;
+  &:hover .logo-dot {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-a.mat-flat-button {
+.logo {
+  font-size: 1.65rem;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  color: #ffffff;
+
+  span {
+    color: #3ddc84;
+  }
+}
+
+.logo-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: #3ddc84;
-  color: #000;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.25s ease;
+}
+
+/* ---------- NAV ---------- */
+
+.desktop-nav {
+  display: flex;
+  gap: 6px;
+  margin-right: 18px;
+
+  @media (max-width: 992px) {
+    display: none;
+  }
+
+  a {
+    font-weight: 500;
+    opacity: 0.75;
+    border-radius: 12px;
+    transition: all 0.25s ease;
+
+    &:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active-link {
+      opacity: 1;
+      color: #3ddc84;
+      background: rgba(61, 220, 132, 0.12);
+    }
+  }
+}
+
+/* ---------- ACTIONS ---------- */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ghost-btn {
+  opacity: 0.8;
+  transition: opacity 0.25s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.cta-btn {
+  height: 40px;
+  border-radius: 14px;
   font-weight: 600;
+  padding: 0 18px;
+}
+
+.logout-btn {
+  color: #ffffff;
+  opacity: 0.8;
+  transition: all 0.25s ease;
+
+  &:hover {
+    opacity: 1;
+    color: #ff6b6b;
+  }
+}
+
+/* ---------- MOBILE ---------- */
+
+.hide-mobile {
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
+.mobile-menu-btn {
+  display: none;
+
+  @media (max-width: 992px) {
+    display: inline-flex;
+  }
+}
+
+/* ---------- UTILS ---------- */
+
+.spacer {
+  flex: 1 1 auto;
 }
