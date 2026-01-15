@@ -1,12 +1,16 @@
 {
   "hosting": {
-    "public": "dist/FitMind/browser",
+    "public": "dist/fit-mind/browser",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/api/**",
+        "destination": "https://fitmind-production-21d5.up.railway.app/api/**"
+      },
       {
         "source": "**",
         "destination": "/index.html"
