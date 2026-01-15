@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+
+# Firebase - all service account files
+firebase-service-account*.json
+*firebase-adminsdk*.json
+*service-account*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

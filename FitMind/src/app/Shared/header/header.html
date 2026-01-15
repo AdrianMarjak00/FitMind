@@ -1,40 +1,46 @@
-<mat-toolbar color="primary">
-    <span class="logo" routerLink="/">FitMind</span>
+<mat-toolbar class="main-header">
+  <div class="header-container">
+    <div class="logo-wrapper" routerLink="/">
+      <div class="logo-icon">
+        <mat-icon>fitness_center</mat-icon>
+      </div>
+      <span class="logo">Fit<span>Mind</span></span>
+    </div>
 
     <span class="spacer"></span>
-    
-    <a mat-button routerLink="/">
-        <mat-icon>home</mat-icon>
+
+    <nav class="desktop-nav">
+      <a mat-button routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}">
         Domov
-    </a>
-
-    <a mat-button routerLink="/piechart">
-        <mat-icon>pie_chart</mat-icon>
-        Analýza
-    </a>
-
-    <a mat-button routerLink="/review">
-        <mat-icon>rate_review</mat-icon> 
-        Recenzie
-    </a>
-    
-    <a mat-button routerLink="/contact">
-        <mat-icon>email</mat-icon>
-        Kontakt
-    </a>
-
-       
-    <ng-container *ngIf="!isLoggedIn">
-        <a mat-button routerLink="/login">
-            <mat-icon>login</mat-icon> 
-            Prihlás sa
+      </a>
+      <a mat-button routerLink="/jedalnicek" routerLinkActive="active-link">
+        Jedálničky
+      </a>
+      <a mat-button routerLink="/training" routerLinkActive="active-link">
+        Tréningy
+      </a>
+      @if (currentUser()) {
+        <a mat-button routerLink="/dashboard" routerLinkActive="active-link">
+          Dashboard
         </a>
-        <a mat-flat-button color="accent" routerLink="/register">
-            <mat-icon>person_add</mat-icon> 
-            Registrácia
+        <a mat-button routerLink="/ai-chat" routerLinkActive="active-link">
+          AI Chat
         </a>
+      }
+    </nav>
 
-        
-    </ng-container>
-    
+    <div class="actions">
+      @if (!currentUser()) {
+        <a mat-button routerLink="/login" class="ghost-btn hide-tablet">Prihlásiť sa</a>
+        <a mat-flat-button color="primary" routerLink="/register" class="cta-btn">Registrácia</a>
+      } @else {
+        <button mat-icon-button class="logout-btn" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+        </button>
+      }
+      <button mat-icon-button class="mobile-menu-btn" (click)="toggleMobileMenu()">
+        <mat-icon>menu</mat-icon>
+      </button>
+    </div>
+  </div>
 </mat-toolbar>

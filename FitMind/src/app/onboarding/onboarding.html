@@ -1,0 +1,102 @@
+<!-- Onboarding Multi-step Form -->
+<div class="onboarding-container">
+  <h1>Nastavte si profil</h1>
+
+  <mat-horizontal-stepper linear #stepper>
+    <!-- Step 1: Personal Info -->
+    <mat-step [stepControl]="personalInfoForm">
+      <ng-template matStepLabel>Osobné údaje</ng-template>
+      <form [formGroup]="personalInfoForm">
+        <mat-form-field appearance="outline">
+          <mat-label>Meno</mat-label>
+          <input matInput formControlName="firstName" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Priezvisko</mat-label>
+          <input matInput formControlName="lastName" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Dátum narodenia</mat-label>
+          <input
+            matInput
+            [matDatepicker]="picker"
+            formControlName="dateOfBirth"
+            [max]="maxDate"
+            [min]="minDate"
+            required
+          >
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Pohlavie</mat-label>
+          <mat-select formControlName="gender" required>
+            @for (gender of genders; track gender) {
+              <mat-option [value]="gender">
+                {{ getGenderLabel(gender) }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="button-row">
+          <button mat-raised-button color="primary" matStepperNext>
+            Ďalej
+          </button>
+        </div>
+      </form>
+    </mat-step>
+
+    <!-- Step 2: Physical Parameters -->
+    <mat-step [stepControl]="physicalParamsForm">
+      <ng-template matStepLabel>Fyzické parametre</ng-template>
+      <form [formGroup]="physicalParamsForm">
+        <mat-form-field appearance="outline">
+          <mat-label>Výška (cm)</mat-label>
+          <input matInput type="number" formControlName="height" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Súčasná váha (kg)</mat-label>
+          <input matInput type="number" formControlName="currentWeight" required>
+        </mat-form-field>
+
+        @if (calculateBMI()) {
+          <p>BMI: {{ calculateBMI() }}</p>
+        }
+
+        <div class="button-row">
+          <button mat-button matStepperPrevious>Späť</button>
+          <button mat-raised-button color="primary" matStepperNext>
+            Ďalej
+          </button>
+        </div>
+      </form>
+    </mat-step>
+
+    <!-- Step 3: Finalize -->
+    <mat-step>
+      <ng-template matStepLabel>Hotovo</ng-template>
+      <p>Váš profil je pripravený!</p>
+
+      <div class="button-row">
+        <button mat-button matStepperPrevious>Späť</button>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="onComplete()"
+          [disabled]="isSaving"
+        >
+          @if (isSaving) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            Dokončiť
+          }
+        </button>
+      </div>
+    </mat-step>
+  </mat-horizontal-stepper>
+</div>
