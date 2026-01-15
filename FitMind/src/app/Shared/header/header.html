@@ -1,61 +1,41 @@
 <mat-toolbar class="main-header">
   <div class="header-container">
-    <!-- LOGO -->
     <div class="logo-wrapper" routerLink="/">
+      <div class="logo-icon">
+        <mat-icon>fitness_center</mat-icon>
+      </div>
       <span class="logo">Fit<span>Mind</span></span>
-      <span class="logo-dot"></span>
     </div>
 
     <span class="spacer"></span>
 
-    <!-- DESKTOP NAV -->
     <nav class="desktop-nav">
-      <a mat-button routerLink="/" routerLinkActive="active-link">
+      <a mat-button routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}">
         Domov
       </a>
-
+      <a mat-button routerLink="/jedalnicek" routerLinkActive="active-link">
+        Jedálničky
+      </a>
+      <a mat-button routerLink="/training" routerLinkActive="active-link">
+        Tréningy
+      </a>
       @if (currentUser()) {
         <a mat-button routerLink="/dashboard" routerLinkActive="active-link">
           Dashboard
         </a>
-        <a mat-button routerLink="/ai-chat" routerLinkActive="active-link">
-          AI Coach
-        </a>
       }
     </nav>
 
-    <!-- ACTIONS -->
     <div class="actions">
       @if (!currentUser()) {
-        <a
-          mat-button
-          routerLink="/login"
-          class="ghost-btn hide-mobile"
-        >
-          Prihlásiť sa
-        </a>
-
-        <a
-          mat-flat-button
-          color="primary"
-          routerLink="/register"
-          class="cta-btn"
-        >
-          Registrácia
-        </a>
+        <a mat-button routerLink="/login" class="ghost-btn hide-tablet">Prihlásiť sa</a>
+        <a mat-flat-button color="primary" routerLink="/register" class="cta-btn">Registrácia</a>
       } @else {
-        <button
-          mat-icon-button
-          class="logout-btn"
-          matTooltip="Odhlásiť sa"
-          (click)="logout()"
-        >
+        <button mat-icon-button class="logout-btn" (click)="logout()">
           <mat-icon>logout</mat-icon>
         </button>
       }
-
-      <!-- MOBILE MENU -->
-      <button mat-icon-button class="mobile-menu-btn">
+      <button mat-icon-button class="mobile-menu-btn" (click)="toggleMobileMenu()">
         <mat-icon>menu</mat-icon>
       </button>
     </div>
