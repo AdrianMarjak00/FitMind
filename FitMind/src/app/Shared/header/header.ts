@@ -22,6 +22,7 @@ import { User } from '@angular/fire/auth';
 })
 export class Header implements OnInit {
   currentUser = signal<User | null>(null);
+  isMobileMenuOpen = signal<boolean>(false);
 
   constructor(
     private authService: AuthService,
@@ -34,11 +35,15 @@ export class Header implements OnInit {
     });
   }
 
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen.update(state => !state);
+  }
+
   logout(): void {
     this.authService.logout().subscribe({
       next: () => {
         this.currentUser.set(null);
-        this.router.navigate(['/']);
+        this.router.navigate(['/login']);
       }
     });
   }
