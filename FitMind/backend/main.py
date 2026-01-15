@@ -39,6 +39,10 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 async def root():
     return {"message": "✅ FitMind AI Backend s OPENAI beží! 🚀"}
 
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "service": "FitMind Backend"}
+
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     user_id = request.user_id
