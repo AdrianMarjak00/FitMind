@@ -1,9 +1,13 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
-import { Router, RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -14,23 +18,37 @@ import { AuthService } from '../../services/auth.service';
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     MatButtonModule,
     MatInputModule,
-    RouterModule
+    MatIconModule,
+    MatProgressSpinnerModule
   ]
 })
 export class LoginComponent {
   email = '';
   password = '';
   errorMsg = '';
+  isLoading = false;
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(
+    private auth: AuthService,
+    private router: Router
+  ) {}
 
-  login() {
+  login(): void {
     this.errorMsg = '';
+    this.isLoading = true;
+
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigate(['/']),
-      error: () => (this.errorMsg = 'Neplatné prihlasovacie údaje.'),
+      next: () => {
+        this.isLoading = false;
+        this.router.navigate(['/dashboard']);
+      },
+      error: () => {
+        this.isLoading = false;
+        this.errorMsg = 'Nesprávny e-mail alebo heslo.';
+      }
     });
   }
 }
