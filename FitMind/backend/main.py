@@ -14,7 +14,11 @@ app = FastAPI(title="FitMind AI Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=[
+        "http://localhost:4200",
+        "https://fitmind-dba6a.web.app",
+        "https://fitmind-dba6a.firebaseapp.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
