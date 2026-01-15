@@ -1,84 +1,193 @@
 .reviews-section {
-  padding: 100px 20px;
-  background: #050505;
-  
+  padding: clamp(80px, 10vw, 120px) 20px;
+  background: radial-gradient(circle at top, #0f2f1f 0%, #050505 45%);
+
   .container {
     max-width: 1200px;
     margin: 0 auto;
   }
 }
 
+/* ---------- HEADER ---------- */
+
 .section-header {
   text-align: center;
-  margin-bottom: 60px;
+  margin-bottom: 70px;
 
   h1 {
-    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
     font-weight: 900;
-    margin: 15px 0;
+    margin: 14px 0;
     letter-spacing: -1px;
   }
 
   .subtitle {
     color: #aaaaaa;
-    max-width: 500px;
+    max-width: 600px;
     margin: 0 auto;
+    line-height: 1.6;
+
+    span {
+      color: #3ddc84;
+      font-weight: 600;
+    }
   }
 }
+
+.badge {
+  display: inline-block;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3ddc84;
+  border-radius: 999px;
+  background: rgba(61, 220, 132, 0.12);
+}
+
+/* ---------- GRID ---------- */
 
 .reviews-grid {
   display: grid;
-  // Automatické stĺpce: 1 na mobile, 2 na tablete, 3 na PC
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 32px;
+}
 
-  @media (max-width: 400px) {
-    grid-template-columns: 1fr;
+/* ---------- CARD ---------- */
+
+.review-card {
+  position: relative;
+  background: linear-gradient(180deg, #111111, #0b0b0b) !important;
+  border-radius: 26px !important;
+  padding: 28px 26px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.35s ease;
+
+  &:hover {
+    transform: translateY(-10px);
+    border-color: rgba(61, 220, 132, 0.4);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
   }
 }
 
-.review-card {
-  background: #0f0f0f !important;
-  border-radius: 24px !important;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  position: relative;
+/* Jemný glow efekt */
+.card-glow {
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(
+    circle at top left,
+    rgba(61, 220, 132, 0.18),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
 
-  &:hover {
-    transform: translateY(-12px);
-    border-color: rgba(61, 220, 132, 0.4);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  }
+.review-card:hover .card-glow {
+  opacity: 1;
+}
 
-  .review-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
+/* ---------- HEADER V KARTE ---------- */
 
-  .author-info {
-    h3 { margin: 0; font-size: 1.2rem; font-weight: 700; }
-    .review-date { font-size: 0.8rem; color: #666; }
-  }
+.review-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
 
-  .rating-badge {
-    background: rgba(61, 220, 132, 0.1);
-    color: #3ddc84;
-    padding: 6px 12px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3ddc84, #1fa463);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #050505;
+  font-size: 1.1rem;
+}
+
+.author-info {
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
     font-weight: 700;
-    
-    mat-icon { font-size: 18px; width: 18px; height: 18px; }
   }
 
+  .review-date {
+    font-size: 0.75rem;
+    color: #777;
+  }
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(61, 220, 132, 0.15);
+  color: #3ddc84;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* ---------- TEXT ---------- */
+
+.review-text {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #d6d6d6;
+  font-style: italic;
+}
+
+/* ---------- EMPTY STATE ---------- */
+
+.no-reviews {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+
+  mat-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    color: #3ddc84;
+  }
+}
+
+/* ---------- ANIMATION ---------- */
+
+.fade-in {
+  animation: fadeInUp 0.5s ease both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- MOBILE ---------- */
+
+@media (max-width: 480px) {
   .review-text {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    color: #d1d1d1;
-    font-style: italic;
+    font-size: 1rem;
   }
 }

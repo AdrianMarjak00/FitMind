@@ -1,34 +1,47 @@
 <section class="reviews-section">
   <div class="container">
-    <div class="section-header">
+    <header class="section-header fade-in">
       <span class="badge">KOMUNITA</span>
-      <h1>Recenzie našich klientov</h1>
-      <p class="subtitle">Skutočné výsledky od skutočných ľudí, ktorí zmenili svoj život.</p>
-    </div>
-  
+      <h1>Čo hovoria naši členovia</h1>
+      <p class="subtitle">
+        Skutočné príbehy, reálne výsledky a skúsenosti ľudí,
+        ktorí sa rozhodli zmeniť svoj život s <span>FitMind</span>.
+      </p>
+    </header>
+
     <div class="reviews-grid">
       @for (review of reviews | async; track review.author) {
-        <mat-card class="review-card">
+        <mat-card class="review-card fade-in">
           <div class="card-glow"></div>
+
           <mat-card-content>
             <div class="review-header">
+              <div class="avatar">
+                {{ review.author.charAt(0) }}
+              </div>
+
               <div class="author-info">
                 <h3>{{ review.author }}</h3>
-                <span class="review-date">{{ review.date.toDate() | date:'mediumDate' }}</span>
+                <span class="review-date">
+                  {{ review.date.toDate() | date:'mediumDate' }}
+                </span>
               </div>
-              <div class="rating-badge">
+
+              <div class="rating">
                 <mat-icon>star</mat-icon>
                 <span>{{ review.rating }}</span>
               </div>
             </div>
-    
-            <p class="review-text">"{{ review.text }}"</p>
+
+            <p class="review-text">
+              “{{ review.text }}”
+            </p>
           </mat-card-content>
         </mat-card>
       } @empty {
-        <div class="no-reviews">
+        <div class="no-reviews fade-in">
           <mat-icon>sentiment_dissatisfied</mat-icon>
-          <p>Zatiaľ nie sú žiadne recenzie. Buď prvý!</p>
+          <p>Zatiaľ tu nie sú žiadne recenzie. Buď prvý a podeľ sa o svoju skúsenosť!</p>
         </div>
       }
     </div>
