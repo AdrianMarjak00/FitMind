@@ -39,31 +39,31 @@ except ImportError:
 # Načítaj premenné prostredia z .env súboru
 load_dotenv()
 
-# Vytvor FastAPI aplikáciu
 app = FastAPI(
     title="FitMind AI Backend - Personal Coach Edition",
-    docs_url="/docs" if os.getenv("ENV") == "development" else None,  # Disable docs in production
+    docs_url="/docs" if os.getenv("ENV") == "development" else None,
     redoc_url="/redoc" if os.getenv("ENV") == "development" else None
 )
 
 # Is production?
 is_production = os.getenv("ENV", "production") == "production"
 
-# Security Middleware
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
-app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)  # 10 MB
+# --- MIDDLEWARE SEKCOA ---
 
-# CORS Configuration
-allowed_origins = ["*"]
-
+# 1. CORS musí byť spravidla PRVÝ, aby prehliadač dostal povolenie skôr, než narazí na iné limity
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Toto je kľúčové - povolí to prístup z Firebase
+    allow_origins=["*"],  # Povoľuje prístup z Firebase
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
+
+# 2. Ostatné bezpečnostné prvky (SecurityHeadersMiddleware dočasne zakomentuj, ak to stále nepôjde)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
+app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)  # 10 MB
 # Inicializuj služby (Firebase, AI, Stats, Coach)
 firebase = FirebaseService()
 ai_service = AIService()
