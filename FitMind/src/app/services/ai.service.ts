@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -13,7 +14,7 @@ export interface ChatMessage {
   providedIn: 'root'
 })
 export class AiService {
-  private apiUrl = 'http://localhost:8000/api/chat';
+  private apiUrl = `${environment.apiUrl}/chat`;
   private messagesSubject = new BehaviorSubject<ChatMessage[]>([]);
   public messages$ = this.messagesSubject.asObservable();
 
