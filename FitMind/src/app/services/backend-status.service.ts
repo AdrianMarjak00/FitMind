@@ -7,11 +7,11 @@ import { catchError, map } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class BackendStatusService {
-private backendUrl = 'https://fitmind-production-21d5.up.railway.app';
-  constructor(private http: HttpClient) {}
+  private backendUrl = 'https://fitmind-production-21d5.up.railway.app/api';
+  constructor(private http: HttpClient) { }
 
   checkBackendStatus(): Observable<boolean> {
-    return this.http.get<any>(`${this.backendUrl}/`, { 
+    return this.http.get<any>(`${this.backendUrl}/`, {
       observe: 'response',
       responseType: 'json' as 'json'
     }).pipe(

@@ -55,20 +55,14 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)  # 10 MB
 
 # CORS Configuration
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:4200")
-allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
-
-# Validate CORS configuration
-if is_production and "*" in allowed_origins:
-    raise ValueError("Wildcard CORS origins not allowed in production!")
+allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 # Inicializuj služby (Firebase, AI, Stats, Coach)
