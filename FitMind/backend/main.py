@@ -59,12 +59,11 @@ allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],  # Toto je kľúčové - povolí to prístup z Firebase
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # Inicializuj služby (Firebase, AI, Stats, Coach)
 firebase = FirebaseService()
 ai_service = AIService()
