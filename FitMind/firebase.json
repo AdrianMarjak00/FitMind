@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "FitMind/dist/fit-mind",
+"public": "dist/fit-mind/browser",
     "ignore": [
       "firebase.json",
       "**/.*",
