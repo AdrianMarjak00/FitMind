@@ -1,21 +1,33 @@
 <section class="auth">
   <div class="register-container">
-    <h1>Vytvor si účet</h1>
-    <p class="subtitle">Začni svoju fitness cestu s FitMind</p>
+    <div class="header-section">
+      <h1>Vytvor si účet</h1>
+      <p class="subtitle">Začni svoju fitness cestu s <span>FitMind</span></p>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-line">
+        <div class="progress-fill" [style.width.%]="(currentStep / 3) * 100"></div>
+      </div>
+      <div class="progress-steps">
+        <span class="step-dot" [class.active]="currentStep >= 1">1</span>
+        <span class="step-dot" [class.active]="currentStep >= 2">2</span>
+        <span class="step-dot" [class.active]="currentStep >= 3">3</span>
+      </div>
+    </div>
 
     <form (ngSubmit)="register()" class="register-form">
-      <!-- Krok 1: Základné údaje -->
       @if (currentStep === 1) {
-        <div class="form-section">
-          <h3>📋 Základné údaje</h3>
+        <div class="form-section fade-in">
+          <h3><mat-icon>person</mat-icon> Základné údaje</h3>
           
           <div class="form-row">
-            <mat-form-field appearance="outline" class="half-width">
+            <mat-form-field appearance="outline">
               <mat-label>Meno</mat-label>
               <input matInput [(ngModel)]="profile.firstName" name="firstName" required />
             </mat-form-field>
 
-            <mat-form-field appearance="outline" class="half-width">
+            <mat-form-field appearance="outline">
               <mat-label>Priezvisko</mat-label>
               <input matInput [(ngModel)]="profile.lastName" name="lastName" required />
             </mat-form-field>
@@ -23,21 +35,23 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>E-mail</mat-label>
+            <mat-icon matPrefix>email</mat-icon>
             <input matInput type="email" [(ngModel)]="email" name="email" required />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Heslo</mat-label>
+            <mat-icon matPrefix>lock</mat-icon>
             <input matInput type="password" [(ngModel)]="password" name="password" required />
           </mat-form-field>
 
           <div class="form-row">
-            <mat-form-field appearance="outline" class="half-width">
+            <mat-form-field appearance="outline">
               <mat-label>Vek</mat-label>
               <input matInput type="number" [(ngModel)]="profile.age" name="age" required />
             </mat-form-field>
 
-            <mat-form-field appearance="outline" class="half-width">
+            <mat-form-field appearance="outline">
               <mat-label>Pohlavie</mat-label>
               <mat-select [(ngModel)]="profile.gender" name="gender" required>
                 <mat-option value="male">Muž</mat-option>
@@ -49,36 +63,37 @@
         </div>
       }
 
-      <!-- Krok 2: Fyzické parametre -->
       @if (currentStep === 2) {
-        <div class="form-section">
-          <h3>📏 Fyzické parametre</h3>
+        <div class="form-section fade-in">
+          <h3><mat-icon>straighten</mat-icon> Fyzické parametre</h3>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Výška (cm)</mat-label>
             <input matInput type="number" [(ngModel)]="profile.height" name="height" required />
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Aktuálna váha (kg)</mat-label>
-            <input matInput type="number" [(ngModel)]="profile.currentWeight" name="currentWeight" required />
-          </mat-form-field>
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Aktuálna váha (kg)</mat-label>
+              <input matInput type="number" [(ngModel)]="profile.currentWeight" name="currentWeight" required />
+            </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Cieľová váha (kg)</mat-label>
-            <input matInput type="number" [(ngModel)]="profile.targetWeight" name="targetWeight" required />
-          </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Cieľová váha (kg)</mat-label>
+              <input matInput type="number" [(ngModel)]="profile.targetWeight" name="targetWeight" required />
+            </mat-form-field>
+          </div>
 
-          <div class="bmi-display">
-            <p>Tvoje BMI: <strong>{{ calculateBMI() }}</strong></p>
+          <div class="bmi-card">
+            <span class="bmi-label">Tvoje aktuálne BMI</span>
+            <span class="bmi-value">{{ calculateBMI() }}</span>
           </div>
         </div>
       }
 
-      <!-- Krok 3: Fitness ciele -->
       @if (currentStep === 3) {
-        <div class="form-section">
-          <h3>🎯 Tvoje ciele</h3>
+        <div class="form-section fade-in">
+          <h3><mat-icon>track_changes</mat-icon> Tvoje ciele</h3>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Hlavný cieľ</mat-label>
@@ -102,58 +117,47 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Zdravotné obmedzenia (voliteľné)</mat-label>
-            <textarea matInput [(ngModel)]="medicalConditionsText" name="medicalConditions" rows="3" 
-              placeholder="Napr.: cukrovka, vysoký tlak..."></textarea>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Diétne obmedzenia (voliteľné)</mat-label>
-            <textarea matInput [(ngModel)]="dietaryRestrictionsText" name="dietaryRestrictions" rows="3"
-              placeholder="Napr.: laktóza, gluten, vegetarián..."></textarea>
+            <mat-label>Zdravotné/Diétne poznámky</mat-label>
+            <textarea matInput [(ngModel)]="medicalConditionsText" name="medicalConditions" rows="2"
+              placeholder="Alergie, obmedzenia..."></textarea>
           </mat-form-field>
         </div>
       }
 
-      <!-- Chybové hlásenie -->
       @if (errorMsg) {
         <div class="error-box">
-          {{ errorMsg }}
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMsg }}</span>
         </div>
       }
 
-      <!-- Navigačné tlačidlá -->
       <div class="button-group">
         @if (currentStep > 1) {
-          <button mat-stroked-button type="button" (click)="previousStep()">
-            ← Späť
+          <button mat-stroked-button type="button" class="btn-prev" (click)="previousStep()">
+            Späť
           </button>
         }
 
         @if (currentStep < 3) {
-          <button mat-flat-button color="primary" type="button" (click)="nextStep()">
-            Ďalej →
+          <button mat-flat-button color="primary" type="button" class="btn-next" (click)="nextStep()">
+            Ďalej <mat-icon>arrow_forward</mat-icon>
           </button>
         }
 
         @if (currentStep === 3) {
-          <button mat-flat-button color="primary" type="submit" [disabled]="isLoading">
-            {{ isLoading ? 'Vytváram účet...' : '✓ Vytvoriť účet' }}
+          <button mat-flat-button class="btn-submit" type="submit" [disabled]="isLoading">
+            @if (!isLoading) {
+              <span>Dokončiť registráciu</span>
+            } @else {
+              <mat-spinner diameter="24"></mat-spinner>
+            }
           </button>
         }
-      </div>
-
-      <!-- Progress indicator -->
-      <div class="progress-dots">
-        <span class="dot" [class.active]="currentStep === 1"></span>
-        <span class="dot" [class.active]="currentStep === 2"></span>
-        <span class="dot" [class.active]="currentStep === 3"></span>
       </div>
     </form>
 
     <p class="link">
-      Už máš účet?
-      <a routerLink="/login">Prihlás sa</a>
+      Už máš účet? <a routerLink="/login">Prihlás sa</a>
     </p>
   </div>
 </section>
