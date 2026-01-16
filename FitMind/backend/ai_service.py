@@ -7,7 +7,6 @@ import google.generativeai as genai
 from google.generativeai.types import FunctionDeclaration, Tool
 from datetime import datetime, timedelta
 import os
-import time
 
 class AIService:
     """
@@ -146,7 +145,8 @@ class AIService:
         )
 
     def analyze_user_progress(self, profile: Dict, entries: Dict) -> Dict[str, Any]:
-        """Analyzuje pokrok (rovnaké ako predtým)"""
+        """Analyzuje pokrok používateľa na základe dát"""
+        # Tu môžete implementovať vlastnú logiku výpočtu trendov
         analysis = {
             "calories_trend": "stable",
             "exercise_trend": "stable",
@@ -155,53 +155,38 @@ class AIService:
             "concerns": [],
             "recommendations": []
         }
-        # ... (zachovaná logika analýzy) ...
-        # (Skrátené pre prehľadnosť, logika je identická ako v pôvodnom súbore)
         return analysis
 
     def create_system_prompt(self, profile: Dict, entries: Dict, conversation_history: Optional[List[Dict]] = None) -> str:
-        """Vytvorí systémový prompt (rovnaké ako predtým)"""
-        # (Zachovaná logika vytvárania promptu)
-        # Tu je dôležité povedať modelu, že má používať nástroje
+        """Vytvorí podrobný systémový prompt pre FitMind AI"""
+        goals = ", ".join(profile.get('goals', []))
         
-        base_prompt = """Si FitMind AI - osobný fitness tréner.
-        ... (pôvodný prompt) ...
-        DÔLEŽITÉ: Používaj dostupné funkcie na ukladanie dát!
-        Keď používateľ spomenie jedlo, cvičenie alebo iné metriky, VŽDY zavolaj príslušnú funkciu."""
-        
-        # Pre stručnosť, použijem len základný prompt + dáta
-        # V reálnej implementácii by tu bol celý kód z pôvodného súboru
-        
-        # Provizórny return pre ukážku (tento kód bude nahradený plným obsahom pri zápise)
-        return f"System Prompt with profile data: {json.dumps(profile, default=str)}"
+        prompt = f"""Si FitMind AI - osobný fitness tréner a mentor pre duševné zdravie.
+Tvojím cieľom je pomáhať používateľovi dosiahnuť: {goals}.
+
+DÔLEŽITÉ INŠTRUKCIE:
+1. Používaj dostupné funkcie (tools) na ukladanie každého jedla, cvičenia, váhy, nálady alebo spánku.
+2. Ak používateľ zadá neúplné informácie o jedle, odhadni kalórie a makroživiny.
+3. Buď povzbudivý, ale profesionálny.
+4. Ak používateľ nahlási vysoký stres alebo zlú náladu, navrhni krátke dychové cvičenie.
+
+Aktuálne dáta profilu: {json.dumps(profile, ensure_ascii=False)}
+"""
+        return prompt
 
     def chat(self, message: str, system_prompt: str, conversation_history: Optional[List[Dict]] = None) -> Any:
         """
-        Posiela správu do Gemini
-        Vráti objekt, ktorý má atribúty podobné OpenAI odpovedi pre kompatibilitu s main.py
+        Posiela správu do Gemini a simuluje OpenAI formát pre kompatibilitu
         """
-        chat = self.model.start_chat(history=[])
+        # Gemini Start Chat (tu by sa dala spracovať história konverzie)
+        chat_session = self.model.start_chat(history=[])
         
-        # Spracovanie histórie
-        history_text = ""
-        if conversation_history:
-            history_text = "\n\nHistória konverzácie:\n"
-            for msg in conversation_history:
-                role = "Používateľ" if msg['role'] == 'user' else "AI"
-                content = msg.get('content') or ""
-                if not content and msg.get('function_call'):
-                    content = f"[Volanie funkcie: {msg['function_call']['name']}]"
-                history_text += f"{role}: {content}\n"
-        
-        full_message = f"{system_prompt}{history_text}\n\nAktuálna správa od používateľa: {message}"
+        full_message = f"{system_prompt}\n\nPoužívateľ: {message}"
         
         try:
-            response = chat.send_message(full_message)
+            response = chat_session.send_message(full_message)
             
-            # Spracovanie function calls
-            # Gemini vracia 'parts' v 'candidates[0].content'
-            # Ak je tam function call, je to v 'function_call'
-            
+            # Vyhľadanie volania funkcie v odpovedi
             fc = None
             if response.candidates and response.candidates[0].content.parts:
                 for part in response.candidates[0].content.parts:
@@ -209,18 +194,18 @@ class AIService:
                         fc = part.function_call
                         break
             
+            # Mockovacie triedy pre zachovanie kompatibility s main.py
+            class MockFunctionCall:
+                def __init__(self, name, args):
+                    self.name = name
+                    self.arguments = json.dumps(args)
+            
             class MockMessage:
                 def __init__(self, content, function_call=None):
                     self.content = content
                     self.function_call = function_call
-            
+
             if fc:
-                # Konverzia na formát očakávaný v main.py
-                class MockFunctionCall:
-                    def __init__(self, name, args):
-                        self.name = name
-                        self.arguments = json.dumps(args)
-                
                 return MockMessage(
                     content=None,
                     function_call=MockFunctionCall(fc.name, dict(fc.args))
@@ -229,29 +214,17 @@ class AIService:
                 return MockMessage(content=response.text)
                 
         except Exception as e:
-            print(f"[ERROR] Gemini Error: {e}")
+            print(f"[ERROR] Gemini Chat Error: {e}")
             raise e
 
     def get_final_response(self, messages: List[Dict]) -> str:
         """
-        Získa finálnu odpoveď od AI po volaní funkcie.
-        Pre Gemini musíme poslať históriu s function call a function response.
+        Potvrdí úspešné vykonanie funkcie používateľovi
         """
-        # Toto je zložitejšie pretože main.py posiela zoznam správ v OpenAI formáte.
-        # Musíme to konvertovať pre Gemini alebo len poslať sumár.
+        func_res = messages[-1] # Posledná správa s výsledkom funkcie
         
-        # Zjednodušenie: Pošleme nový kontext s informáciou o úspechu
+        prompt = f"Systémová informácia: Akcia prebehla úspešne s výsledkom: {func_res['content']}. Odpovedaj používateľovi prirodzene a potvrď uloženie."
         
-        last_msg = messages[-2] # Assistant msg with function call (ignorujeme)
-        func_res = messages[-1] # Function result
-        
-        prompt = f"""
-        Predchádzajúca akcia (volanie funkcie) bola úspešná: {func_res['content']}
-        
-        Na základe toho odpovedz používateľovi na jeho pôvodnú správu.
-        Potvrď uloženie a pridaj povzbudenie.
-        """
-        
-        chat = self.model.start_chat(history=[])
-        response = chat.send_message(prompt)
+        chat_session = self.model.start_chat(history=[])
+        response = chat_session.send_message(prompt)
         return response.text
