@@ -12,11 +12,12 @@ from firebase_admin import firestore
 
 # Import služieb - pokúsi sa najprv relatívny import, ak zlyhá, použije absolútny
 try:
-    from .firebase_service import FirebaseService
-    from .ai_service import AIService
-    from .stats_service import StatsService
-    from .coach_service import CoachService
-    from .middleware import (
+# Import služieb - Using clean absolute imports
+    from firebase_service import FirebaseService
+    from ai_service import AIService
+    from stats_service import StatsService
+    from coach_service import CoachService
+    from middleware import (
         RateLimitMiddleware,
         SecurityHeadersMiddleware,
         RequestSizeLimitMiddleware,
