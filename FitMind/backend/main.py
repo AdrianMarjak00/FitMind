@@ -54,7 +54,7 @@ is_production = os.getenv("ENV", "production") == "production"
 # 1. CORS musí byť spravidla PRVÝ, aby prehliadač dostal povolenie skôr, než narazí na iné limity
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://fitmind-dba6a.web.app", "http://localhost:4200"], # Skús radšej konkrétne domény
+    allow_origins=["https://fitmind-dba6a.web.app"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
