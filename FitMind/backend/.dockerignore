@@ -1,18 +1,41 @@
-.git
-.gitignore
-.env
-.venv
-venv
-__pycache__
-*.pyc
-*.pyo
-*.pyd
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 .Python
+venv/
 env/
-instance/
-bin/
-include/
-lib/
-local/
-serviceAccountKey.json
-tests/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Environment files (budú nastavené cez Cloud Run)
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+README.md
+
+# Temp files
+tmp/
+temp/
+*.tmp
