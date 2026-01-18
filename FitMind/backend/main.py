@@ -20,8 +20,11 @@ from middleware import (
     SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware,
     validate_user_id,
-    sanitize_error_message
+    sanitize_error_message,
+    verify_firebase_token,
+    check_admin_auth
 )
+from fastapi import FastAPI, HTTPException, Depends, Request
 
 # Načítaj premenné prostredia z .env súboru
 load_dotenv()
@@ -44,7 +47,7 @@ allowed_origins = [
     "https://fitmind-dba6a.firebaseapp.com",
     "https://fitmind.netlify.app",  # TODO: Update with your actual Netlify URL
     "http://localhost:4200",
-    "https://fitmind-581538831484.europe-west1.run.app",  # Pre lokálne testovanie
+    "https://fitmind-581538831484.europe-west1.run.app",  
 ]
 
 app.add_middleware(
@@ -108,7 +111,7 @@ async def health():
         "environment": "production" if is_production else "development"
     }
 
-@app.post("/api/chat")
+@app.post("/api/chat", dependencies=[Depends(verify_firebase_token)])
 async def chat(request: ChatRequest):
     """
     AI Chat endpoint - pokročilý personalizovaný kouč s pamäťou konverzácie
@@ -220,7 +223,7 @@ async def chat(request: ChatRequest):
         error_msg = sanitize_error_message(e, production=is_production)
         raise HTTPException(status_code=500, detail=error_msg)
 
-@app.get("/api/stats/{user_id}")
+@app.get("/api/stats/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_stats(user_id: str, days: Optional[int] = 30):
     """Získa všetky štatistiky pre používateľa"""
     validate_user_id(user_id)
@@ -239,7 +242,7 @@ async def get_stats(user_id: str, days: Optional[int] = 30):
         error_msg = sanitize_error_message(e, production=is_production)
         raise HTTPException(status_code=500, detail=error_msg)
 
-@app.get("/api/chart/{user_id}/{chart_type}")
+@app.get("/api/chart/{user_id}/{chart_type}", dependencies=[Depends(verify_firebase_token)])
 async def get_chart_data(user_id: str, chart_type: str, days: Optional[int] = 30):
     """Získa dáta pre konkrétny graf (kalórie, cvičenie, nálada, atď.)"""
     try:
@@ -248,7 +251,7 @@ async def get_chart_data(user_id: str, chart_type: str, days: Optional[int] = 30
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/entries/{user_id}/{entry_type}")
+@app.get("/api/entries/{user_id}/{entry_type}", dependencies=[Depends(verify_firebase_token)])
 async def get_entries(user_id: str, entry_type: str, days: Optional[int] = 30, limit: Optional[int] = 100):
     """Získa záznamy pre používateľa (jedlo, cvičenie, atď.)"""
     try:
@@ -257,7 +260,7 @@ async def get_entries(user_id: str, entry_type: str, days: Optional[int] = 30, l
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/admin/check/{user_id}")
+@app.get("/api/admin/check/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def check_admin(user_id: str):
     """Kontroluje, či je používateľ admin"""
     try:
@@ -275,7 +278,7 @@ async def check_admin_by_email(email: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/admin/add")
+@app.post("/api/admin/add", dependencies=[Depends(verify_firebase_token), Depends(check_admin_auth)])
 async def add_admin(request: AddAdminRequest):
     """Pridá admina do databázy"""
     try:
@@ -287,7 +290,7 @@ async def add_admin(request: AddAdminRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/admin/list")
+@app.get("/api/admin/list", dependencies=[Depends(verify_firebase_token), Depends(check_admin_auth)])
 async def list_admins():
     """Získa zoznam všetkých adminov"""
     try:
@@ -296,7 +299,7 @@ async def list_admins():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/profile/{user_id}")
+@app.get("/api/profile/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_profile(user_id: str):
     """Získa profil používateľa"""
     try:
@@ -307,7 +310,7 @@ async def get_profile(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/profile")
+@app.post("/api/profile", dependencies=[Depends(verify_firebase_token)])
 async def save_profile(request: ProfileRequest):
     """Uloží alebo aktualizuje profil používateľa (používa sa pri onboarding)"""
     try:
@@ -360,7 +363,7 @@ async def save_profile(request: ProfileRequest):
 
 # === PERSONALIZOVANÉ KOUČ ENDPOINTY ===
 
-@app.get("/api/coach/weekly-report/{user_id}")
+@app.get("/api/coach/weekly-report/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_weekly_report(user_id: str):
     """Získa týždenný report pre používateľa s analýzou pokroku"""
     try:
@@ -369,7 +372,7 @@ async def get_weekly_report(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/coach/monthly-report/{user_id}")
+@app.get("/api/coach/monthly-report/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_monthly_report(user_id: str):
     """Získa mesačný report pre používateľa s dlhodobými trendmi"""
     try:
@@ -378,7 +381,7 @@ async def get_monthly_report(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/coach/recommendations/{user_id}")
+@app.get("/api/coach/recommendations/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_recommendations(user_id: str):
     """Získa personalizované odporúčania pre používateľa"""
     try:
@@ -391,7 +394,7 @@ async def get_recommendations(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/coach/goal-progress/{user_id}")
+@app.get("/api/coach/goal-progress/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_goal_progress(user_id: str):
     """Kontroluje pokrok k stanoveným cieľom"""
     try:
@@ -400,7 +403,7 @@ async def get_goal_progress(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/chat/history/{user_id}")
+@app.get("/api/chat/history/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_chat_history(user_id: str, limit: Optional[int] = 50):
     """Získa históriu konverzácie s AI"""
     try:
@@ -413,7 +416,7 @@ async def get_chat_history(user_id: str, limit: Optional[int] = 50):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/chat/history/{user_id}")
+@app.delete("/api/chat/history/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def clear_chat_history(user_id: str):
     """Vymaže históriu konverzácie"""
     try:

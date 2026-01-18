@@ -5,7 +5,7 @@
 ### Critical Files to Protect
 
 **NEVER commit these files to git:**
-- `backend/.env` - Contains OpenAI API key and other secrets
+- `backend/.env` - Contains Google Gemini API key and other secrets
 - `backend/firebase-service-account*.json` - Firebase admin credentials
 - Any files matching `*-key.json` or `*.pem`
 
@@ -18,9 +18,9 @@
    # Edit .env and add your actual API keys
    ```
 
-2. **OpenAI API Key**
-   - Get your API key from: https://platform.openai.com/api-keys
-   - Add to `backend/.env`: `OPENAI_API_KEY=sk-proj-your-key-here`
+2. **Google Gemini API Key**
+   - Get your API key from: https://aistudio.google.com/
+   - Add to `backend/.env`: `GOOGLE_API_KEY=your-gemini-key-here`
 
 3. **Firebase Service Account**
    - Go to [Firebase Console](https://console.firebase.google.com/)

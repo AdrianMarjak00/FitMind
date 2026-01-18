@@ -9,7 +9,7 @@ This guide covers deploying the FitMind application to production, including bot
 - Node.js 18+ and npm
 - Python 3.9+
 - Firebase project with Firestore enabled
-- OpenAI API key
+- Google Gemini API key
 - Hosting platform account (recommended: Vercel for frontend, Railway/Render for backend)
 
 ## 🔧 Environment Setup
@@ -19,8 +19,8 @@ This guide covers deploying the FitMind application to production, including bot
 Create `backend/.env` with the following:
 
 ```bash
-# OpenAI API Key
-OPENAI_API_KEY=sk-proj-your-actual-api-key-here
+# Google Gemini API Key
+GOOGLE_API_KEY=your-gemini-key-here
 
 # Server Configuration
 PORT=8000
@@ -257,7 +257,7 @@ export const environment = {
 - [ ] CORS is properly configured (test from frontend)
 - [ ] Rate limiting is working
 - [ ] Firebase connection is successful
-- [ ] OpenAI API is responding
+- [ ] Google Gemini API is responding
 - [ ] Error messages don't expose sensitive information
 - [ ] API documentation is disabled (`/docs` returns 404)
 

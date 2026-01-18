@@ -25,21 +25,12 @@ class FirebaseService:
     
     @classmethod
     def _init_firebase(cls):
-        """Inicializuje Firebase pripojenie"""
+        """Inicializuje Firebase pripojenie výhradne cez premenné prostredia"""
         try:
-            # Skús nájsť Service Account Key v rôznych súboroch
-            key_files = [
-                "serviceAccountKey.json",
-                "firebase-service-account.json",
-                # Hľadaj aj súbory začínajúce na fitmind-
-                *[f for f in os.listdir('.') if f.startswith('fitmind-') and f.endswith('.json')]
-            ]
-            
-            
-            # 1. Skús načítať z environment premennej (pre cloud hosting)
+            # 1. Skús načítať z environment premennej (pre cloud hosting aj lokálny vývoj)
+            # Obsahuje JSON reťazec service account kľúča
             env_creds = os.getenv("FIREBASE_CREDENTIALS")
             cred = None
-            used_file = "ENV Variable"
             
             if env_creds:
                 try:
@@ -47,24 +38,13 @@ class FirebaseService:
                     cred = credentials.Certificate(cred_dict)
                 except Exception as e:
                     print(f"[ERROR] Chyba pri parsovaní FIREBASE_CREDENTIALS: {e}")
-
-            # 2. Ak nie je v ENV, hľadaj súbory (lokálny vývoj)
-            if not cred:
-                for key_file in key_files:
-                    if os.path.exists(key_file):
-                        try:
-                            cred = credentials.Certificate(key_file)
-                            used_file = key_file
-                            break
-                        except:
-                            continue
             
             if cred:
                 firebase_admin.initialize_app(cred)
                 cls._db = firestore.client()
-                print(f"[OK] Firebase pripojene! (pouzity subor: {used_file})")
+                print("[OK] Firebase pripojene cez environment premennu!")
             else:
-                print("[WARNING] Firebase credentials nenajdene! (skontrolovane: serviceAccountKey.json, firebase-service-account.json a fitmind-*.json)")
+                print("[CRITICAL] FIREBASE_CREDENTIALS nenajdene! Prosim nastav premennú prostredia.")
                 cls._db = None
 
         except Exception as e:

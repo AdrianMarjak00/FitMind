@@ -9,7 +9,7 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "destination": "https://fitmind-production-21d5.up.railway.app/api/**"
+        "destination": "https://fitmind-581538831484.europe-west1.run.app/api/**"
       },
       {
         "source": "**",

@@ -151,7 +151,7 @@ def sanitize_error_message(error: Exception, production: bool = True) -> str:
         error_type = type(error).__name__
         if "Firebase" in error_type or "Firestore" in error_type:
             return "Database error occurred"
-        elif "OpenAI" in str(error) or "API" in str(error):
+        elif "Google" in str(error) or "Gemini" in str(error) or "API" in str(error):
             return "AI service temporarily unavailable"
         else:
             return "An error occurred processing your request"
