@@ -10,32 +10,18 @@ import os
 from dotenv import load_dotenv
 from firebase_admin import firestore
 
-# Import služieb - pokúsi sa najprv relatívny import, ak zlyhá, použije absolútny
-try:
-# Import služieb - Using clean absolute imports
-    from firebase_service import FirebaseService
-    from ai_service import AIService
-    from stats_service import StatsService
-    from coach_service import CoachService
-    from middleware import (
-        RateLimitMiddleware,
-        SecurityHeadersMiddleware,
-        RequestSizeLimitMiddleware,
-        validate_user_id,
-        sanitize_error_message
-    )
-except ImportError:
-    from firebase_service import FirebaseService
-    from ai_service import AIService
-    from stats_service import StatsService
-    from coach_service import CoachService
-    from middleware import (
-        RateLimitMiddleware,
-        SecurityHeadersMiddleware,
-        RequestSizeLimitMiddleware,
-        validate_user_id,
-        sanitize_error_message
-    )
+# Import služieb
+from firebase_service import FirebaseService
+from ai_service import AIService
+from stats_service import StatsService
+from coach_service import CoachService
+from middleware import (
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    RequestSizeLimitMiddleware,
+    validate_user_id,
+    sanitize_error_message
+)
 
 # Načítaj premenné prostredia z .env súboru
 load_dotenv()
@@ -51,10 +37,19 @@ is_production = os.getenv("ENV", "production") == "production"
 
 # --- MIDDLEWARE SEKCOA ---
 
-# 1. CORS musí byť spravidla PRVÝ, aby prehliadač dostal povolenie skôr, než narazí na iné limity
+# 1. CORS - povoľujeme Netlify, Firebase Hosting, localhost pre testovanie
+# Pri migrácii na Cloud Run pridaj Cloud Run URL sem
+allowed_origins = [
+    "https://fitmind-dba6a.web.app",
+    "https://fitmind-dba6a.firebaseapp.com",
+    "https://fitmind.netlify.app",  # TODO: Update with your actual Netlify URL
+    "http://localhost:4200",
+    "https://fitmind-581538831484.europe-west1.run.app",  # Pre lokálne testovanie
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://fitmind-dba6a.web.app"], 
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -108,12 +103,10 @@ async def health():
     """Health check endpoint for monitoring"""
     return {
         "status": "healthy",
-        "firebase": firebase.is_connected()
+        "service": "FitMind Backend",
+        "firebase": firebase.is_connected(),
+        "environment": "production" if is_production else "development"
     }
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy", "service": "FitMind Backend"}
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
