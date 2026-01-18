@@ -175,9 +175,7 @@ Aktuálne dáta profilu: {json.dumps(profile, ensure_ascii=False)}
         return prompt
 
     def chat(self, message: str, system_prompt: str, conversation_history: Optional[List[Dict]] = None) -> Any:
-        """
-        Posiela správu do Gemini a simuluje OpenAI formát pre kompatibilitu
-        """
+
         # Gemini Start Chat (tu by sa dala spracovať história konverzie)
         chat_session = self.model.start_chat(history=[])
         
