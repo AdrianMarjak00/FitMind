@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = "dist/FitMind/browser"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://fitmind-581538831484.europe-west1.run.app/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
