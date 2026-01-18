@@ -1,0 +1,41 @@
+# Node modules
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+env/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Frontend source (nepotrebné pre backend deployment)
+src/
+public/
+angular.json
+tsconfig*.json
+package.json
+package-lock.json
+
+# Documentation
+*.md
+README.md
+SECURITY.md
+DEPLOYMENT.md
+
+# Firebase
+.firebase/
+firebase.json
+.firebaserc
+
+# Temp
+*.log
+tmp/
+temp/
