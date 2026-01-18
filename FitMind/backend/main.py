@@ -9,6 +9,10 @@ import json
 import os
 from dotenv import load_dotenv
 from firebase_admin import firestore
+import sys
+
+# Pridaj aktuálny priečinok do sys.path, aby fungovali importy v Docker/Cloud Run
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import služieb
 from firebase_service import FirebaseService
