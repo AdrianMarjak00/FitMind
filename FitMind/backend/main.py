@@ -3,8 +3,9 @@
 
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 from typing import Optional
 import json
@@ -64,6 +65,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # 2. Jednoduchý Logger pre Render/Production
 @app.middleware("http")
@@ -474,8 +476,11 @@ else:
     print(f"[WARNING] Assets directory not found: {ASSETS_DIR}")
 
 # Catch-all route for Angular routing (must be last!)
+index_html_cache = None
+
 @app.get("/{full_path:path}")
 async def serve_angular(full_path: str):
+    global index_html_cache
     """Serve Angular app for all non-API routes"""
     # Ak cesta začína na api, ale nenašiel sa endpoint v FastAPI (404 pre API)
     # full_path v /{full_path:path} neobsahuje úvodné lomítko
@@ -484,7 +489,6 @@ async def serve_angular(full_path: str):
 
     # Inak skús servovať Angular
     if not os.path.exists(DIST_DIR):
-        # Ak sme v developmente a nemáme dist, aspoň niečo vypíš
         if not is_production:
             return {"message": "Development mode: Frontend dist not found"}
         raise HTTPException(status_code=503, detail="Frontend not built yet")
@@ -493,11 +497,19 @@ async def serve_angular(full_path: str):
         # 1. Skús, či je to konkrétny súbor (napr. main.js, styles.css)
         file_path = os.path.join(DIST_DIR, full_path)
         if full_path and os.path.isfile(file_path):
+            # Pre statické súbory necháme FileResponse (prehliadač si ich nacashuje)
             return FileResponse(file_path)
         
-        # 2. Pre všetko ostatné (vrátane '/') pošli index.html (Angular Routing)
+        # 2. Pre všetko ostatné pošli index.html (Angular Routing)
+        if index_html_cache and is_production:
+            return HTMLResponse(content=index_html_cache)
+            
         index_path = os.path.join(DIST_DIR, "index.html")
         if os.path.exists(index_path):
+            if is_production:
+                with open(index_path, "r", encoding="utf-8") as f:
+                    index_html_cache = f.read()
+                return HTMLResponse(content=index_html_cache)
             return FileResponse(index_path)
             
         raise HTTPException(status_code=404, detail="index.html not found")
