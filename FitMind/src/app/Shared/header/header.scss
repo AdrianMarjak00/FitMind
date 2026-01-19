@@ -19,18 +19,11 @@
 }
 
 /* ---------- LOGO ---------- */
-
 .logo-wrapper {
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  position: relative;
-
-  &:hover .logo-dot {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 .logo {
@@ -38,24 +31,10 @@
   font-weight: 900;
   letter-spacing: -1.5px;
   color: #ffffff;
-
-  span {
-    color: #3ddc84;
-  }
+  span { color: #3ddc84; }
 }
 
-.logo-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #3ddc84;
-  opacity: 0;
-  transform: scale(0.5);
-  transition: all 0.25s ease;
-}
-
-/* ---------- NAV ---------- */
-
+/* ---------- DESKTOP NAV ---------- */
 .desktop-nav {
   display: flex;
   gap: 6px;
@@ -71,11 +50,6 @@
     border-radius: 12px;
     transition: all 0.25s ease;
 
-    &:hover {
-      opacity: 1;
-      background: rgba(255, 255, 255, 0.05);
-    }
-
     &.active-link {
       opacity: 1;
       color: #3ddc84;
@@ -85,58 +59,93 @@
 }
 
 /* ---------- ACTIONS ---------- */
-
 .actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.ghost-btn {
-  opacity: 0.8;
-  transition: opacity 0.25s ease;
-
-  &:hover {
-    opacity: 1;
-  }
-}
-
 .cta-btn {
   height: 40px;
   border-radius: 14px;
   font-weight: 600;
-  padding: 0 18px;
-}
-
-.logout-btn {
-  color: #ffffff;
-  opacity: 0.8;
-  transition: all 0.25s ease;
-
-  &:hover {
-    opacity: 1;
-    color: #ff6b6b;
-  }
-}
-
-/* ---------- MOBILE ---------- */
-
-.hide-mobile {
-  @media (max-width: 600px) {
-    display: none;
-  }
 }
 
 .mobile-menu-btn {
   display: none;
+  color: white;
 
   @media (max-width: 992px) {
     display: inline-flex;
   }
 }
 
-/* ---------- UTILS ---------- */
+.spacer { flex: 1 1 auto; }
 
-.spacer {
-  flex: 1 1 auto;
+/* ---------- MOBILNÉ MENU STYLES ---------- */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mobile-nav {
+  width: 80%;
+  max-width: 300px;
+  background: #0a0a0a;
+  height: 100%;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+  border-left: 1px solid rgba(255,255,255,0.1);
+
+  .mobile-nav-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .mobile-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    a {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      font-size: 1.1rem;
+      padding: 12px !important;
+      color: rgba(255,255,255,0.8);
+      border-radius: 12px;
+      width: 100%;
+
+      mat-icon { margin-right: 8px; }
+
+      &.active-link {
+        color: #3ddc84;
+        background: rgba(61, 220, 132, 0.1);
+      }
+    }
+  }
+}
+
+.menu-divider {
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin: 15px 0;
+}
+
+/* Skrytie na tabletoch pre prihlásenie ak treba */
+@media (max-width: 600px) {
+  .hide-tablet { display: none; }
 }
