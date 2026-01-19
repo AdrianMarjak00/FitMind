@@ -61,7 +61,7 @@ async def simple_log(request: Request, call_next):
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)
 
-# --- 3. CORS KONFIGURÁCIA (Outer layer) ---
+# --- 3. CORS KONFIGURÁCIA ---
 allowed_origins = [
     "https://www.fit-mind.sk",
     "https://fit-mind.sk",
@@ -81,7 +81,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# Inicializuj služby
+# Inicializuj služby (Singletons)
 firebase = FirebaseService()
 ai_service = AIService()
 stats_service = StatsService()
@@ -98,45 +98,63 @@ def api_status():
     return {
         "status": "online", 
         "firebase": "connected" if firebase.is_connected() else "disconnected",
-        "ai": "operational" if ai_service.model else "limited"
+        "ai": "operational" # Zjednodušený status
     }
 
 @app.get("/api/health")
 def health():
     return {"status": "healthy", "timestamp": time.time()}
 
-@app.post("/api/chat", dependencies=[Depends(verify_firebase_token)])
-def chat(request: ChatRequest):
-    validate_user_id(request.user_id)
-    user_id = request.user_id
+@app.post("/api/chat")
+def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_token)):
+    """
+    AI Chat endpoint. 
+    VÝZNAMNÁ OPRAVA: Používame user_id priamo z tokenu, 
+    aby sme zabránili zdieľaniu histórie medzi používateľmi.
+    """
+    user_id = decoded_token.get("uid")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID not found in token")
+        
     message = request.message
-    
-    print(f"[CHAT] {user_id}: {message[:50]}...")
+    print(f"[CHAT] Request for user {user_id} (Token Verified)")
     
     try:
+        # Načítaj kontext konkrétneho používateľa
         profile = firebase.get_user_profile(user_id)
         entries = {
-            'food': firebase.get_entries(user_id, 'food', days=7),
-            'exercise': firebase.get_entries(user_id, 'exercise', days=7)
+            'food': firebase.get_entries(user_id, 'food', days=3),
+            'exercise': firebase.get_entries(user_id, 'exercise', days=3)
         }
-        history = firebase.get_chat_history(user_id, limit=5)
+        # História len pre tohto používateľa
+        history = firebase.get_chat_history(user_id, limit=8)
         
         system_prompt = ai_service.create_system_prompt(profile or {}, entries)
+        
+        # Volanie AI - teraz stateless (vytvára model vnútri)
         message_response = ai_service.chat(message, system_prompt, history)
         
         ai_odpoved = message_response.content
         saved_entries = []
         
+        # Spracovanie funkcií (uloženie do DB)
         if message_response.function_call:
             fc_name = message_response.function_call.name
             fc_args = json.loads(message_response.function_call.arguments)
+            print(f"[CHAT] Function Call: {fc_name} for {user_id}")
             
-            mapping = {'save_food_entry': 'food', 'save_exercise_entry': 'exercise', 'save_mood_entry': 'mood', 'save_weight_entry': 'weight'}
+            mapping = {
+                'save_food_entry': 'food', 
+                'save_exercise_entry': 'exercise', 
+                'save_mood_entry': 'mood', 
+                'save_weight_entry': 'weight'
+            }
             if fc_name in mapping:
                 if firebase.save_entry(user_id, mapping[fc_name], fc_args):
                     saved_entries.append(f"Zaznamenané do {mapping[fc_name]}")
                     ai_odpoved = ai_service.get_final_response([])
         
+        # Uloženie do histórie používateľa
         firebase.save_chat_message(user_id, 'user', message)
         if ai_odpoved:
             firebase.save_chat_message(user_id, 'assistant', ai_odpoved)
@@ -145,41 +163,58 @@ def chat(request: ChatRequest):
         
     except Exception as e:
         print(f"[CHAT ERROR] {str(e)}")
+        print(traceback.format_exc())
         return {
-            "odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže pri komunikácii s AI. Skúste to prosím o chvíľu.", 
+            "odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže. Skúste to prosím o chvíľu.", 
             "saved_entries": [],
             "error_detail": str(e) if not IS_PRODUCTION else None
         }
 
-@app.get("/api/chart/{user_id}/{chart_type}", dependencies=[Depends(verify_firebase_token)])
-def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30):
-    validate_user_id(user_id)
+@app.get("/api/chart/{user_id}/{chart_type}")
+def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30, decoded_token: dict = Depends(verify_firebase_token)):
+    # Overenie že používateľ pozerá svoje dáta
+    token_uid = decoded_token.get("uid")
+    if token_uid != user_id:
+        print(f"[SECURITY] User {token_uid} tried to access data of {user_id}")
+        user_id = token_uid # Force users to see only their data
+        
     try:
         data = stats_service.get_chart_data(user_id, chart_type, days)
         return {"chart_type": chart_type, "data": data, "days": days}
     except Exception as e:
         return {"chart_type": chart_type, "data": {}, "days": days, "error": str(e)}
 
-@app.get("/api/stats/{user_id}", dependencies=[Depends(verify_firebase_token)])
-def get_stats_api(user_id: str, days: Optional[int] = 30):
-    validate_user_id(user_id)
+@app.get("/api/stats/{user_id}")
+def get_stats_api(user_id: str, days: Optional[int] = 30, decoded_token: dict = Depends(verify_firebase_token)):
+    token_uid = decoded_token.get("uid")
+    if token_uid != user_id:
+        user_id = token_uid
     return {
         "calories": stats_service.get_calories_summary(user_id, days),
         "exercise": stats_service.get_exercise_summary(user_id, days)
     }
 
-@app.get("/api/profile/{user_id}", dependencies=[Depends(verify_firebase_token)])
-def get_profile_api(user_id: str):
+@app.get("/api/profile/{user_id}")
+def get_profile_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    token_uid = decoded_token.get("uid")
+    if token_uid != user_id:
+        user_id = token_uid
     p = firebase.get_user_profile(user_id)
     return {"profile": p, "exists": p is not None}
 
-@app.get("/api/coach/recommendations/{user_id}", dependencies=[Depends(verify_firebase_token)])
-def get_recommendations_api(user_id: str):
+@app.get("/api/coach/recommendations/{user_id}")
+def get_recommendations_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    token_uid = decoded_token.get("uid")
+    if token_uid != user_id:
+        user_id = token_uid
     recs = coach_service.get_personalized_recommendations(user_id)
     return {"user_id": user_id, "recommendations": recs, "count": len(recs)}
 
-@app.get("/api/chat/history/{user_id}", dependencies=[Depends(verify_firebase_token)])
-def get_history_api(user_id: str, limit: Optional[int] = 50):
+@app.get("/api/chat/history/{user_id}")
+def get_history_api(user_id: str, limit: Optional[int] = 50, decoded_token: dict = Depends(verify_firebase_token)):
+    token_uid = decoded_token.get("uid")
+    if token_uid != user_id:
+        user_id = token_uid
     hist = firebase.get_chat_history(user_id, limit)
     return {"messages": hist}
 
