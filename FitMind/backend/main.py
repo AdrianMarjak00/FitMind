@@ -48,7 +48,7 @@ is_production = os.getenv("ENV", "production") == "production"
 allowed_origins = [
     "https://fitmind-dba6a.web.app",
     "https://fitmind-dba6a.firebaseapp.com",
-    "https://fitmind.onrender.com",  # Tvoja Render URL
+    "https://fitmind-backend-fvq7.onrender.com/",  # Tvoja Render URL
     "http://localhost:4200",
     "https://*.onrender.com"
 ]
