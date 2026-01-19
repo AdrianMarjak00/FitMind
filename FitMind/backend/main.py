@@ -199,19 +199,26 @@ def get_history_api(user_id: str, limit: Optional[int] = 50):
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_DIR = os.path.join(BASE_DIR, "dist", "FitMind", "browser")
 
+# Servovanie statických súborov (JS, CSS, assets)
 @app.get("/{full_path:path}")
 def serve_angular(full_path: str):
+    # DÔLEŽITÉ: Tento route by nemal nikdy zachytiť /api cesty
+    # lebo API routes sú definované vyššie a majú prednosť
     if full_path.startswith("api"):
-        raise HTTPException(status_code=404, detail="API route not found")
-    
+        # Ak sa sem dostaneme, znamená to že API endpoint neexistuje
+        raise HTTPException(status_code=404, detail=f"API endpoint not found: /{full_path}")
+
+    # Ak je to súbor v dist priečinku, vráť ho
     file_path = os.path.join(DIST_DIR, full_path)
     if full_path and os.path.isfile(file_path):
         return FileResponse(file_path)
-    
+
+    # Inak vráť Angular index.html (pre client-side routing)
     index_path = os.path.join(DIST_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    
-    return HTMLResponse("<h1>FitMind Loading...</h1>", status_code=200)
+
+    # Fallback ak dist priečinok neexistuje
+    return HTMLResponse("<h1>FitMind - Building...</h1><p>Backend is running but frontend is not built yet.</p>", status_code=200)
 
 print("[START] Backend beží.")
