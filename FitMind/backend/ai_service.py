@@ -6,66 +6,67 @@ from google.generativeai.types import FunctionDeclaration, Tool
 from datetime import datetime, timedelta
 import os
 
+class AIEncoder(json.JSONEncoder):
+    """Pomocník pre serializáciu špeciálnych objektov z Firebase do JSON"""
+    def default(self, obj):
+        if hasattr(obj, 'to_datetime'):
+            return obj.to_datetime().isoformat()
+        if hasattr(obj, 'isoformat'):
+            return obj.isoformat()
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return str(obj)
+
 class AIService:
     def __init__(self):
         self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.model = None
         self.tools = self._get_tools()
 
-        print(f"[DEBUG] AI API Key loaded: {'Yes' if self.api_key else 'No'}")
         if self.api_key:
-            print(f"[DEBUG] API Key starts with: {self.api_key[:10]}...")
+            print(f"[DEBUG] AI Service: API Key detected ({self.api_key[:8]}...)")
 
         if not self.api_key:
-            print("[WARNING] AI API key missing. Set GOOGLE_API_KEY environment variable.")
+            print("[WARNING] AI API key missing.")
             return
 
         try:
-            # Revertujeme na default transport (gRPC), keďže máme vyriešené blokovanie event loopu
             genai.configure(api_key=self.api_key)
             self._create_model()
-            print("[OK] Gemini AI initialized successfully.")
         except Exception as e:
-            import traceback
-            print(f"[ERROR] AI Init failed: {e}")
-            print(f"[ERROR] AI Init traceback: {traceback.format_exc()}")
+            print(f"[ERROR] AI Init: {e}")
 
     def _create_model(self, system_instruction: str = None):
-        try:
-            # Skúsime primárne najlepší model
-            model_name = 'gemini-1.5-flash'
-            self.model = genai.GenerativeModel(
-                model_name=model_name,
-                tools=[self.tools],
-                system_instruction=system_instruction
-            )
-            # Testovacie volanie (nepovinné tu, ale overíme či model existuje)
-            print(f"[DEBUG] Model {model_name} created.")
-        except Exception as e:
-            print(f"[WARNING] Model gemini-1.5-flash failed, trying gemini-pro: {e}")
+        """Vytvorí model s voliteľným systémovým promptom"""
+        # Zoznam modelov, ktoré skúsime v poradí
+        models_to_try = [
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-001',
+            'gemini-pro'
+        ]
+        
+        last_error = None
+        for m_name in models_to_try:
             try:
                 self.model = genai.GenerativeModel(
-                    model_name='gemini-pro',
+                    model_name=m_name,
                     tools=[self.tools],
                     system_instruction=system_instruction
                 )
-            except Exception as e2:
-                print(f"[ERROR] Both models failed. Available models are:")
-                try:
-                    for m in genai.list_models():
-                        if 'generateContent' in m.supported_generation_methods:
-                            print(f" - {m.name}")
-                except:
-                    pass
-                raise e2
+                print(f"[DEBUG] Model {m_name} ready.")
+                return
+            except Exception as e:
+                last_error = e
+                continue
+        
+        print(f"[CRITICAL ERROR] Failed to initialize any AI model: {last_error}")
 
     def _get_tools(self):
-        # Definície nástrojov (skrátené pre prehľadnosť ale funkčné)
         declarations = [
             FunctionDeclaration(
                 name="save_food_entry",
                 description="Uloží záznam o jedle",
-                parameters={"type": "object", "properties": {"name": {"type": "string"}, "calories": {"type": "number"}, "mealType": {"type": "string"}}, "required": ["name", "calories"]}
+                parameters={"type": "object", "properties": {"name": {"type": "string"}, "calories": {"type": "number"}}, "required": ["name", "calories"]}
             ),
             FunctionDeclaration(
                 name="save_exercise_entry",
@@ -74,55 +75,43 @@ class AIService:
             ),
             FunctionDeclaration(
                 name="save_mood_entry",
-                description="Uloží záznam o nálade (1-5)",
+                description="Uloží záznam o nálade (1-10)",
                 parameters={"type": "object", "properties": {"score": {"type": "number"}}, "required": ["score"]}
             ),
             FunctionDeclaration(
                 name="save_weight_entry",
-                description="Uloží aktuálnu váhu v kg",
+                description="Uloží váhu v kg",
                 parameters={"type": "object", "properties": {"weight": {"type": "number"}}, "required": ["weight"]}
-            ),
-            FunctionDeclaration(
-                name="update_profile",
-                description="Aktualizuje ciele alebo problémy používateľa",
-                parameters={"type": "object", "properties": {"goals": {"type": "array", "items": {"type": "string"}}, "problems": {"type": "array", "items": {"type": "string"}}}}
             )
         ]
         return Tool(function_declarations=declarations)
 
-    def create_system_prompt(self, profile: Dict, entries: Dict, history=None) -> str:
+    def create_system_prompt(self, profile: Dict, entries: Dict) -> str:
+        # Serializácia profilu s ošetrením typov
+        profile_json = json.dumps(profile, cls=AIEncoder, ensure_ascii=False)
         goals = ", ".join(profile.get('goals', []))
-        return f"""Si FitMind AI - fitness a mental kouč.
-Používateľove ciele: {goals}.
-Profil: {json.dumps(profile, ensure_ascii=False)}
+        
+        return f"""Si FitMind AI kouč. Používateľ: {profile_json}. Ciele: {goals}.
+Odpovedaj v slovenčine, buď stručný a motivujúci. 
+Ak používateľ povie čo jedol alebo cvičil, POUŽI funkciu na uloženie a potvrď to."""
 
-DÔLEŽITÉ: 
-- Na každé jedlo, cvičenie alebo váhu POUŽI príslušnú funkciu.
-- Buď stručný a motivujúci.
-- Odpovedaj v slovenčine.
-"""
+    def chat(self, message: str, system_prompt: str, history: List[Dict] = None) -> Any:
+        if not self.model:
+            raise Exception("AI model nie je dostupný.")
 
-    def chat(self, message: str, system_prompt: str, conversation_history: List[Dict] = None) -> Any:
-        if not self.model or not self.api_key:
-            raise Exception("AI model nie je nakonfigurovaný.")
-
-        # Aktualizujeme model so správnym systémovým promptom pre tohto používateľa
         self._create_model(system_instruction=system_prompt)
         
-        # Konverzia histórie
         gemini_history = []
-        if conversation_history:
-            for msg in conversation_history:
+        if history:
+            for msg in history:
                 role = "user" if msg['role'] == "user" else "model"
-                # Ošetríme prázdny obsah (napr. pri function call v histórii)
-                content = msg.get('content') or "OK"
+                content = msg.get('content') or "Záznam uložený."
                 gemini_history.append({"role": role, "parts": [content]})
 
         try:
             chat_session = self.model.start_chat(history=gemini_history)
             response = chat_session.send_message(message)
             
-            # Kontrola funkcie
             fc = None
             if response.candidates and response.candidates[0].content.parts:
                 for part in response.candidates[0].content.parts:
@@ -130,35 +119,29 @@ DÔLEŽITÉ:
                         fc = part.function_call
                         break
             
-            # Tvorba odpovede pre main.py
-            class MockResponse:
-                def __init__(self, content, function_call=None):
-                    self.content = content
-                    self.function_call = function_call
-            
+            class MockResp:
+                def __init__(self, c, f=None):
+                    self.content = c
+                    self.function_call = f
             class MockFC:
-                def __init__(self, name, args):
-                    self.name = name
-                    self.arguments = json.dumps(args)
+                def __init__(self, n, a):
+                    self.name = n
+                    self.arguments = json.dumps(a)
 
             if fc:
-                return MockResponse("Spracovávam vašu požiadavku...", MockFC(fc.name, dict(fc.args)))
+                return MockResp("Spracovávam...", MockFC(fc.name, dict(fc.args)))
             
-            # Robustnejšie získanie textu (v prípade safety filtrov môže response.text zlyhať)
-            res_text = "Nerozumiem, môžete to zopakovať inak?"
+            res_text = "Nerozumiem, skús to inak."
             try:
-                if response.candidates and response.candidates[0].content.parts:
-                    res_text = response.text
-            except Exception:
-                res_text = "Ospravedlňujem sa, ale na túto správu nemôžem odpovedať z bezpečnostných dôvodov."
+                res_text = response.text
+            except:
+                if response.candidates:
+                    res_text = "Mám problém s odpoveďou, ale počúvam."
 
-            return MockResponse(res_text)
+            return MockResp(res_text)
         except Exception as e:
-            import traceback
-            print(f"[ERROR] Chat call failed: {e}")
-            print(f"[ERROR] Chat traceback: {traceback.format_exc()}")
+            print(f"[ERROR] AI Chat failed: {e}")
             raise e
 
     def get_final_response(self, messages: List[Dict]) -> str:
-        # Jednoduché potvrdenie
-        return "Úspešne som to uložil do vášho dashboardu!"
+        return "Hotovo! Záznam som uložil do tvojho dashboardu. 👍"

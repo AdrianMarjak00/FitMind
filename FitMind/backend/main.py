@@ -10,6 +10,7 @@ import os
 import sys
 import time
 import traceback
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Pridaj aktuálny priečinok do sys.path
@@ -17,6 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Načítaj premenné prostredia
 load_dotenv()
+IS_PRODUCTION = os.getenv("ENV", "production").lower() == "production"
 
 # Import služieb
 from firebase_service import FirebaseService
@@ -32,7 +34,7 @@ from middleware import (
     check_admin_auth
 )
 
-print("[START] Inicializujem FastAPI...")
+print(f"[START] Inicializujem FastAPI (Env: {'Prod' if IS_PRODUCTION else 'Dev'})...")
 app = FastAPI(title="FitMind AI Backend")
 
 # --- 1. JEDNODUCHÝ LOGGER ---
@@ -50,7 +52,6 @@ async def simple_log(request: Request, call_next):
         error_details = traceback.format_exc()
         print(f"[CRITICAL ERROR] {request.method} {request.url.path} failed: {str(e)}")
         print(f"[CRITICAL TRACEBACK] {error_details}")
-        # Vrátime JSONResponse, ale CORS middleware ho ešte spracuje, ak je pridaný neskôr
         return JSONResponse(
             status_code=500, 
             content={"error": "Internal Server Error", "message": str(e)}
@@ -60,7 +61,7 @@ async def simple_log(request: Request, call_next):
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)
 
-# --- 3. CORS KONFIGURÁCIA (MUSÍ BYŤ POSLEDNÁ ABY BOLA OUTERMOST) ---
+# --- 3. CORS KONFIGURÁCIA (Outer layer) ---
 allowed_origins = [
     "https://www.fit-mind.sk",
     "https://fit-mind.sk",
@@ -81,12 +82,10 @@ app.add_middleware(
 )
 
 # Inicializuj služby
-print("[START] Inicializujem služby...")
 firebase = FirebaseService()
 ai_service = AIService()
 stats_service = StatsService()
 coach_service = CoachService(firebase)
-print("[OK] Všetky služby pripravené.")
 
 class ChatRequest(BaseModel):
     user_id: str
@@ -108,12 +107,11 @@ def health():
 
 @app.post("/api/chat", dependencies=[Depends(verify_firebase_token)])
 def chat(request: ChatRequest):
-    """AI Chat endpoint"""
     validate_user_id(request.user_id)
     user_id = request.user_id
     message = request.message
     
-    print(f"[CHAT] Správa od {user_id}: {message[:50]}...")
+    print(f"[CHAT] {user_id}: {message[:50]}...")
     
     try:
         profile = firebase.get_user_profile(user_id)
@@ -132,7 +130,6 @@ def chat(request: ChatRequest):
         if message_response.function_call:
             fc_name = message_response.function_call.name
             fc_args = json.loads(message_response.function_call.arguments)
-            print(f"[CHAT] AI volá funkciu: {fc_name}")
             
             mapping = {'save_food_entry': 'food', 'save_exercise_entry': 'exercise', 'save_mood_entry': 'mood', 'save_weight_entry': 'weight'}
             if fc_name in mapping:
@@ -148,10 +145,10 @@ def chat(request: ChatRequest):
         
     except Exception as e:
         print(f"[CHAT ERROR] {str(e)}")
-        print(traceback.format_exc())
         return {
             "odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže pri komunikácii s AI. Skúste to prosím o chvíľu.", 
-            "saved_entries": []
+            "saved_entries": [],
+            "error_detail": str(e) if not IS_PRODUCTION else None
         }
 
 @app.get("/api/chart/{user_id}/{chart_type}", dependencies=[Depends(verify_firebase_token)])
@@ -161,7 +158,6 @@ def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30):
         data = stats_service.get_chart_data(user_id, chart_type, days)
         return {"chart_type": chart_type, "data": data, "days": days}
     except Exception as e:
-        print(f"[CHART ERROR] {chart_type}: {e}")
         return {"chart_type": chart_type, "data": {}, "days": days, "error": str(e)}
 
 @app.get("/api/stats/{user_id}", dependencies=[Depends(verify_firebase_token)])
@@ -194,13 +190,13 @@ DIST_DIR = os.path.join(BASE_DIR, "dist", "FitMind", "browser")
 @app.get("/{full_path:path}")
 def serve_angular(full_path: str):
     if full_path.startswith("api"):
-        raise HTTPException(status_code=404, detail=f"API endpoint not found: /{full_path}")
+        raise HTTPException(status_code=404, detail=f"API not found: /{full_path}")
     file_path = os.path.join(DIST_DIR, full_path)
     if full_path and os.path.isfile(file_path):
         return FileResponse(file_path)
     index_path = os.path.join(DIST_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return HTMLResponse("<h1>FitMind - Building...</h1>", status_code=200)
+    return HTMLResponse("<h1>FitMind Loading...</h1>", status_code=200)
 
 print("[START] Backend beží.")
