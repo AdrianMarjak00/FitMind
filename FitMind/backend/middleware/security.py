@@ -87,15 +87,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # HSTS (only if using HTTPS in production)
         # response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         
-        # Content Security Policy
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https:; "
-            "font-src 'self' data:; "
-            "connect-src 'self' https://identitytoolkit.googleapis.com https://firestore.googleapis.com"
-        )
+        # Content Security Policy - Relaxed for production and local development
+        csp_rules = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "img-src 'self' data: https: blob:",
+            "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
+            "connect-src 'self' http://localhost:* https://*.googleapis.com https://*.firebaseio.com https://fitmind-backend-fvq7.onrender.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com",
+            "frame-src 'self' https://fitmind-dba6a.firebaseapp.com",
+            "object-src 'none'"
+        ]
+        response.headers["Content-Security-Policy"] = "; ".join(csp_rules)
         
         return response
 
