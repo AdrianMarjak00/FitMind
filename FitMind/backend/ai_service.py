@@ -26,7 +26,7 @@ class AIService:
         
         # Konfigurácia modelu
         self.model = genai.GenerativeModel(
-            model_name='gemini-flash-latest',
+            model_name='gemini-1.5-flash-latest',
             tools=[self.tools]
         )
     
@@ -175,10 +175,23 @@ Aktuálne dáta profilu: {json.dumps(profile, ensure_ascii=False)}
         return prompt
 
     def chat(self, message: str, system_prompt: str, conversation_history: Optional[List[Dict]] = None) -> Any:
-
-        # Gemini Start Chat (tu by sa dala spracovať história konverzie)
-        chat_session = self.model.start_chat(history=[])
+        """
+        Pošle správu do Gemini a vráti odpoveď (obsah alebo volanie funkcie)
+        """
+        # Prekonvertuj históriu z formátu OpenAI na formát Gemini
+        gemini_history = []
+        if conversation_history:
+            for msg in conversation_history:
+                role = "user" if msg['role'] == "user" else "model"
+                gemini_history.append({
+                    "role": role,
+                    "parts": [msg['content']]
+                })
         
+        # Gemini Start Chat s históriou
+        chat_session = self.model.start_chat(history=gemini_history)
+        
+        # Pridaj systémový prompt k prvej správe pre zabezpečenie kontextu
         full_message = f"{system_prompt}\n\nPoužívateľ: {message}"
         
         try:
