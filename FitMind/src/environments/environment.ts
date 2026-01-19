@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: '/api'
+  // Render backend URL pre production build
+  apiUrl: 'https://fitmind-backend-fvq7.onrender.com/api'
 };
