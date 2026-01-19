@@ -13,7 +13,7 @@ export class BackendStatusService {
   constructor(private http: HttpClient) { }
 
   checkBackendStatus(): Observable<boolean> {
-    return this.http.get<any>(`${this.backendUrl}/`, {
+    return this.http.get<any>(`${this.backendUrl}/status`, {
       observe: 'response',
       responseType: 'json' as 'json'
     }).pipe(

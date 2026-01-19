@@ -114,7 +114,11 @@ class ProfileRequest(BaseModel):
 
 # API Endpointy
 
+# --- HEALTH & STATUS ENDPOINTS ---
+# Tieto musia byť pred catch-all route pre Angular
+
 @app.get("/api/status")
+@app.get("/api/status/")
 async def root():
     """Kontrola, či backend beží (presunuté z rootu)"""
     return {
@@ -125,6 +129,7 @@ async def root():
     }
 
 @app.get("/health")
+@app.get("/api/health")
 async def health():
     """Health check endpoint for monitoring"""
     return {
@@ -135,6 +140,8 @@ async def health():
         "environment": "production" if is_production else "development",
         "timestamp": time.time()
     }
+
+# --- API ENDPOINTY ---
 
 @app.post("/api/chat", dependencies=[Depends(verify_firebase_token)])
 async def chat(request: ChatRequest):
@@ -470,9 +477,10 @@ else:
 @app.get("/{full_path:path}")
 async def serve_angular(full_path: str):
     """Serve Angular app for all non-API routes"""
-    # Ak cesta začína na api, ale nenašiel sa endpoint (404 pre API)
-    if full_path.startswith("api"):
-         raise HTTPException(status_code=404, detail="API endpoint not found")
+    # Ak cesta začína na api, ale nenašiel sa endpoint v FastAPI (404 pre API)
+    # full_path v /{full_path:path} neobsahuje úvodné lomítko
+    if full_path.startswith("api/") or full_path == "api":
+         raise HTTPException(status_code=404, detail=f"API endpoint not found: /{full_path}")
 
     # Inak skús servovať Angular
     if not os.path.exists(DIST_DIR):

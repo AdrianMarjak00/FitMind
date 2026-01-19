@@ -7,9 +7,12 @@ import { from, of } from 'rxjs';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const auth = inject(Auth);
 
-    // Zoznam URL adries, ktoré vyžadujú token (všetky naše backend API volania)
-    // Ak URL obsahuje '/api/', pridáme token
-    if (req.url.includes('/api/')) {
+    // List of public endpoints that don't need a token
+    const publicEndpoints = ['/api/status', '/api/health', '/api/admin/check-email'];
+    const isPublic = publicEndpoints.some(path => req.url.includes(path));
+
+    // If it's a backend API call and NOT a public endpoint, try to add token
+    if (req.url.includes('/api/') && !isPublic) {
         return idToken(auth).pipe(
             take(1),
             switchMap(token => {
