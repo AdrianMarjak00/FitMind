@@ -2,13 +2,14 @@
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 import json
 import os
 import sys
 import time
+import traceback
 from dotenv import load_dotenv
 
 # Pridaj aktuálny priečinok do sys.path
@@ -34,25 +35,7 @@ from middleware import (
 print("[START] Inicializujem FastAPI...")
 app = FastAPI(title="FitMind AI Backend")
 
-# --- 1. CORS KONFIGURÁCIA ---
-allowed_origins = [
-    "https://www.fit-mind.sk",
-    "https://fit-mind.sk",
-    "https://fitmind-dba6a.web.app",
-    "https://fitmind-dba6a.firebaseapp.com",
-    "https://fitmind-backend-fvq7.onrender.com",
-    "http://localhost:4200"
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# --- 2. JEDNODUCHÝ LOGGER ---
+# --- 1. JEDNODUCHÝ LOGGER ---
 @app.middleware("http")
 async def simple_log(request: Request, call_next):
     start_time = time.time()
@@ -64,13 +47,38 @@ async def simple_log(request: Request, call_next):
             print(f"[{request.method}] {path} - {response.status_code} ({duration:.3f}s)")
         return response
     except Exception as e:
+        error_details = traceback.format_exc()
         print(f"[CRITICAL ERROR] {request.method} {request.url.path} failed: {str(e)}")
-        from fastapi.responses import JSONResponse
-        return JSONResponse(status_code=500, content={"error": "Internal Server Error", "message": str(e)})
+        print(f"[CRITICAL TRACEBACK] {error_details}")
+        # Vrátime JSONResponse, ale CORS middleware ho ešte spracuje, ak je pridaný neskôr
+        return JSONResponse(
+            status_code=500, 
+            content={"error": "Internal Server Error", "message": str(e)}
+        )
 
-# --- 3. BEZPEČNOSŤ ---
+# --- 2. BEZPEČNOSŤ ---
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)
+
+# --- 3. CORS KONFIGURÁCIA (MUSÍ BYŤ POSLEDNÁ ABY BOLA OUTERMOST) ---
+allowed_origins = [
+    "https://www.fit-mind.sk",
+    "https://fit-mind.sk",
+    "https://fitmind-dba6a.web.app",
+    "https://fitmind-dba6a.firebaseapp.com",
+    "https://fitmind-backend-fvq7.onrender.com",
+    "http://localhost:4200",
+    "http://localhost:8080"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
 
 # Inicializuj služby
 print("[START] Inicializujem služby...")
@@ -80,7 +88,6 @@ stats_service = StatsService()
 coach_service = CoachService(firebase)
 print("[OK] Všetky služby pripravené.")
 
-# Modely pre API
 class ChatRequest(BaseModel):
     user_id: str
     message: str
@@ -109,7 +116,6 @@ def chat(request: ChatRequest):
     print(f"[CHAT] Správa od {user_id}: {message[:50]}...")
     
     try:
-        # Načítanie kontextu
         profile = firebase.get_user_profile(user_id)
         entries = {
             'food': firebase.get_entries(user_id, 'food', days=7),
@@ -118,63 +124,42 @@ def chat(request: ChatRequest):
         history = firebase.get_chat_history(user_id, limit=5)
         
         system_prompt = ai_service.create_system_prompt(profile or {}, entries)
-        
-        # Volanie AI služby
         message_response = ai_service.chat(message, system_prompt, history)
         
         ai_odpoved = message_response.content
         saved_entries = []
         
-        # Ak AI chce vykonať funkciu (uložiť záznam)
         if message_response.function_call:
             fc_name = message_response.function_call.name
             fc_args = json.loads(message_response.function_call.arguments)
             print(f"[CHAT] AI volá funkciu: {fc_name}")
             
-            mapping = {
-                'save_food_entry': 'food', 
-                'save_exercise_entry': 'exercise', 
-                'save_mood_entry': 'mood', 
-                'save_weight_entry': 'weight'
-            }
-            
+            mapping = {'save_food_entry': 'food', 'save_exercise_entry': 'exercise', 'save_mood_entry': 'mood', 'save_weight_entry': 'weight'}
             if fc_name in mapping:
                 if firebase.save_entry(user_id, mapping[fc_name], fc_args):
                     saved_entries.append(f"Zaznamenané do {mapping[fc_name]}")
                     ai_odpoved = ai_service.get_final_response([])
         
-        # Uloženie do histórie
         firebase.save_chat_message(user_id, 'user', message)
         if ai_odpoved:
             firebase.save_chat_message(user_id, 'assistant', ai_odpoved)
         
-        print(f"[CHAT] Odpoveď odoslaná pre {user_id}")
         return {"odpoved": ai_odpoved, "saved_entries": saved_entries}
         
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
         print(f"[CHAT ERROR] {str(e)}")
-        print(f"[CHAT ERROR TRACEBACK] {error_details}")
-        # Vrátime aspoň nejakú odpoveď, aby sa frontend nezasekol
+        print(traceback.format_exc())
         return {
             "odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže pri komunikácii s AI. Skúste to prosím o chvíľu.", 
-            "saved_entries": [],
-            "error_detail": str(e) if not is_production else None
+            "saved_entries": []
         }
 
 @app.get("/api/chart/{user_id}/{chart_type}", dependencies=[Depends(verify_firebase_token)])
 def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30):
-    """Získanie dát pre grafy v správnom formáte pre frontend"""
     validate_user_id(user_id)
     try:
         data = stats_service.get_chart_data(user_id, chart_type, days)
-        # Frontend očakáva objekt s kľúčom 'data'
-        return {
-            "chart_type": chart_type,
-            "data": data,
-            "days": days
-        }
+        return {"chart_type": chart_type, "data": data, "days": days}
     except Exception as e:
         print(f"[CHART ERROR] {chart_type}: {e}")
         return {"chart_type": chart_type, "data": {}, "days": days, "error": str(e)}
@@ -206,26 +191,16 @@ def get_history_api(user_id: str, limit: Optional[int] = 50):
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_DIR = os.path.join(BASE_DIR, "dist", "FitMind", "browser")
 
-# Servovanie statických súborov (JS, CSS, assets)
 @app.get("/{full_path:path}")
 def serve_angular(full_path: str):
-    # DÔLEŽITÉ: Tento route by nemal nikdy zachytiť /api cesty
-    # lebo API routes sú definované vyššie a majú prednosť
     if full_path.startswith("api"):
-        # Ak sa sem dostaneme, znamená to že API endpoint neexistuje
         raise HTTPException(status_code=404, detail=f"API endpoint not found: /{full_path}")
-
-    # Ak je to súbor v dist priečinku, vráť ho
     file_path = os.path.join(DIST_DIR, full_path)
     if full_path and os.path.isfile(file_path):
         return FileResponse(file_path)
-
-    # Inak vráť Angular index.html (pre client-side routing)
     index_path = os.path.join(DIST_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-
-    # Fallback ak dist priečinok neexistuje
-    return HTMLResponse("<h1>FitMind - Building...</h1><p>Backend is running but frontend is not built yet.</p>", status_code=200)
+    return HTMLResponse("<h1>FitMind - Building...</h1>", status_code=200)
 
 print("[START] Backend beží.")

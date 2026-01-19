@@ -25,13 +25,13 @@ async def verify_firebase_token(request: Request):
         request.state.user = decoded_token
         return decoded_token
     except auth.ExpiredIdTokenError:
-        print("[AUTH ERROR] Token expired")
+        print(f"[AUTH ERROR] Token expired for request to {request.url.path}")
         raise HTTPException(status_code=401, detail="Token expired")
     except auth.InvalidIdTokenError:
-        print("[AUTH ERROR] Token invalid")
+        print(f"[AUTH ERROR] Token invalid (check Firebase Project ID) for request to {request.url.path}")
         raise HTTPException(status_code=401, detail="Token invalid")
     except Exception as e:
-        print(f"[AUTH ERROR] Unexpected: {e}")
+        print(f"[AUTH ERROR] Unexpected: {str(e)} for request to {request.url.path}")
         raise HTTPException(status_code=401, detail=f"Authentication error: {str(e)}")
 
 async def check_admin_auth(request: Request):
