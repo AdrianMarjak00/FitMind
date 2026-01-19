@@ -25,30 +25,62 @@ class FirebaseService:
     
     @classmethod
     def _init_firebase(cls):
-        """Inicializuje Firebase pripojenie výhradne cez premenné prostredia"""
+        """Inicializuje Firebase pripojenie cez premenné prostredia alebo lokálny súbor"""
         try:
-            # 1. Skús načítať z environment premennej (pre cloud hosting aj lokálny vývoj)
-            # Obsahuje JSON reťazec service account kľúča
-            env_creds = os.getenv("FIREBASE_CREDENTIALS")
+            # 1. Skús načítať z environment premenných (pre cloud hosting)
+            # Skús obidva možné názvy premenných
+            env_creds = os.getenv("FIREBASE_CREDENTIALS") or os.getenv("FIREBASE_SERVICE_ACCOUNT")
             cred = None
             
             if env_creds:
                 try:
+                    # Skús či je to JSON reťazec
                     cred_dict = json.loads(env_creds)
                     cred = credentials.Certificate(cred_dict)
+                    print("[INFO] Firebase: Používam credentials z environment premennej.")
                 except Exception as e:
-                    print(f"[ERROR] Chyba pri parsovaní FIREBASE_CREDENTIALS: {e}")
+                    # Ak to nie je JSON, skús či je to cesta k súboru
+                    if os.path.exists(env_creds):
+                        cred = credentials.Certificate(env_creds)
+                        print(f"[INFO] Firebase: Používam credentials zo súboru v env: {env_creds}")
+                    else:
+                        print(f"[ERROR] Chyba pri parsovaní FIREBASE_CREDENTIALS: {e}")
+            
+            # 2. Ak stále nič, skús lokálny súbor (pre vývoj)
+            if not cred:
+                # Cesty ktoré skúsime
+                possible_paths = [
+                    os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"),
+                    os.path.join(os.path.dirname(__file__), "firebase-service-account.json"),
+                    "serviceAccountKey.json",
+                    "backend/serviceAccountKey.json"
+                ]
+                
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        try:
+                            cred = credentials.Certificate(path)
+                            print(f"[INFO] Firebase: Používam credentials z lokálneho súboru: {path}")
+                            break
+                        except Exception:
+                            continue
             
             if cred:
-                firebase_admin.initialize_app(cred)
+                # Inicializuj app len ak už nie je inicializovaná
+                try:
+                    firebase_admin.get_app()
+                    print("[INFO] Firebase: Aplikácia už bola inicializovaná.")
+                except ValueError:
+                    firebase_admin.initialize_app(cred)
+                
                 cls._db = firestore.client()
-                print("[OK] Firebase pripojene cez environment premennu!")
+                print("[OK] Firebase úspešne pripojené!")
             else:
-                print("[CRITICAL] FIREBASE_CREDENTIALS nenajdene! Prosim nastav premennú prostredia.")
+                print("[CRITICAL] Firebase credentials nenájdené! Nastav FIREBASE_CREDENTIALS alebo nahraj serviceAccountKey.json.")
                 cls._db = None
 
         except Exception as e:
-            print(f"[WARNING] Firebase chyba: {e}")
+            print(f"[WARNING] Firebase kritická chyba pri inicializácii: {e}")
             cls._db = None
     
     @property

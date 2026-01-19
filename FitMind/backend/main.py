@@ -1,17 +1,20 @@
 # FitMind Backend - Hlavný API server
 # Tento súbor obsahuje všetky API endpointy pre frontend
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 import json
 import os
+import sys
+import time
 from dotenv import load_dotenv
 from firebase_admin import firestore
-import sys
 
-# Pridaj aktuálny priečinok do sys.path, aby fungovali importy v Docker/Cloud Run
+# Pridaj aktuálny priečinok do sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import služieb
@@ -28,9 +31,6 @@ from middleware import (
     verify_firebase_token,
     check_admin_auth
 )
-from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 # Načítaj premenné prostredia z .env súboru
 load_dotenv()
@@ -47,13 +47,13 @@ is_production = os.getenv("ENV", "production") == "production"
 # --- MIDDLEWARE SEKCOA ---
 
 # 1. CORS - povoľujeme Render, Firebase Hosting a localhost
+# POZOR: Origins nesmú končiť lomkou!
 allowed_origins = [
-    "https://www.fit-mind.sk",  # Production domain
+    "https://www.fit-mind.sk",
     "https://fitmind-dba6a.web.app",
     "https://fitmind-dba6a.firebaseapp.com",
-    "https://fitmind-backend-fvq7.onrender.com/",  # Tvoja Render URL
-    "http://localhost:4200",
-    "https://*.onrender.com"
+    "https://fitmind-backend-fvq7.onrender.com",
+    "http://localhost:4200"
 ]
 
 app.add_middleware(
@@ -64,7 +64,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. Ostatné bezpečnostné prvky (SecurityHeadersMiddleware dočasne zakomentuj, ak to stále nepôjde)
+# 2. Jednoduchý Logger pre Render/Production
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    path = request.url.path
+    method = request.method
+    try:
+        response = await call_next(request)
+        process_time = (time.time() - start_time) * 1000
+        print(f"[INFO] {method} {path} - {response.status_code} ({process_time:.2f}ms)")
+        return response
+    except Exception as e:
+        print(f"[ERROR] {method} {path} FAILED: {str(e)}")
+        raise e
+
+# 3. Ostatné bezpečnostné prvky
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)  # 10 MB
@@ -113,8 +128,10 @@ async def health():
     return {
         "status": "healthy",
         "service": "FitMind Backend",
-        "firebase": firebase.is_connected(),
-        "environment": "production" if is_production else "development"
+        "firebase": "connected" if firebase.is_connected() else "disconnected",
+        "ai": "operational" if ai_service.model else "limited (no model)",
+        "environment": "production" if is_production else "development",
+        "timestamp": time.time()
     }
 
 @app.post("/api/chat", dependencies=[Depends(verify_firebase_token)])
