@@ -33,9 +33,9 @@ class AIService:
 
     def _create_model(self, system_instruction: str = None):
         try:
-            # Použijeme stabilný názov modelu namiesto -latest
+            # Použijeme gemini-1.5-flash-001 - správny názov modelu pre v1beta API
             self.model = genai.GenerativeModel(
-                model_name='gemini-1.5-flash',
+                model_name='gemini-1.5-flash-001',
                 tools=[self.tools],
                 system_instruction=system_instruction
             )
