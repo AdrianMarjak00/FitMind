@@ -1,6 +1,4 @@
 # FitMind Backend - Hlavný API server
-# Tento súbor obsahuje všetky API endpointy pre frontend
-
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -18,6 +16,9 @@ from firebase_admin import firestore
 # Pridaj aktuálny priečinok do sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Načítaj premenné prostredia
+load_dotenv()
+
 # Import služieb
 from firebase_service import FirebaseService
 from ai_service import AIService
@@ -33,25 +34,16 @@ from middleware import (
     check_admin_auth
 )
 
-# Načítaj premenné prostredia z .env súboru
-load_dotenv()
-
-app = FastAPI(
-    title="FitMind AI Backend - Personal Coach Edition",
-    docs_url="/docs" if os.getenv("ENV") == "development" else None,
-    redoc_url="/redoc" if os.getenv("ENV") == "development" else None
-)
+print("[START] Inicializujem FastAPI...")
+app = FastAPI(title="FitMind AI Backend")
 
 # Is production?
 is_production = os.getenv("ENV", "production") == "production"
 
-# --- MIDDLEWARE SEKCOA ---
-
-# 1. CORS - povoľujeme Render, Firebase Hosting a localhost
-# POZOR: Origins nesmú končiť lomkou!
+# --- 1. CORS KONFIGURÁCIA ---
 allowed_origins = [
     "https://www.fit-mind.sk",
-    "https://fit-mind.sk",      # Naked domain
+    "https://fit-mind.sk",
     "https://fitmind-dba6a.web.app",
     "https://fitmind-dba6a.firebaseapp.com",
     "https://fitmind-backend-fvq7.onrender.com",
@@ -65,34 +57,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- 2. KOMPRESIA (Pre rýchlejšie JS/CSS) ---
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
-# 2. Jednoduchý Logger pre Render/Production
+# --- 3. JEDNODUCHÝ LOGGER ---
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
+async def simple_log(request: Request, call_next):
     start_time = time.time()
-    path = request.url.path
-    method = request.method
     try:
         response = await call_next(request)
-        process_time = (time.time() - start_time) * 1000
-        print(f"[INFO] {method} {path} - {response.status_code} ({process_time:.2f}ms)")
+        duration = time.time() - start_time
+        print(f"[{request.method}] {request.url.path} - {response.status_code} ({duration:.3f}s)")
         return response
     except Exception as e:
-        print(f"[ERROR] {method} {path} FAILED: {str(e)}")
+        print(f"[CRITICAL ERROR] {request.method} {request.url.path} failed: {str(e)}")
         raise e
 
-# 3. Ostatné bezpečnostné prvky
+# --- 4. BEZPEČNOSŤ ---
 app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
-app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)  # 10 MB
-# Inicializuj služby (Firebase, AI, Stats, Coach)
+# Rate limiting dočasne vypnutý pre elimináciu chýb pri štarte
+# app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
+app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)
+
+# Inicializuj služby
+print("[START] Inicializujem Firebase a AI...")
 firebase = FirebaseService()
 ai_service = AIService()
 stats_service = StatsService()
 coach_service = CoachService(firebase)
 
-# Definície dátových modelov pre API requesty
+# Modely pre API
 class ChatRequest(BaseModel):
     user_id: str
     message: str
@@ -114,59 +109,28 @@ class ProfileRequest(BaseModel):
     targetWeight: Optional[float] = None
     targetCalories: Optional[int] = None
 
-# API Endpointy
-
-# --- HEALTH & STATUS ENDPOINTS ---
-# Tieto musia byť pred catch-all route pre Angular
+# --- API ENDPOINTY ---
 
 @app.get("/api/status")
 @app.get("/api/status/")
-async def root():
-    """Kontrola, či backend beží (presunuté z rootu)"""
+async def api_status():
     return {
-        "status": "online",
-        "message": "FitMind AI Backend bezi!",
-        "firebase": "pripojene" if firebase.is_connected() else "odpojene",
-        "environment": "production" if is_production else "development"
+        "status": "online", 
+        "firebase": "connected" if firebase.is_connected() else "disconnected",
+        "ai": "operational" if ai_service.model else "limited"
     }
 
 @app.get("/health")
 @app.get("/api/health")
 async def health():
-    """Health check endpoint for monitoring"""
-    return {
-        "status": "healthy",
-        "service": "FitMind Backend",
-        "firebase": "connected" if firebase.is_connected() else "disconnected",
-        "ai": "operational" if ai_service.model else "limited (no model)",
-        "environment": "production" if is_production else "development",
-        "timestamp": time.time()
-    }
-
-# --- API ENDPOINTY ---
+    return {"status": "healthy", "timestamp": time.time()}
 
 @app.post("/api/chat", dependencies=[Depends(verify_firebase_token)])
 async def chat(request: ChatRequest):
-    """
-    AI Chat endpoint - pokročilý personalizovaný kouč s pamäťou konverzácie
-    Automaticky zaznamenáva údaje a poskytuje personalizované rady
-    """
-    # Validate input
     validate_user_id(request.user_id)
-    if not request.message or len(request.message) > 5000:
-        raise HTTPException(status_code=400, detail="Invalid message length")
-    
     user_id = request.user_id
     message = request.message
     
-    # Skús bezpečne vytlačiť správu (bez emoji pre Windows)
-    try:
-        safe_msg = message.encode("ascii", "ignore").decode()
-        print(f"[USER] {user_id}: {safe_msg}")
-    except Exception:
-        print(f"[USER] {user_id}: <message>")
-    
-    # Načítaj profil a záznamy používateľa z databázy
     profile = firebase.get_user_profile(user_id)
     entries = {
         'food': firebase.get_entries(user_id, 'food', days=7, limit=10),
@@ -176,26 +140,18 @@ async def chat(request: ChatRequest):
         'sleep': firebase.get_entries(user_id, 'sleep', days=7, limit=5)
     }
     
-    # Získaj konverzačnú históriu (posledných 10 správ)
     conversation_history = firebase.get_chat_history(user_id, limit=10)
-    
-    # Vytvor systémový prompt pre AI s informáciami o používateľovi a históriou
     system_prompt = ai_service.create_system_prompt(profile or {}, entries, conversation_history)
     
     try:
-        # Pošli správu do OpenAI s históriou konverzácie
         message_response = ai_service.chat(message, system_prompt, conversation_history)
         ai_odpoved = message_response.content
         saved_entries = []
         
-        # Ak AI chce zavolať funkciu (napr. uložiť jedlo), spracuj to
         if message_response.function_call:
             function_name = message_response.function_call.name
             function_args = json.loads(message_response.function_call.arguments)
             
-            print(f"[AI] Vola funkciu: {function_name}")
-            
-            # Mapovanie názvov funkcií na typy záznamov
             function_map = {
                 'save_food_entry': ('food', '🍽️ Jedlo ulozene'),
                 'save_exercise_entry': ('exercise', '💪 Cvicenie ulozene'),
@@ -205,7 +161,6 @@ async def chat(request: ChatRequest):
                 'save_weight_entry': ('weight', '⚖️ Vaha ulozena')
             }
             
-            # Ulož záznam do databázy
             if function_name in function_map:
                 entry_type, msg = function_map[function_name]
                 if firebase.save_entry(user_id, entry_type, function_args):
@@ -214,7 +169,6 @@ async def chat(request: ChatRequest):
                 if firebase.update_profile(user_id, function_args):
                     saved_entries.append('✅ Profil aktualizovany')
             
-            # Získaj finálnu odpoveď od AI po uložení dát
             messages = [
                 {"role": "system", "content": system_prompt},
                 *conversation_history,
@@ -225,44 +179,21 @@ async def chat(request: ChatRequest):
             
             try:
                 ai_odpoved = ai_service.get_final_response(messages) or ai_odpoved
-            except Exception as e:
-                print(f"[WARNING] Nepodarilo sa ziskat finalnu odpoved od AI: {e}")
-                if len(saved_entries) > 0:
-                    ai_odpoved = "Údaje boli úspešne uložené, ale AI je momentálne preťažené. Skontrolujte prosím dashboard."
-                else:
-                    raise e
+            except Exception:
+                if not saved_entries: raise
         
-        # Ulož správy do histórie
         firebase.save_chat_message(user_id, 'user', message)
         if ai_odpoved:
-            firebase.save_chat_message(user_id, 'assistant', ai_odpoved, 
-                                      metadata={'saved_entries': saved_entries})
+            firebase.save_chat_message(user_id, 'assistant', ai_odpoved, metadata={'saved_entries': saved_entries})
         
-        # Vytlač preview odpovede
-        try:
-            preview = (ai_odpoved or "").encode("ascii", "ignore").decode()[:100]
-        except Exception:
-            preview = "<non-ascii>"
-        print(f"[AI] {preview if preview else 'Function call'}...")
-        
-        # Vráť odpoveď frontendu
-        return {
-            "odpoved": ai_odpoved or "Data ulozene!",
-            "saved_entries": saved_entries,
-            "user_id": user_id
-        }
-    
+        return {"odpoved": ai_odpoved or "Data ulozene!", "saved_entries": saved_entries, "user_id": user_id}
     except Exception as e:
-        print(f"[ERROR] CHYBA: {e}")
         error_msg = sanitize_error_message(e, production=is_production)
         raise HTTPException(status_code=500, detail=error_msg)
 
 @app.get("/api/stats/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_stats(user_id: str, days: Optional[int] = 30):
-    """Získa všetky štatistiky pre používateľa"""
     validate_user_id(user_id)
-    if days and (days < 1 or days > 365):
-        raise HTTPException(status_code=400, detail="Days must be between 1 and 365")
     try:
         return {
             "calories": stats_service.get_calories_summary(user_id, days),
@@ -273,250 +204,65 @@ async def get_stats(user_id: str, days: Optional[int] = 30):
             "weight_trend": stats_service.get_weight_trend(user_id, days)
         }
     except Exception as e:
-        error_msg = sanitize_error_message(e, production=is_production)
-        raise HTTPException(status_code=500, detail=error_msg)
-
-@app.get("/api/chart/{user_id}/{chart_type}", dependencies=[Depends(verify_firebase_token)])
-async def get_chart_data(user_id: str, chart_type: str, days: Optional[int] = 30):
-    """Získa dáta pre konkrétny graf (kalórie, cvičenie, nálada, atď.)"""
-    try:
-        data = stats_service.get_chart_data(user_id, chart_type, days)
-        return {"chart_type": chart_type, "data": data, "days": days}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/entries/{user_id}/{entry_type}", dependencies=[Depends(verify_firebase_token)])
-async def get_entries(user_id: str, entry_type: str, days: Optional[int] = 30, limit: Optional[int] = 100):
-    """Získa záznamy pre používateľa (jedlo, cvičenie, atď.)"""
-    try:
-        entries = firebase.get_entries(user_id, entry_type, days, limit)
-        return {"entry_type": entry_type, "entries": entries, "count": len(entries)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/admin/check/{user_id}", dependencies=[Depends(verify_firebase_token)])
-async def check_admin(user_id: str):
-    """Kontroluje, či je používateľ admin"""
-    try:
-        is_admin = firebase.is_admin(user_id)
-        return {"user_id": user_id, "isAdmin": is_admin}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/admin/check-email/{email}")
-async def check_admin_by_email(email: str):
-    """Kontroluje, či je email admin"""
-    try:
-        is_admin = firebase.is_admin_by_email(email)
-        return {"email": email, "isAdmin": is_admin}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/admin/add", dependencies=[Depends(verify_firebase_token), Depends(check_admin_auth)])
-async def add_admin(request: AddAdminRequest):
-    """Pridá admina do databázy"""
-    try:
-        success = firebase.add_admin(request.user_id, request.email)
-        if success:
-            return {"success": True, "message": f"Admin {request.email} pridaný"}
-        else:
-            raise HTTPException(status_code=500, detail="Nepodarilo sa pridať admina")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/admin/list", dependencies=[Depends(verify_firebase_token), Depends(check_admin_auth)])
-async def list_admins():
-    """Získa zoznam všetkých adminov"""
-    try:
-        admins = firebase.get_all_admins()
-        return {"admins": admins, "count": len(admins)}
-    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profile/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_profile(user_id: str):
-    """Získa profil používateľa"""
     try:
         profile = firebase.get_user_profile(user_id)
-        if not profile:
-            return {"user_id": user_id, "profile": None, "exists": False}
-        return {"user_id": user_id, "profile": profile, "exists": True}
+        return {"user_id": user_id, "profile": profile, "exists": profile is not None}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/profile", dependencies=[Depends(verify_firebase_token)])
 async def save_profile(request: ProfileRequest):
-    """Uloží alebo aktualizuje profil používateľa (používa sa pri onboarding)"""
     try:
-        # Vytvor slovník s dátami profilu
-        profile_data = {
-            "userId": request.user_id,
-            "updatedAt": firestore.SERVER_TIMESTAMP
-        }
+        profile_data = {"userId": request.user_id, "updatedAt": firestore.SERVER_TIMESTAMP}
+        for field in ["name", "age", "height", "gender", "activityLevel", "goals", "problems", "helps", "targetWeight", "targetCalories"]:
+            val = getattr(request, field)
+            if val is not None: profile_data[field] = val
         
-        # Pridaj len tie polia, ktoré boli zadané
-        if request.name:
-            profile_data["name"] = request.name
-        if request.age:
-            profile_data["age"] = request.age
-        if request.height:
-            profile_data["height"] = request.height
-        if request.gender:
-            profile_data["gender"] = request.gender
-        if request.activityLevel:
-            profile_data["activityLevel"] = request.activityLevel
-        if request.goals:
-            profile_data["goals"] = request.goals
-        if request.problems:
-            profile_data["problems"] = request.problems
-        if request.helps:
-            profile_data["helps"] = request.helps
-        if request.targetWeight:
-            profile_data["targetWeight"] = request.targetWeight
-        if request.targetCalories:
-            profile_data["targetCalories"] = request.targetCalories
-        
-        # Skontroluj či profil už existuje
-        existing = firebase.get_user_profile(request.user_id)
-        if existing:
-            # Aktualizuj existujúci profil
-            success = firebase.update_profile(request.user_id, profile_data)
-        else:
-            # Vytvor nový profil
+        success = firebase.update_profile(request.user_id, profile_data)
+        if not success:
             profile_data["createdAt"] = firestore.SERVER_TIMESTAMP
-            user_ref = firebase.db.collection('userFitnessProfiles').document(request.user_id)
-            user_ref.set(profile_data, merge=True)
+            firebase.db.collection('userFitnessProfiles').document(request.user_id).set(profile_data, merge=True)
             success = True
-        
-        if success:
-            return {"success": True, "message": "Profil ulozeny", "user_id": request.user_id}
-        else:
-            raise HTTPException(status_code=500, detail="Nepodarilo sa ulozit profil")
+        return {"success": success, "user_id": request.user_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# === PERSONALIZOVANÉ KOUČ ENDPOINTY ===
-
+# Ostatné coach endpointy
 @app.get("/api/coach/weekly-report/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_weekly_report(user_id: str):
-    """Získa týždenný report pre používateľa s analýzou pokroku"""
-    try:
-        report = coach_service.generate_weekly_report(user_id)
-        return {"user_id": user_id, "report": report}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/coach/monthly-report/{user_id}", dependencies=[Depends(verify_firebase_token)])
-async def get_monthly_report(user_id: str):
-    """Získa mesačný report pre používateľa s dlhodobými trendmi"""
-    try:
-        report = coach_service.generate_monthly_report(user_id)
-        return {"user_id": user_id, "report": report}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"user_id": user_id, "report": coach_service.generate_weekly_report(user_id)}
 
 @app.get("/api/coach/recommendations/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_recommendations(user_id: str):
-    """Získa personalizované odporúčania pre používateľa"""
-    try:
-        recommendations = coach_service.get_personalized_recommendations(user_id)
-        return {
-            "user_id": user_id,
-            "recommendations": recommendations,
-            "count": len(recommendations)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/coach/goal-progress/{user_id}", dependencies=[Depends(verify_firebase_token)])
-async def get_goal_progress(user_id: str):
-    """Kontroluje pokrok k stanoveným cieľom"""
-    try:
-        progress = coach_service.check_goal_progress(user_id)
-        return progress
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    recs = coach_service.get_personalized_recommendations(user_id)
+    return {"user_id": user_id, "recommendations": recs, "count": len(recs)}
 
 @app.get("/api/chat/history/{user_id}", dependencies=[Depends(verify_firebase_token)])
 async def get_chat_history(user_id: str, limit: Optional[int] = 50):
-    """Získa históriu konverzácie s AI"""
-    try:
-        history = firebase.get_chat_history(user_id, limit)
-        return {
-            "user_id": user_id,
-            "messages": history,
-            "count": len(history)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/chat/history/{user_id}", dependencies=[Depends(verify_firebase_token)])
-async def clear_chat_history(user_id: str):
-    """Vymaže históriu konverzácie"""
-    try:
-        success = firebase.clear_chat_history(user_id)
-        if success:
-            return {"success": True, "message": "Chat historia vymazana", "user_id": user_id}
-        else:
-            raise HTTPException(status_code=500, detail="Nepodarilo sa vymazat historiu")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    history = firebase.get_chat_history(user_id, limit)
+    return {"user_id": user_id, "messages": history, "count": len(history)}
 
 # === SERVOVANIE ANGULAR FRONTENDU ===
-# Get base directory (parent of backend folder)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_DIR = os.path.join(BASE_DIR, "dist", "FitMind", "browser")
-ASSETS_DIR = os.path.join(DIST_DIR, "assets")
-
-# Mount static files (Angular build output) if they exist
-if os.path.exists(ASSETS_DIR):
-    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
-    print(f"[INFO] Serving static assets from: {ASSETS_DIR}")
-else:
-    print(f"[WARNING] Assets directory not found: {ASSETS_DIR}")
-
-# Catch-all route for Angular routing (must be last!)
-index_html_cache = None
 
 @app.get("/{full_path:path}")
 async def serve_angular(full_path: str):
-    global index_html_cache
-    """Serve Angular app for all non-API routes"""
-    # Ak cesta začína na api, ale nenašiel sa endpoint v FastAPI (404 pre API)
-    # full_path v /{full_path:path} neobsahuje úvodné lomítko
-    if full_path.startswith("api/") or full_path == "api":
-         raise HTTPException(status_code=404, detail=f"API endpoint not found: /{full_path}")
+    if full_path.startswith("api"):
+        raise HTTPException(status_code=404, detail=f"API not found: {full_path}")
 
-    # Inak skús servovať Angular
-    if not os.path.exists(DIST_DIR):
-        if not is_production:
-            return {"message": "Development mode: Frontend dist not found"}
-        raise HTTPException(status_code=503, detail="Frontend not built yet")
+    file_path = os.path.join(DIST_DIR, full_path)
+    if full_path and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    index_path = os.path.join(DIST_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    return HTMLResponse(content="<h1>FitMind is loading...</h1><p>Please wait a moment.</p>", status_code=200)
 
-    try:
-        # 1. Skús, či je to konkrétny súbor (napr. main.js, styles.css)
-        file_path = os.path.join(DIST_DIR, full_path)
-        if full_path and os.path.isfile(file_path):
-            # Pre statické súbory necháme FileResponse (prehliadač si ich nacashuje)
-            return FileResponse(file_path)
-        
-        # 2. Pre všetko ostatné pošli index.html (Angular Routing)
-        if index_html_cache and is_production:
-            return HTMLResponse(content=index_html_cache)
-            
-        index_path = os.path.join(DIST_DIR, "index.html")
-        if os.path.exists(index_path):
-            if is_production:
-                with open(index_path, "r", encoding="utf-8") as f:
-                    index_html_cache = f.read()
-                return HTMLResponse(content=index_html_cache)
-            return FileResponse(index_path)
-            
-        raise HTTPException(status_code=404, detail="index.html not found")
-    except Exception as e:
-        print(f"[ERROR] Serving frontend: {e}")
-        raise HTTPException(status_code=500, detail="Error serving frontend")
-
-# Server sa spúšťa takto:
-# Lokálne: uvicorn main:app --reload
-# Railpack: uvicorn main:app --host 0.0.0.0 --port $PORT
+print("[START] Backend pripravený.")
