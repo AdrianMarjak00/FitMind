@@ -15,20 +15,32 @@ class AIService:
     
     def __init__(self):
         """Inicializuje Gemini klienta s API kľúčom"""
-        api_key = os.getenv("GOOGLE_API_KEY")
+        # Skús obidva možné názvy premenných prostredia
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        
         if not api_key:
-            print("[WARNING] GOOGLE_API_KEY not found in environment variables")
+            print("[WARNING] GOOGLE_API_KEY or GEMINI_API_KEY not found in environment variables")
+            # Nechcem aby celý server spadol ak chýba kľúč, ale AI funkcie nebudú fungovať
+            self.model = None
+            self.tools = None
+            return
         
-        genai.configure(api_key=api_key)
-        
-        # Definuj nástroje (funkcie)
-        self.tools = self._get_tools()
-        
-        # Konfigurácia modelu
-        self.model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash-latest',
-            tools=[self.tools]
-        )
+        try:
+            genai.configure(api_key=api_key)
+            
+            # Definuj nástroje (funkcie)
+            self.tools = self._get_tools()
+            
+            # Konfigurácia modelu
+            self.model = genai.GenerativeModel(
+                model_name='gemini-1.5-flash-latest',
+                tools=[self.tools]
+            )
+            print("[OK] Gemini AI service inicializovany.")
+        except Exception as e:
+            print(f"[ERROR] Chyba pri inicializacii Gemini: {e}")
+            self.model = None
+            self.tools = None
     
     def _get_tools(self):
         """
@@ -178,6 +190,9 @@ Aktuálne dáta profilu: {json.dumps(profile, ensure_ascii=False)}
         """
         Pošle správu do Gemini a vráti odpoveď (obsah alebo volanie funkcie)
         """
+        if not self.model:
+            raise Exception("AI model nie je inicializovaný. Skontrolujte API kľúč.")
+            
         # Prekonvertuj históriu z formátu OpenAI na formát Gemini
         gemini_history = []
         if conversation_history:

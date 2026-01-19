@@ -24,8 +24,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.requests = defaultdict(list)
         
     async def dispatch(self, request: Request, call_next):
-        # Get client IP
-        client_ip = request.client.host
+        # Get client IP - robust handle for proxies
+        client_ip = "unknown"
+        if request.client:
+            client_ip = request.client.host
+        
+        # Check X-Forwarded-For if behind a proxy like Render/Cloudflare
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
         
         # Skip rate limiting for health check endpoints
         if request.url.path in ["/", "/health", "/api/health"]:
