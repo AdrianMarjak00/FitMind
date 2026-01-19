@@ -3,11 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
+import { environment } from '../../environments/environment';
+
 @Injectable({
   providedIn: 'root'
 })
 export class BackendStatusService {
-  private backendUrl = 'https://fitmind-production-21d5.up.railway.app/api';
+  private backendUrl = environment.apiUrl;
   constructor(private http: HttpClient) { }
 
   checkBackendStatus(): Observable<boolean> {
