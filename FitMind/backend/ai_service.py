@@ -11,19 +11,25 @@ class AIService:
         self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.model = None
         self.tools = self._get_tools()
-        
+
+        print(f"[DEBUG] AI API Key loaded: {'Yes' if self.api_key else 'No'}")
+        if self.api_key:
+            print(f"[DEBUG] API Key starts with: {self.api_key[:10]}...")
+
         if not self.api_key:
-            print("[WARNING] AI API key missing.")
+            print("[WARNING] AI API key missing. Set GOOGLE_API_KEY environment variable.")
             return
-            
+
         try:
             genai.configure(api_key=self.api_key, transport='rest')
-            # Inicializujeme model bez system_instruction zatiaľ, 
+            # Inicializujeme model bez system_instruction zatiaľ,
             # budeme ho meniť dynamicky podľa používateľa
             self._create_model()
-            print("[OK] Gemini AI initialized.")
+            print("[OK] Gemini AI initialized successfully.")
         except Exception as e:
-            print(f"[ERROR] AI Init: {e}")
+            import traceback
+            print(f"[ERROR] AI Init failed: {e}")
+            print(f"[ERROR] AI Init traceback: {traceback.format_exc()}")
 
     def _create_model(self, system_instruction: str = None):
         try:
@@ -131,7 +137,9 @@ DÔLEŽITÉ:
 
             return MockResponse(res_text)
         except Exception as e:
+            import traceback
             print(f"[ERROR] Chat call failed: {e}")
+            print(f"[ERROR] Chat traceback: {traceback.format_exc()}")
             raise e
 
     def get_final_response(self, messages: List[Dict]) -> str:

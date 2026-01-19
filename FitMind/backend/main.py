@@ -152,7 +152,10 @@ def chat(request: ChatRequest):
         return {"odpoved": ai_odpoved, "saved_entries": saved_entries}
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         print(f"[CHAT ERROR] {str(e)}")
+        print(f"[CHAT ERROR TRACEBACK] {error_details}")
         # Vrátime aspoň nejakú odpoveď, aby sa frontend nezasekol
         return {"odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže. Skúste to prosím neskôr.", "saved_entries": []}
 
