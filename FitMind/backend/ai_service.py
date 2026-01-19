@@ -3,7 +3,7 @@ import json
 from typing import Dict, List, Any, Optional
 import google.generativeai as genai
 from google.generativeai.types import FunctionDeclaration, Tool
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 
 class AIEncoder(json.JSONEncoder):
@@ -11,8 +11,11 @@ class AIEncoder(json.JSONEncoder):
     def default(self, obj):
         if hasattr(obj, 'to_datetime'):
             return obj.to_datetime().isoformat()
-        if hasattr(obj, 'isoformat'):
-            return obj.isoformat()
+        if hasattr(obj, 'timestamp'):
+            try:
+                return datetime.fromtimestamp(obj.timestamp()).isoformat()
+            except:
+                pass
         if isinstance(obj, datetime):
             return obj.isoformat()
         return str(obj)
@@ -20,48 +23,15 @@ class AIEncoder(json.JSONEncoder):
 class AIService:
     def __init__(self):
         self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.model = None
-        self.tools = self._get_tools()
-
+        
         if self.api_key:
             print(f"[DEBUG] AI Service: API Key detected ({self.api_key[:8]}...)")
-
-        if not self.api_key:
-            print("[WARNING] AI API key missing.")
-            return
-
-        try:
             genai.configure(api_key=self.api_key)
-            self._create_model()
-        except Exception as e:
-            print(f"[ERROR] AI Init: {e}")
-
-    def _create_model(self, system_instruction: str = None):
-        """Vytvorí model s voliteľným systémovým promptom"""
-        # Zoznam modelov, ktoré skúsime v poradí
-        models_to_try = [
-            'gemini-1.5-flash',
-            'gemini-1.5-flash-001',
-            'gemini-pro'
-        ]
-        
-        last_error = None
-        for m_name in models_to_try:
-            try:
-                self.model = genai.GenerativeModel(
-                    model_name=m_name,
-                    tools=[self.tools],
-                    system_instruction=system_instruction
-                )
-                print(f"[DEBUG] Model {m_name} ready.")
-                return
-            except Exception as e:
-                last_error = e
-                continue
-        
-        print(f"[CRITICAL ERROR] Failed to initialize any AI model: {last_error}")
+        else:
+            print("[WARNING] AI API key missing. AI will not work.")
 
     def _get_tools(self):
+        """Definície nástrojov pre AI"""
         declarations = [
             FunctionDeclaration(
                 name="save_food_entry",
@@ -91,27 +61,54 @@ class AIService:
         profile_json = json.dumps(profile, cls=AIEncoder, ensure_ascii=False)
         goals = ", ".join(profile.get('goals', []))
         
-        return f"""Si FitMind AI kouč. Používateľ: {profile_json}. Ciele: {goals}.
-Odpovedaj v slovenčine, buď stručný a motivujúci. 
-Ak používateľ povie čo jedol alebo cvičil, POUŽI funkciu na uloženie a potvrď to."""
+        return f"""Si FitMind AI - fitness a mental kouč. 
+Profil používateľa v JSON: {profile_json}. 
+Ciele: {goals}.
+Odpovedaj v slovenčine. Buď stručný, motivujúci a profesionálny.
+DÔLEŽITÉ: 
+- Ak používateľ povie čo jedol, cvičil alebo svoju váhu, VŽDY použi príslušnú funkciu.
+- Nepoužívaj Markdown formátovanie v odpovedi (napr. žiadne hviezdičky), píš čistý text.
+"""
 
     def chat(self, message: str, system_prompt: str, history: List[Dict] = None) -> Any:
-        if not self.model:
-            raise Exception("AI model nie je dostupný.")
+        if not self.api_key:
+            raise Exception("AI API kľúč nie je nastavený.")
 
-        self._create_model(system_instruction=system_prompt)
+        # Vytvoríme inštanciu modelu LOKÁLNE pre každý request (thread-safe)
+        # Používame modely v poradí podľa stability
+        model_names = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+        model = None
+        last_err = None
+
+        for name in model_names:
+            try:
+                model = genai.GenerativeModel(
+                    model_name=name,
+                    tools=[self._get_tools()],
+                    system_instruction=system_prompt
+                )
+                print(f"[DEBUG] Using AI model: {name}")
+                break
+            except Exception as e:
+                last_err = e
+                continue
         
+        if not model:
+            raise Exception(f"Nepodarilo sa vybrať AI model: {last_err}")
+
+        # Konverzia histórie pre Gemini
         gemini_history = []
         if history:
             for msg in history:
                 role = "user" if msg['role'] == "user" else "model"
-                content = msg.get('content') or "Záznam uložený."
+                content = msg.get('content') or "Záznam bol úspešne uložený."
                 gemini_history.append({"role": role, "parts": [content]})
 
         try:
-            chat_session = self.model.start_chat(history=gemini_history)
+            chat_session = model.start_chat(history=gemini_history)
             response = chat_session.send_message(message)
             
+            # Kontrola či AI chce zavolať funkciu
             fc = None
             if response.candidates and response.candidates[0].content.parts:
                 for part in response.candidates[0].content.parts:
@@ -119,6 +116,7 @@ Ak používateľ povie čo jedol alebo cvičil, POUŽI funkciu na uloženie a po
                         fc = part.function_call
                         break
             
+            # Pomocné triedy pre výsledok
             class MockResp:
                 def __init__(self, c, f=None):
                     self.content = c
@@ -129,19 +127,19 @@ Ak používateľ povie čo jedol alebo cvičil, POUŽI funkciu na uloženie a po
                     self.arguments = json.dumps(a)
 
             if fc:
-                return MockResp("Spracovávam...", MockFC(fc.name, dict(fc.args)))
+                return MockResp("Pripravujem uloženie záznamu...", MockFC(fc.name, dict(fc.args)))
             
-            res_text = "Nerozumiem, skús to inak."
+            # Získanie textu (ošetrenie chýb pri blokovaných správach)
             try:
                 res_text = response.text
             except:
-                if response.candidates:
-                    res_text = "Mám problém s odpoveďou, ale počúvam."
+                res_text = "Ospravedlňujem sa, ale na túto správu nemôžem odpovedať z bezpečnostných dôvodov."
 
             return MockResp(res_text)
+            
         except Exception as e:
-            print(f"[ERROR] AI Chat failed: {e}")
+            print(f"[ERROR] Gemini Chat Call failed: {e}")
             raise e
 
     def get_final_response(self, messages: List[Dict]) -> str:
-        return "Hotovo! Záznam som uložil do tvojho dashboardu. 👍"
+        return "Hotovo! Váš záznam bol úspešne uložený do dashboardu. Máte ešte nejaké otázky?"
