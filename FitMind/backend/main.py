@@ -435,8 +435,17 @@ async def clear_chat_history(user_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 # === SERVOVANIE ANGULAR FRONTENDU ===
-# Mount static files (Angular build output)
-app.mount("/assets", StaticFiles(directory="dist/FitMind/browser/assets"), name="assets")
+# Get base directory (parent of backend folder)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIST_DIR = os.path.join(BASE_DIR, "dist", "FitMind", "browser")
+ASSETS_DIR = os.path.join(DIST_DIR, "assets")
+
+# Mount static files (Angular build output) if they exist
+if os.path.exists(ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
+    print(f"[INFO] Serving static assets from: {ASSETS_DIR}")
+else:
+    print(f"[WARNING] Assets directory not found: {ASSETS_DIR}")
 
 # Catch-all route for Angular routing (must be last!)
 @app.get("/{full_path:path}")
@@ -444,15 +453,24 @@ async def serve_angular(full_path: str):
     """Serve Angular app for all non-API routes"""
     # If path doesn't start with /api, serve Angular
     if not full_path.startswith("api"):
+        if not os.path.exists(DIST_DIR):
+            raise HTTPException(status_code=503, detail="Frontend not built")
+
         try:
             # Try to serve the file from dist
-            file_path = f"dist/FitMind/browser/{full_path}"
+            file_path = os.path.join(DIST_DIR, full_path)
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 return FileResponse(file_path)
             # Otherwise serve index.html (for Angular routing)
-            return FileResponse("dist/FitMind/browser/index.html")
-        except Exception:
-            return FileResponse("dist/FitMind/browser/index.html")
+            index_path = os.path.join(DIST_DIR, "index.html")
+            if os.path.exists(index_path):
+                return FileResponse(index_path)
+            raise HTTPException(status_code=404, detail="Frontend files not found")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[ERROR] Serving static file: {e}")
+            raise HTTPException(status_code=500, detail="Error serving frontend")
     # Should not reach here, but return 404 if somehow API route not found
     raise HTTPException(status_code=404, detail="Not found")
 
