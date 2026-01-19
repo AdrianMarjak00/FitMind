@@ -44,14 +44,12 @@ is_production = os.getenv("ENV", "production") == "production"
 
 # --- MIDDLEWARE SEKCOA ---
 
-# 1. CORS - povoľujeme Netlify, Firebase Hosting, localhost pre testovanie
-# Pri migrácii na Cloud Run pridaj Cloud Run URL sem
+# 1. CORS - povoľujeme Render, Firebase Hosting a localhost
 allowed_origins = [
     "https://fitmind-dba6a.web.app",
     "https://fitmind-dba6a.firebaseapp.com",
-    "https://fitmind.netlify.app",  # TODO: Update with your actual Netlify URL
+    "https://fitmind.onrender.com",  # Tvoja Render URL
     "http://localhost:4200",
-    "https://fitmind-581538831484.europe-west1.run.app",  
     "https://*.onrender.com"
 ]
 
