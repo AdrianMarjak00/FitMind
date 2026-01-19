@@ -63,20 +63,20 @@ async def simple_log(request: Request, call_next):
         response = await call_next(request)
         duration = time.time() - start_time
         path = request.url.path
-        if path != "/api/health" and not path.endswith((".js", ".css", ".png", ".ico")):
+        # Loguj len dôležité API volania, ignoruj statické súbory
+        if path.startswith("/api") and not path.endswith((".js", ".css", ".png", ".ico")):
             print(f"[{request.method}] {path} - {response.status_code} ({duration:.3f}s)")
         return response
     except Exception as e:
         print(f"[CRITICAL ERROR] {request.method} {request.url.path} failed: {str(e)}")
-        # Nechceme aby spadol celý server pri jednej chybe
         from fastapi.responses import JSONResponse
-        return JSONResponse(status_code=500, content={"error": "Internal Server Error", "detail": str(e)})
+        return JSONResponse(status_code=500, content={"error": "Internal Server Error", "message": str(e)})
 
 # --- 3. BEZPEČNOSŤ ---
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)
 
-# Inicializuj služby (Robíme to raz pri štarte)
+# Inicializuj služby (Len raz pri štarte)
 print("[START] Inicializujem Firebase a AI...")
 try:
     firebase = FirebaseService()
@@ -93,7 +93,6 @@ class ChatRequest(BaseModel):
     message: str
 
 # --- API ENDPOINTY ---
-# Používame synchrónne 'def' pre CPU-heavy alebo blocking operácie (FastAPI ich spustí v thread poole)
 
 @app.get("/api/status")
 def api_status():
@@ -109,13 +108,11 @@ def health():
 
 @app.post("/api/chat", dependencies=[Depends(verify_firebase_token)])
 def chat(request: ChatRequest):
-    """AI Chat - Synchrónna verzia pre stabilitu Gemini volaní"""
     validate_user_id(request.user_id)
     user_id = request.user_id
     message = request.message
     
     try:
-        # Načítanie dát
         profile = firebase.get_user_profile(user_id)
         entries = {
             'food': firebase.get_entries(user_id, 'food', days=7, limit=5),
@@ -142,7 +139,6 @@ def chat(request: ChatRequest):
             
             ai_odpoved = ai_service.get_final_response([])
         
-        # Uloženie histórie
         firebase.save_chat_message(user_id, 'user', message)
         if ai_odpoved:
             firebase.save_chat_message(user_id, 'assistant', ai_odpoved)
@@ -152,22 +148,55 @@ def chat(request: ChatRequest):
         print(f"[CHAT ERROR] {e}")
         raise HTTPException(status_code=500, detail="Chyba AI. Skúste to prosím o chvíľu.")
 
+# --- ŠTATISTIKY A GRAFY ---
+
 @app.get("/api/stats/{user_id}", dependencies=[Depends(verify_firebase_token)])
-def get_stats(user_id: str, days: Optional[int] = 30):
+def get_stats_summary(user_id: str, days: Optional[int] = 30):
+    validate_user_id(user_id)
     return {
         "calories": stats_service.get_calories_summary(user_id, days),
         "exercise": stats_service.get_exercise_summary(user_id, days)
     }
 
-@app.get("/api/coach/recommendations/{user_id}", dependencies=[Depends(verify_firebase_token)])
-def get_recommendations(user_id: str):
-    recs = coach_service.get_personalized_recommendations(user_id)
-    return {"user_id": user_id, "recommendations": recs, "count": len(recs)}
+@app.get("/api/chart/{user_id}/{chart_type}", dependencies=[Depends(verify_firebase_token)])
+def get_chart_data(user_id: str, chart_type: str, days: Optional[int] = 30):
+    """Získanie dát pre grafy podla typu (napr. calories, mood, weight)"""
+    validate_user_id(user_id)
+    try:
+        data = stats_service.get_chart_data(user_id, chart_type, days)
+        return data
+    except Exception as e:
+        print(f"[CHART ERROR] {user_id} {chart_type}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- PROFIL ---
 
 @app.get("/api/profile/{user_id}", dependencies=[Depends(verify_firebase_token)])
 def get_profile(user_id: str):
     p = firebase.get_user_profile(user_id)
     return {"profile": p, "exists": p is not None}
+
+# --- KOUČ A ODPORÚČANIA ---
+
+@app.get("/api/coach/weekly-report/{user_id}", dependencies=[Depends(verify_firebase_token)])
+def get_weekly_report(user_id: str):
+    return {"user_id": user_id, "report": coach_service.generate_weekly_report(user_id)}
+
+@app.get("/api/coach/recommendations/{user_id}", dependencies=[Depends(verify_firebase_token)])
+def get_recommendations(user_id: str):
+    try:
+        # Použijeme krátky timeout pre stabilitu
+        recs = coach_service.get_personalized_recommendations(user_id)
+        return {"user_id": user_id, "recommendations": recs, "count": len(recs)}
+    except Exception as e:
+        print(f"[COACH ERROR] Recommendations failed for {user_id}: {e}")
+        # Vrátime prázdne odporúčania namiesto 502/500 chyby
+        return {"user_id": user_id, "recommendations": [], "count": 0, "error": "Momentálne nedostupné"}
+
+@app.get("/api/chat/history/{user_id}", dependencies=[Depends(verify_firebase_token)])
+def get_chat_history_api(user_id: str, limit: Optional[int] = 50):
+    history = firebase.get_chat_history(user_id, limit)
+    return {"user_id": user_id, "messages": history, "count": len(history)}
 
 # === SERVOVANIE FRONTENDU ===
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
