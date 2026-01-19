@@ -46,6 +46,7 @@ is_production = os.getenv("ENV", "production") == "production"
 
 # 1. CORS - povoľujeme Render, Firebase Hosting a localhost
 allowed_origins = [
+    "https://www.fit-mind.sk",  # Production domain
     "https://fitmind-dba6a.web.app",
     "https://fitmind-dba6a.firebaseapp.com",
     "https://fitmind-backend-fvq7.onrender.com/",  # Tvoja Render URL
