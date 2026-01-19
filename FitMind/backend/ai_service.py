@@ -35,8 +35,19 @@ class AIService:
         declarations = [
             FunctionDeclaration(
                 name="save_food_entry",
-                description="Uloží záznam o jedle",
-                parameters={"type": "object", "properties": {"name": {"type": "string"}, "calories": {"type": "number"}}, "required": ["name", "calories"]}
+                description="Uloží záznam o jedle s nutričnými hodnotami",
+                parameters={
+                    "type": "object", 
+                    "properties": {
+                        "name": {"type": "string", "description": "Názov jedla"}, 
+                        "calories": {"type": "number", "description": "Celkové kalórie (kcal)"},
+                        "protein": {"type": "number", "description": "Bielkoviny v gramoch"},
+                        "carbs": {"type": "number", "description": "Sacharidy v gramoch"},
+                        "fats": {"type": "number", "description": "Tuky v gramoch"},
+                        "mealType": {"type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"]}
+                    }, 
+                    "required": ["name", "calories", "protein", "carbs", "fats"]
+                }
             ),
             FunctionDeclaration(
                 name="save_exercise_entry",
@@ -61,13 +72,19 @@ class AIService:
         profile_json = json.dumps(profile, cls=AIEncoder, ensure_ascii=False)
         goals = ", ".join(profile.get('goals', []))
         
-        return f"""Si FitMind AI - fitness a mental kouč. 
+        return f"""Si FitMind AI - expert na výživu a fitness tréner. 
 Profil používateľa v JSON: {profile_json}. 
 Ciele: {goals}.
-Odpovedaj v slovenčine. Buď stručný, motivujúci a profesionálny.
-DÔLEŽITÉ: 
-- Ak používateľ povie čo jedol, cvičil alebo svoju váhu, VŽDY použi príslušnú funkciu.
-- Nepoužívaj Markdown formátovanie v odpovedi (napr. žiadne hviezdičky), píš čistý text.
+
+TVOJE PRAVIDLÁ:
+1. Odpovedaj VŽDY v slovenčine.
+2. Ak používateľ povie, že niečo jedol, tvojou úlohou je to ZAPÍSAŤ.
+3. NIKDY sa nepýtaj na kalórie alebo makroživiny (bielkoviny, sacharidy, tuky). Ty si expert, musíš ich ODHADNUŤ sám na základe vedeckých tabuliek.
+4. Ak používateľ povie detaily (napr. "2 vajíčka"), použi presný odhad pre 2 vajíčka. Ak povie len "praženica", použi štandardnú porciu (cca 3 vajíčka).
+5. Vždy zavolaj funkciu `save_food_entry` s tvojím odhadom.
+6. Po zavolaní funkcie oznám používateľovi, čo si zapísal a aké hodnoty si odhadol (napr. "Zapísal som ti praženicu z 2 vajec (140 kcal, 12g bielkovín...)").
+7. To isté platí pre cvičenie (odhadni spálené kalórie podľa dĺžky a typu) a váhu.
+8. Buď stručný, motivačný a neospravedlňuj sa, že niečo nemáš v databáze. Ty si tá databáza.
 """
 
     def chat(self, message: str, system_prompt: str, history: List[Dict] = None) -> Any:
@@ -117,13 +134,17 @@ DÔLEŽITÉ:
             chat_session = model.start_chat(history=gemini_history)
             response = chat_session.send_message(message)
             
-            # Kontrola či AI chce zavolať funkciu
+            # Kontrola či AI chce zavolať funkciu + získanie sprievodného textu
             fc = None
+            text_parts = []
             if response.candidates and response.candidates[0].content.parts:
                 for part in response.candidates[0].content.parts:
                     if part.function_call:
                         fc = part.function_call
-                        break
+                    elif hasattr(part, 'text') and part.text:
+                        text_parts.append(part.text)
+            
+            ai_text = " ".join(text_parts).strip()
             
             # Pomocné triedy pre výsledok
             class MockResp:
@@ -136,14 +157,16 @@ DÔLEŽITÉ:
                     self.arguments = json.dumps(a)
 
             if fc:
-                return MockResp("Pripravujem uloženie záznamu...", MockFC(fc.name, dict(fc.args)))
+                final_text = ai_text if ai_text else "Jasné, už to zapisujem do tvojho denníka."
+                return MockResp(final_text, MockFC(fc.name, dict(fc.args)))
             
-            try:
-                res_text = response.text
-            except:
-                res_text = "Ospravedlňujem sa, ale na túto správu nemôžem odpovedať z bezpečnostných dôvodov."
+            if not ai_text:
+                try:
+                    ai_text = response.text
+                except:
+                    ai_text = "Ospravedlňujem sa, ale na túto správu nemôžem odpovedať z bezpečnostných dôvodov."
 
-            return MockResp(res_text)
+            return MockResp(ai_text)
             
         except Exception as e:
             print(f"[ERROR] Gemini Chat Call failed: {e}")

@@ -7,6 +7,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { Observable } from 'rxjs';
@@ -20,7 +22,12 @@ import { User } from '@angular/fire/auth';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxEchartsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatTableModule, MatIconModule],
+  imports: [
+    CommonModule, FormsModule, NgxEchartsModule,
+    MatButtonModule, MatFormFieldModule, MatInputModule,
+    MatSelectModule, MatTableModule, MatIconModule,
+    MatDatepickerModule, MatNativeDateModule
+  ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
   animations: [
@@ -40,7 +47,7 @@ export class DashboardComponent implements OnInit {
   userId = '';
   userProfile: UserProfile | null = null;
   loading = true;
-  
+
   // Grafy
   caloriesChart: any = {};
   exerciseChart: any = {};
@@ -48,7 +55,7 @@ export class DashboardComponent implements OnInit {
   stressChart: any = {};
   sleepChart: any = {};
   weightChart: any = {};
-  
+
   // Detailné záznamy
   recentFoodEntries: FoodEntry[] = [];
   recentExerciseEntries: ExerciseEntry[] = [];
@@ -56,11 +63,11 @@ export class DashboardComponent implements OnInit {
   recentMoodEntries: MoodEntry[] = [];
   recentSleepEntries: SleepEntry[] = [];
   recentStressEntries: StressEntry[] = [];
-  
+
   // Zobrazenie detailného panelu
   showDetailsPanel = false;
   selectedDetailType: 'food' | 'exercise' | 'weight' | 'mood' | 'sleep' | 'stress' | null = null;
-  
+
   // 🆕 Denné štatistiky
   todayStats = {
     calories: { consumed: 0, target: 2000, remaining: 2000 },
@@ -68,13 +75,27 @@ export class DashboardComponent implements OnInit {
     exercise: { minutes: 0, target: 30 },
     steps: { count: 0, target: 10000 }
   };
-  
+
   // 🆕 Týždenný súhrn
   weeklyStats = {
     calories: { total: 0, avg: 0, days: 0 },
     exercise: { total: 0, count: 0 },
     weight: { current: 0, change: 0 }
   };
+
+  // 🗓️ FILTROVANIE OBDOBIA
+  selectedPeriod: 'today' | 'week' | 'month' | 'custom' = 'week';
+  periodOptions = [
+    { id: 'today', label: 'Dnes', days: 1 },
+    { id: 'week', label: 'Tento týždeň', days: 7 },
+    { id: 'month', label: 'Tento mesiac', days: 30 },
+    { id: 'custom', label: 'Vlastné', days: 0 }
+  ];
+
+  // Vlastný rozsah dátumov
+  customDateFrom: Date | null = null;
+  customDateTo: Date | null = null;
+  showCustomDatePicker = false;
 
   // Aktívna záložka
   activeTab = 'calories';
@@ -88,9 +109,9 @@ export class DashboardComponent implements OnInit {
   ];
 
   // Formuláre
-  calorieForm = { 
-    meal: 'breakfast', 
-    foods: '', 
+  calorieForm = {
+    meal: 'breakfast',
+    foods: '',
     calories: 0,
     protein: 0,
     carbs: 0,
@@ -102,7 +123,7 @@ export class DashboardComponent implements OnInit {
   moodForm = { score: 5, note: '' };
   sleepForm = { hours: 0, quality: 'good' };
   stressForm = { level: 1, source: '' };
-  
+
   // AI návrhy
   showAISuggestions = true; // Zobrazené automaticky
   aiSuggestions: string[] = [];
@@ -111,13 +132,13 @@ export class DashboardComponent implements OnInit {
     private authService: AuthService,
     private userFitnessService: UserFitnessService,
     private chartsService: ChartsService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.authService.getCurrentUser().subscribe(user => {
       this.currentUser = user;
       this.userId = user?.uid || '';
-      
+
       if (this.userId) {
         this.loadUserProfile();
         this.loadTodayStats();
@@ -131,10 +152,11 @@ export class DashboardComponent implements OnInit {
       }
     });
   }
-  
+
   // Načítaj posledné záznamy pre detailné zobrazenie
   loadRecentEntries(): void {
-    this.userFitnessService.getRecentEntries(this.userId, 7).subscribe({
+    const days = this.getFilterDays();
+    this.userFitnessService.getRecentEntries(this.userId, days).subscribe({
       next: entries => {
         this.recentFoodEntries = entries.food;
         this.recentExerciseEntries = entries.exercise;
@@ -143,7 +165,7 @@ export class DashboardComponent implements OnInit {
         this.recentSleepEntries = entries.sleep;
         this.recentStressEntries = entries.stress;
       },
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -163,28 +185,28 @@ export class DashboardComponent implements OnInit {
       }
     });
   }
-  
+
   // 🆕 Načítaj denné štatistiky
   loadTodayStats(): void {
     // Kalórie dnes
     this.chartsService.getChartData(this.userId, 'calories', 1).subscribe({
       next: data => {
         this.todayStats.calories.consumed = data.data.total || 0;
-        this.todayStats.calories.remaining = 
+        this.todayStats.calories.remaining =
           this.todayStats.calories.target - this.todayStats.calories.consumed;
       },
-      error: () => {}
+      error: () => { }
     });
-    
+
     // Cvičenie dnes
     this.chartsService.getChartData(this.userId, 'exercise', 1).subscribe({
       next: data => {
         this.todayStats.exercise.minutes = data.data.total_minutes || 0;
       },
-      error: () => {}
+      error: () => { }
     });
   }
-  
+
   // 🆕 Načítaj týždenné štatistiky
   loadWeeklyStats(): void {
     this.chartsService.getChartData(this.userId, 'calories', 7).subscribe({
@@ -193,30 +215,30 @@ export class DashboardComponent implements OnInit {
         this.weeklyStats.calories.avg = data.data.average || 0;
         this.weeklyStats.calories.days = data.data.count || 0;
       },
-      error: () => {}
+      error: () => { }
     });
-    
+
     this.chartsService.getChartData(this.userId, 'exercise', 7).subscribe({
       next: data => {
         this.weeklyStats.exercise.total = data.data.total_minutes || 0;
         this.weeklyStats.exercise.count = data.data.count || 0;
       },
-      error: () => {}
+      error: () => { }
     });
   }
-  
+
   // 🆕 Počítaj percentá
   getPercentage(current: number, target: number): number {
     if (target === 0) return 0;
     return Math.min((current / target) * 100, 100);
   }
-  
+
   // 🆕 Aktuálny dátum
   getCurrentDateMessage(): string {
     const today = new Date();
     const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
-    const months = ['januára', 'februára', 'marca', 'apríla', 'mája', 'júna', 
-                    'júla', 'augusta', 'septembra', 'októbra', 'novembra', 'decembra'];
+    const months = ['januára', 'februára', 'marca', 'apríla', 'mája', 'júna',
+      'júla', 'augusta', 'septembra', 'októbra', 'novembra', 'decembra'];
     return `${days[today.getDay()]}, ${today.getDate()}. ${months[today.getMonth()]} ${today.getFullYear()}`;
   }
 
@@ -229,11 +251,54 @@ export class DashboardComponent implements OnInit {
     return '--';
   }
 
+  // Získaj počet dní pre aktuálny filter
+  getFilterDays(): number {
+    const option = this.periodOptions.find(o => o.id === this.selectedPeriod);
+    if (option) return option.days;
+
+    // Pre custom rozsah vypočítaj dni
+    if (this.customDateFrom && this.customDateTo) {
+      const diff = this.customDateTo.getTime() - this.customDateFrom.getTime();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
+    }
+    return 7; // Default
+  }
+
+  // Zmena obdobia
+  onPeriodChange(period: string): void {
+    this.selectedPeriod = period as any;
+
+    if (period === 'custom') {
+      this.showCustomDatePicker = true;
+    } else {
+      this.showCustomDatePicker = false;
+      this.refreshAllData();
+    }
+  }
+
+  // Aplikovať vlastný rozsah dátumov
+  applyCustomDateRange(): void {
+    if (this.customDateFrom && this.customDateTo) {
+      this.showCustomDatePicker = false;
+      this.refreshAllData();
+    }
+  }
+
+  // Získaj popis aktuálneho obdobia
+  getPeriodLabel(): string {
+    const days = this.getFilterDays();
+    if (days === 1) return 'Dnes';
+    if (days <= 7) return `${days} dní`;
+    if (days <= 31) return `${days} dní`;
+    return `${days} dní`;
+  }
+
   loadCharts(): void {
     this.loading = true;
-    
+    const days = this.getFilterDays();
+
     // Kalórie Pie Chart
-    this.chartsService.getChartData(this.userId, 'calories', 7).subscribe({
+    this.chartsService.getChartData(this.userId, 'calories', days).subscribe({
       next: data => {
         this.caloriesChart = this.createPieChart(data.data.by_meal || {}, 'Kalórie podľa jedla');
       },
@@ -243,7 +308,7 @@ export class DashboardComponent implements OnInit {
     });
 
     // Cvičenie Pie Chart
-    this.chartsService.getChartData(this.userId, 'exercise', 7).subscribe({
+    this.chartsService.getChartData(this.userId, 'exercise', days).subscribe({
       next: data => {
         this.exerciseChart = this.createPieChart(data.data.by_type || {}, 'Cvičenie podľa typu');
       },
@@ -252,8 +317,8 @@ export class DashboardComponent implements OnInit {
       }
     });
 
-    // Nálada Line Chart
-    this.chartsService.getChartData(this.userId, 'mood', 30).subscribe({
+    // Nálada Line Chart - vždy dlhšie obdobie
+    this.chartsService.getChartData(this.userId, 'mood', Math.max(days, 30)).subscribe({
       next: data => {
         this.moodChart = this.createLineChart(data.data.trend || [], 'Nálada', 'score');
       },
@@ -263,7 +328,7 @@ export class DashboardComponent implements OnInit {
     });
 
     // Stres Line Chart
-    this.chartsService.getChartData(this.userId, 'stress', 30).subscribe({
+    this.chartsService.getChartData(this.userId, 'stress', Math.max(days, 30)).subscribe({
       next: data => {
         this.stressChart = this.createLineChart(data.data.trend || [], 'Stres', 'level');
       },
@@ -273,7 +338,7 @@ export class DashboardComponent implements OnInit {
     });
 
     // Spánok Bar Chart
-    this.chartsService.getChartData(this.userId, 'sleep', 7).subscribe({
+    this.chartsService.getChartData(this.userId, 'sleep', days).subscribe({
       next: data => {
         this.sleepChart = this.createBarChart(data.data.by_quality || {}, 'Kvalita spánku');
       },
@@ -282,8 +347,8 @@ export class DashboardComponent implements OnInit {
       }
     });
 
-    // Váha Line Chart
-    this.chartsService.getChartData(this.userId, 'weight', 90).subscribe({
+    // Váha Line Chart - vždy dlhšie obdobie
+    this.chartsService.getChartData(this.userId, 'weight', Math.max(days, 90)).subscribe({
       next: data => {
         this.weightChart = this.createLineChart(data.data.trend || [], 'Váha', 'weight');
       },
@@ -302,7 +367,7 @@ export class DashboardComponent implements OnInit {
       alert('⚠️ Vyplňte názov jedla a kalórie');
       return;
     }
-    
+
     this.userFitnessService.addFoodEntry(this.userId, {
       name: this.calorieForm.foods,
       calories: this.calorieForm.calories,
@@ -326,7 +391,7 @@ export class DashboardComponent implements OnInit {
       alert('⚠️ Zadajte trvanie cvičenia');
       return;
     }
-    
+
     this.userFitnessService.addExerciseEntry(this.userId, {
       type: this.exerciseForm.type,
       duration: this.exerciseForm.duration,
@@ -348,7 +413,7 @@ export class DashboardComponent implements OnInit {
       alert('⚠️ Zadajte váhu');
       return;
     }
-    
+
     this.userFitnessService.addWeightEntry(this.userId, {
       weight: this.weightForm.weight,
       timestamp: new Date()
@@ -360,7 +425,7 @@ export class DashboardComponent implements OnInit {
       error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
     });
   }
-  
+
   // Refresh všetkých dát
   refreshAllData(): void {
     this.loadTodayStats();
@@ -368,11 +433,11 @@ export class DashboardComponent implements OnInit {
     this.loadCharts();
     this.loadRecentEntries();
   }
-  
+
   // Formátuj timestamp na čitateľný dátum
   formatDate(timestamp: any): string {
     if (!timestamp) return '';
-    
+
     let date: Date;
     if (timestamp.toDate) {
       date = timestamp.toDate();
@@ -381,28 +446,28 @@ export class DashboardComponent implements OnInit {
     } else {
       date = new Date(timestamp);
     }
-    
-    return date.toLocaleDateString('sk-SK', { 
-      day: '2-digit', 
-      month: '2-digit', 
+
+    return date.toLocaleDateString('sk-SK', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   }
-  
+
   // Otvor detail panel pre konkrétny typ
   openDetailsPanel(type: 'food' | 'exercise' | 'weight' | 'mood' | 'sleep' | 'stress'): void {
     this.selectedDetailType = type;
     this.showDetailsPanel = true;
   }
-  
+
   // Zatvor detail panel
   closeDetailsPanel(): void {
     this.showDetailsPanel = false;
     this.selectedDetailType = null;
   }
-  
+
   // Získaj záznamy pre aktuálne vybraný typ
   getSelectedEntries(): any[] {
     switch (this.selectedDetailType) {
@@ -415,7 +480,7 @@ export class DashboardComponent implements OnInit {
       default: return [];
     }
   }
-  
+
   // Získaj názov pre aktuálne vybraný typ
   getDetailTitle(): string {
     switch (this.selectedDetailType) {
@@ -428,38 +493,38 @@ export class DashboardComponent implements OnInit {
       default: return 'Detaily';
     }
   }
-  
+
   // 🆕 Automaticky vypočítaj kalórie z makronutrientov
   calculateCaloriesFromMacros(): void {
     if (this.calorieForm.autoCalculate) {
       const protein = this.calorieForm.protein || 0;
       const carbs = this.calorieForm.carbs || 0;
       const fats = this.calorieForm.fats || 0;
-      
+
       // Proteíny: 4 kcal/g, Sacharidy: 4 kcal/g, Tuky: 9 kcal/g
       this.calorieForm.calories = Math.round(
         (protein * 4) + (carbs * 4) + (fats * 9)
       );
     }
   }
-  
+
   // 🆕 Vypočítaj nutričné skóre (percentá makronutrientov)
   getNutritionScore(entry: FoodEntry): { protein: number, carbs: number, fats: number } {
     const total = (entry.protein || 0) + (entry.carbs || 0) + (entry.fats || 0);
     if (total === 0) return { protein: 0, carbs: 0, fats: 0 };
-    
+
     return {
       protein: Math.round(((entry.protein || 0) / total) * 100),
       carbs: Math.round(((entry.carbs || 0) / total) * 100),
       fats: Math.round(((entry.fats || 0) / total) * 100)
     };
   }
-  
+
   // 🆕 Denný nutričný súhrn
   getDailyNutritionSummary(): { protein: number, carbs: number, fats: number, calories: number } {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const todayEntries = this.recentFoodEntries.filter(entry => {
       let entryDate: Date;
       if (entry.timestamp.toDate) {
@@ -472,7 +537,7 @@ export class DashboardComponent implements OnInit {
       entryDate.setHours(0, 0, 0, 0);
       return entryDate.getTime() === today.getTime();
     });
-    
+
     return todayEntries.reduce((acc, entry) => ({
       protein: acc.protein + (entry.protein || 0),
       carbs: acc.carbs + (entry.carbs || 0),
@@ -480,7 +545,7 @@ export class DashboardComponent implements OnInit {
       calories: acc.calories + entry.calories
     }), { protein: 0, carbs: 0, fats: 0, calories: 0 });
   }
-  
+
   // 🆕 Toggle AI návrhy
   toggleAISuggestions(): void {
     this.showAISuggestions = !this.showAISuggestions;
@@ -488,18 +553,18 @@ export class DashboardComponent implements OnInit {
       this.loadAISuggestions();
     }
   }
-  
+
   // 🗑️ DELETE FUNKCIE
   deleteEntry(entryId: string | undefined, type: 'food' | 'exercise' | 'weight' | 'mood' | 'sleep' | 'stress'): void {
     if (!entryId) {
       alert('❌ Záznam nemá ID, nemôže byť vymazaný');
       return;
     }
-    
+
     if (!confirm('Naozaj chcete vymazať tento záznam?')) return;
-    
+
     let deleteObs: Observable<void>;
-    
+
     switch (type) {
       case 'food':
         deleteObs = this.userFitnessService.deleteFoodEntry(this.userId, entryId);
@@ -522,7 +587,7 @@ export class DashboardComponent implements OnInit {
       default:
         return;
     }
-    
+
     deleteObs.subscribe({
       next: () => {
         alert('✅ Záznam vymazaný!');
@@ -531,7 +596,7 @@ export class DashboardComponent implements OnInit {
       error: err => alert('❌ Chyba pri vymazávaní: ' + (err.message || 'Neznáma chyba'))
     });
   }
-  
+
   loadAISuggestions(): void {
     const summary = this.getDailyNutritionSummary();
     const remaining = this.todayStats.calories.remaining;
@@ -561,7 +626,7 @@ export class DashboardComponent implements OnInit {
       alert('⚠️ Zadajte platnú hodnotu (1-10)');
       return;
     }
-    
+
     this.userFitnessService.addMoodEntry(this.userId, {
       score: this.moodForm.score,
       note: this.moodForm.note,
@@ -581,7 +646,7 @@ export class DashboardComponent implements OnInit {
       alert('⚠️ Zadajte hodiny spánku');
       return;
     }
-    
+
     this.userFitnessService.addSleepEntry(this.userId, {
       hours: this.sleepForm.hours,
       quality: this.sleepForm.quality as any,
@@ -601,7 +666,7 @@ export class DashboardComponent implements OnInit {
       alert('⚠️ Zadajte platnú hodnotu (1-10)');
       return;
     }
-    
+
     this.userFitnessService.addStressEntry(this.userId, {
       level: this.stressForm.level,
       source: this.stressForm.source,
@@ -622,7 +687,7 @@ export class DashboardComponent implements OnInit {
     if (!data || Object.keys(data).length === 0) {
       return { title: { text: title, left: 'center' }, series: [{ type: 'pie', data: [] }] };
     }
-    
+
     const chartData = Object.entries(data).map(([name, value]) => ({
       name,
       value: value || 0
@@ -644,8 +709,8 @@ export class DashboardComponent implements OnInit {
         label: {
           color: '#cfcfcf'
         },
-        emphasis: { 
-          itemStyle: { 
+        emphasis: {
+          itemStyle: {
             shadowBlur: 10,
             shadowOffsetX: 0,
             shadowColor: 'rgba(61, 220, 132, 0.5)'
@@ -657,14 +722,14 @@ export class DashboardComponent implements OnInit {
 
   createLineChart(data: any[], title: string, valueKey: string): any {
     if (!data || data.length === 0) {
-      return { 
+      return {
         title: { text: title, left: 'center', textStyle: { color: '#3ddc84' } },
         xAxis: { type: 'category', data: [] },
         yAxis: { type: 'value' },
-        series: [{ data: [], type: 'line' }] 
+        series: [{ data: [], type: 'line' }]
       };
     }
-    
+
     const dates = data.map(d => {
       if (d.date?.seconds) {
         return new Date(d.date.seconds * 1000).toLocaleDateString('sk-SK');
@@ -676,13 +741,13 @@ export class DashboardComponent implements OnInit {
     return {
       title: { text: title, left: 'center', textStyle: { color: '#3ddc84' } },
       tooltip: { trigger: 'axis' },
-      xAxis: { 
-        type: 'category', 
+      xAxis: {
+        type: 'category',
         data: dates,
         axisLine: { lineStyle: { color: '#333' } },
         axisLabel: { color: '#cfcfcf' }
       },
-      yAxis: { 
+      yAxis: {
         type: 'value',
         axisLine: { lineStyle: { color: '#333' } },
         axisLabel: { color: '#cfcfcf' },
@@ -712,14 +777,14 @@ export class DashboardComponent implements OnInit {
 
   createBarChart(data: any, title: string): any {
     if (!data || Object.keys(data).length === 0) {
-      return { 
+      return {
         title: { text: title, left: 'center', textStyle: { color: '#3ddc84' } },
         xAxis: { type: 'category', data: [] },
         yAxis: { type: 'value' },
-        series: [{ type: 'bar', data: [] }] 
+        series: [{ type: 'bar', data: [] }]
       };
     }
-    
+
     const chartData = Object.entries(data).map(([name, value]) => ({
       name,
       value: value || 0
@@ -728,13 +793,13 @@ export class DashboardComponent implements OnInit {
     return {
       title: { text: title, left: 'center', textStyle: { color: '#3ddc84' } },
       tooltip: { trigger: 'axis' },
-      xAxis: { 
-        type: 'category', 
+      xAxis: {
+        type: 'category',
         data: chartData.map(d => d.name),
         axisLine: { lineStyle: { color: '#333' } },
         axisLabel: { color: '#cfcfcf' }
       },
-      yAxis: { 
+      yAxis: {
         type: 'value',
         axisLine: { lineStyle: { color: '#333' } },
         axisLabel: { color: '#cfcfcf' },
@@ -743,7 +808,7 @@ export class DashboardComponent implements OnInit {
       series: [{
         data: chartData.map(d => d.value),
         type: 'bar',
-        itemStyle: { 
+        itemStyle: {
           color: '#3ddc84',
           borderRadius: [4, 4, 0, 0]
         },

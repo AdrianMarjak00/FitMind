@@ -152,7 +152,9 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
             if fc_name in mapping:
                 if firebase.save_entry(user_id, mapping[fc_name], fc_args):
                     saved_entries.append(f"Zaznamenané do {mapping[fc_name]}")
-                    ai_odpoved = ai_service.get_final_response([])
+                    # Ak AI neposlalo text spoločne s funkciou, doplníme generický
+                    if not ai_odpoved or ai_odpoved.startswith("Jasné, už to zapisujem"):
+                        ai_odpoved = ai_service.get_final_response([])
         
         # Uloženie do histórie používateľa
         firebase.save_chat_message(user_id, 'user', message)
