@@ -29,6 +29,8 @@ from middleware import (
     check_admin_auth
 )
 from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Načítaj premenné prostredia z .env súboru
 load_dotenv()
@@ -431,6 +433,28 @@ async def clear_chat_history(user_id: str):
             raise HTTPException(status_code=500, detail="Nepodarilo sa vymazat historiu")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# === SERVOVANIE ANGULAR FRONTENDU ===
+# Mount static files (Angular build output)
+app.mount("/assets", StaticFiles(directory="dist/FitMind/browser/assets"), name="assets")
+
+# Catch-all route for Angular routing (must be last!)
+@app.get("/{full_path:path}")
+async def serve_angular(full_path: str):
+    """Serve Angular app for all non-API routes"""
+    # If path doesn't start with /api, serve Angular
+    if not full_path.startswith("api"):
+        try:
+            # Try to serve the file from dist
+            file_path = f"dist/FitMind/browser/{full_path}"
+            if os.path.exists(file_path) and os.path.isfile(file_path):
+                return FileResponse(file_path)
+            # Otherwise serve index.html (for Angular routing)
+            return FileResponse("dist/FitMind/browser/index.html")
+        except Exception:
+            return FileResponse("dist/FitMind/browser/index.html")
+    # Should not reach here, but return 404 if somehow API route not found
+    raise HTTPException(status_code=404, detail="Not found")
 
 # Server sa spúšťa takto:
 # Lokálne: uvicorn main:app --reload

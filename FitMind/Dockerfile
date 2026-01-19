@@ -26,4 +26,4 @@ COPY --from=build-stage /app/dist /app/dist
 EXPOSE 8080
 
 # Spusti server
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app --worker-class uvicorn.workers.UvicornWorker
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 backend.main:app --worker-class uvicorn.workers.UvicornWorker
