@@ -90,7 +90,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Content Security Policy - Relaxed for production and local development
         csp_rules = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com",
+            "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "img-src 'self' data: https: blob:",
             "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
