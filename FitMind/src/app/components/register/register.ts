@@ -23,7 +23,6 @@ import { UserProfile } from '../../models/user-profile.interface';
     CommonModule,
     FormsModule,
     RouterModule,
-
     MatButtonModule,
     MatInputModule,
     MatSelectModule,
@@ -33,16 +32,13 @@ import { UserProfile } from '../../models/user-profile.interface';
   ]
 })
 export class RegisterComponent {
-  // Auth údaje
   email = '';
   password = '';
 
-  // UI stav
   currentStep = 1;
   isLoading = false;
   errorMsg = '';
 
-  // Fitness profil (naviazaný na formulár)
   profile: Partial<UserProfile> = {
     firstName: '',
     lastName: '',
@@ -55,7 +51,6 @@ export class RegisterComponent {
     activityLevel: 'moderate'
   };
 
-  // Text z textarea
   medicalConditionsText = '';
 
   constructor(
@@ -64,9 +59,21 @@ export class RegisterComponent {
     private router: Router
   ) {}
 
-  /* -------------------- KROKY -------------------- */
-
   nextStep(): void {
+    this.errorMsg = '';
+
+    if (this.currentStep === 1) {
+      if (this.password.length < 8) {
+        this.errorMsg = 'Heslo musí mať aspoň 8 znakov.';
+        return;
+      }
+
+      if ((this.profile.age ?? 0) < 0) {
+        this.errorMsg = 'Vek nemôže byť záporný.';
+        return;
+      }
+    }
+
     if (this.currentStep < 3) {
       this.currentStep++;
     }
@@ -78,21 +85,27 @@ export class RegisterComponent {
     }
   }
 
-  /* -------------------- BMI -------------------- */
-
   calculateBMI(): string {
     if (this.profile.height && this.profile.currentWeight) {
-      const heightM = this.profile.height / 100;
-      const bmi = this.profile.currentWeight / (heightM * heightM);
-      return bmi.toFixed(1);
+      const h = this.profile.height / 100;
+      return (this.profile.currentWeight / (h * h)).toFixed(1);
     }
     return '--';
   }
 
-  /* -------------------- REGISTRÁCIA -------------------- */
-
   register(): void {
     this.errorMsg = '';
+
+    if (this.password.length < 8) {
+      this.errorMsg = 'Heslo musí mať aspoň 8 znakov.';
+      return;
+    }
+
+    if ((this.profile.age ?? 0) < 0) {
+      this.errorMsg = 'Vek nemôže byť záporný.';
+      return;
+    }
+
     this.isLoading = true;
 
     this.auth.register(this.email, this.password).subscribe({
@@ -124,7 +137,7 @@ export class RegisterComponent {
         this.userFitnessService.createUserProfile(userProfile).subscribe({
           next: () => {
             this.isLoading = false;
-            alert('✅ Účet bol úspešne vytvorený! Vitaj v FitMind.');
+            alert('✅ Účet bol úspešne vytvorený!');
             this.router.navigate(['/dashboard']);
           },
           error: () => {
@@ -139,9 +152,9 @@ export class RegisterComponent {
         if (err.code === 'auth/email-already-in-use') {
           this.errorMsg = 'Tento e-mail už je registrovaný.';
         } else if (err.code === 'auth/weak-password') {
-          this.errorMsg = 'Heslo musí mať aspoň 6 znakov.';
+          this.errorMsg = 'Heslo musí mať aspoň 8 znakov.';
         } else {
-          this.errorMsg = 'Chyba pri registrácii. Skontrolujte údaje.';
+          this.errorMsg = 'Chyba pri registrácii.';
         }
       }
     });

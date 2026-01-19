@@ -38,9 +38,49 @@
           <mat-icon>logout</mat-icon>
         </button>
       }
+      
       <button mat-icon-button class="mobile-menu-btn" (click)="toggleMobileMenu()">
-        <mat-icon>menu</mat-icon>
+        <mat-icon>{{ isMobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
       </button>
     </div>
   </div>
 </mat-toolbar>
+
+@if (isMobileMenuOpen()) {
+  <div class="mobile-menu-overlay" (click)="toggleMobileMenu()">
+    <nav class="mobile-nav" (click)="$event.stopPropagation()">
+      <div class="mobile-nav-header">
+        <span class="logo">Fit<span>Mind</span></span>
+      </div>
+      
+      <div class="mobile-links">
+        <a mat-button routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="toggleMobileMenu()">
+          <mat-icon>home</mat-icon> Domov
+        </a>
+        <a mat-button routerLink="/jedalnicek" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+          <mat-icon>restaurant</mat-icon> Jedálničky
+        </a>
+        <a mat-button routerLink="/training" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+          <mat-icon>fitness_center</mat-icon> Tréningy
+        </a>
+        
+        @if (currentUser()) {
+          <hr class="menu-divider">
+          <a mat-button routerLink="/dashboard" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+            <mat-icon>dashboard</mat-icon> Dashboard
+          </a>
+          <a mat-button routerLink="/ai-chat" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+            <mat-icon>chat</mat-icon> AI Chat
+          </a>
+        }
+
+        @if (!currentUser()) {
+          <hr class="menu-divider">
+          <a mat-button routerLink="/login" (click)="toggleMobileMenu()">
+            <mat-icon>login</mat-icon> Prihlásiť sa
+          </a>
+        }
+      </div>
+    </nav>
+  </div>
+}

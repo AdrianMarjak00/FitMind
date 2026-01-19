@@ -7,7 +7,7 @@ import { LoginComponent } from './components/login/login';
 import { Piechart } from './components/piechart/piechart';
 import { AiChatComponent } from './components/ai-chat/ai-chat';
 import { DashboardComponent } from './components/dashboard/dashboard';
-import { ReviewsComponent } from './reviews/reviews';
+import { Reviews } from './reviews/reviews';
 import { JedalnicekComponent } from './components/jedalnicek/jedalnicek';
 import { Training } from './components/training/training';
 import { AdminGuard } from '../guards/admin.guard';
@@ -19,7 +19,7 @@ export const routes: Routes = [
     { path: 'contact', component: Contact },
     { path: 'dashboard', component: DashboardComponent },
     { path: 'piechart', component: Piechart, canActivate: [AdminGuard] },
-    { path: 'review', component: ReviewsComponent },
+    { path: 'review', component: Reviews },
     { path: 'jedalnicek', component: JedalnicekComponent },
     { path: 'training', component: Training },
     { path: 'ai-chat', component: AiChatComponent },

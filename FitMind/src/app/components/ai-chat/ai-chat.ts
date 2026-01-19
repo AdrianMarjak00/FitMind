@@ -23,8 +23,9 @@ export class AiChatComponent implements OnInit, OnDestroy {
   private userSubscription?: Subscription;
 
   backendRunning = true;
+  showHistory = false; // <<< NOVÉ PRE SIDEBAR
 
-  // Nové: Insights panel
+  // Insights panel
   showInsights = false;
   activeTab: 'recommendations' | 'weekly' | 'goals' = 'recommendations';
   loadingInsights = false;
@@ -40,7 +41,6 @@ export class AiChatComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Skontroluj backend status
     this.backendStatus.checkBackendStatus().subscribe(isRunning => {
       this.backendRunning = isRunning;
     });
@@ -49,7 +49,6 @@ export class AiChatComponent implements OnInit, OnDestroy {
       this.currentUser = user;
       this.userId = user?.uid || '';
       if (this.userId) {
-        // Automaticky načítaj odporúčania pri prihlásení
         this.loadRecommendations();
       }
     });
@@ -60,15 +59,10 @@ export class AiChatComponent implements OnInit, OnDestroy {
   }
 
   sendMessage(): void {
-    if (!this.message.trim() || !this.userId) {
-      if (!this.userId) {
-        alert('Prosím prihláste sa pre použitie AI coacha');
-      }
-      return;
-    }
+    if (!this.message.trim() || !this.userId) return;
 
     if (!this.backendRunning) {
-      alert('⚠️ Backend server nebeží!\n\nProsím spusti backend:\n\n1. Otvor terminál\n2. cd backend\n3. python main.py\n\nAlebo použij PM2:\npm2 start ecosystem.config.js');
+      alert('⚠️ Backend server nebeží!');
       return;
     }
 
@@ -80,53 +74,23 @@ export class AiChatComponent implements OnInit, OnDestroy {
         this.message = '';
         if (response.saved_entries && response.saved_entries.length > 0) {
           this.savedEntries = response.saved_entries;
-          
-          // Po uložení dát automaticky aktualizuj insights
-          setTimeout(() => {
-            if (this.showInsights) {
-              this.refreshCurrentTab();
-            }
-          }, 1000);
-          
-          // Skryť notifikácie po 5 sekundách
-          setTimeout(() => {
-            this.savedEntries = [];
-          }, 5000);
+          setTimeout(() => { if (this.showInsights) this.refreshCurrentTab(); }, 1000);
+          setTimeout(() => { this.savedEntries = []; }, 5000);
         }
       },
-      error: (err) => {
-        this.isLoading = false;
-        
-        // Lepšia error handling
-        if (err.status === 0 || err.message?.includes('ERR_CONNECTION_REFUSED')) {
-          alert('⚠️ Backend server nebeží!\n\nProsím spusti backend:\ncd backend\npython main.py\n\nAlebo použij PM2:\npm2 start ecosystem.config.js');
-        } else if (err.status === 500) {
-          alert('❌ Chyba na serveri. Skontroluj backend logy.');
-        } else {
-          alert(`❌ Chyba: ${err.message || 'Neznáma chyba'}`);
-        }
-      },
+      error: (err) => { this.isLoading = false; console.error(err); },
       complete: () => this.isLoading = false
     });
   }
 
   clearChat(): void {
-    if (confirm('Vymazať celú konverzáciu vrátane histórie?')) {
+    if (confirm('Vymazať celú konverzáciu?')) {
       this.aiService.clearChatHistory(this.userId).subscribe({
-        next: () => {
-          this.aiService.clearChat();
-          this.savedEntries = [];
-        },
-        error: () => {
-          // Aj tak vyčisti lokálny chat
-          this.aiService.clearChat();
-          this.savedEntries = [];
-        }
+        next: () => { this.aiService.clearChat(); this.savedEntries = []; },
+        error: () => this.aiService.clearChat()
       });
     }
   }
-
-  // === INSIGHTS PANEL ===
 
   toggleInsights(): void {
     this.showInsights = !this.showInsights;
@@ -136,61 +100,35 @@ export class AiChatComponent implements OnInit, OnDestroy {
   }
 
   refreshCurrentTab(): void {
-    switch (this.activeTab) {
-      case 'recommendations':
-        this.loadRecommendations();
-        break;
-      case 'weekly':
-        this.loadWeeklyReport();
-        break;
-      case 'goals':
-        this.loadGoalProgress();
-        break;
-    }
+    if (this.activeTab === 'recommendations') this.loadRecommendations();
+    else if (this.activeTab === 'weekly') this.loadWeeklyReport();
+    else if (this.activeTab === 'goals') this.loadGoalProgress();
   }
 
   loadRecommendations(): void {
     if (!this.userId) return;
-    
     this.loadingInsights = true;
     this.aiService.getPersonalizedRecommendations(this.userId).subscribe({
-      next: (response) => {
-        this.recommendations = response.recommendations;
-        this.loadingInsights = false;
-      },
-      error: () => {
-        this.loadingInsights = false;
-      }
+      next: (res) => { this.recommendations = res.recommendations; this.loadingInsights = false; },
+      error: () => this.loadingInsights = false
     });
   }
 
   loadWeeklyReport(): void {
     if (!this.userId) return;
-    
     this.loadingInsights = true;
     this.aiService.getWeeklyReport(this.userId).subscribe({
-      next: (response) => {
-        this.weeklyReport = response.report;
-        this.loadingInsights = false;
-      },
-      error: () => {
-        this.loadingInsights = false;
-      }
+      next: (res) => { this.weeklyReport = res.report; this.loadingInsights = false; },
+      error: () => this.loadingInsights = false
     });
   }
 
   loadGoalProgress(): void {
     if (!this.userId) return;
-    
     this.loadingInsights = true;
     this.aiService.getGoalProgress(this.userId).subscribe({
-      next: (response) => {
-        this.goalProgress = response;
-        this.loadingInsights = false;
-      },
-      error: () => {
-        this.loadingInsights = false;
-      }
+      next: (res) => { this.goalProgress = res; this.loadingInsights = false; },
+      error: () => this.loadingInsights = false
     });
   }
 }
