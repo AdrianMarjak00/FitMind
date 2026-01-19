@@ -52,6 +52,7 @@ allowed_origins = [
     "https://fitmind.netlify.app",  # TODO: Update with your actual Netlify URL
     "http://localhost:4200",
     "https://fitmind-581538831484.europe-west1.run.app",  
+    "https://*.onrender.com"
 ]
 
 app.add_middleware(
