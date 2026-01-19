@@ -50,6 +50,7 @@ is_production = os.getenv("ENV", "production") == "production"
 # POZOR: Origins nesmú končiť lomkou!
 allowed_origins = [
     "https://www.fit-mind.sk",
+    "https://fit-mind.sk",      # Naked domain
     "https://fitmind-dba6a.web.app",
     "https://fitmind-dba6a.firebaseapp.com",
     "https://fitmind-backend-fvq7.onrender.com",
@@ -113,10 +114,11 @@ class ProfileRequest(BaseModel):
 
 # API Endpointy
 
-@app.get("/")
+@app.get("/api/status")
 async def root():
-    """Kontrola, či backend beží"""
+    """Kontrola, či backend beží (presunuté z rootu)"""
     return {
+        "status": "online",
         "message": "FitMind AI Backend bezi!",
         "firebase": "pripojene" if firebase.is_connected() else "odpojene",
         "environment": "production" if is_production else "development"
@@ -468,28 +470,32 @@ else:
 @app.get("/{full_path:path}")
 async def serve_angular(full_path: str):
     """Serve Angular app for all non-API routes"""
-    # If path doesn't start with /api, serve Angular
-    if not full_path.startswith("api"):
-        if not os.path.exists(DIST_DIR):
-            raise HTTPException(status_code=503, detail="Frontend not built")
+    # Ak cesta začína na api, ale nenašiel sa endpoint (404 pre API)
+    if full_path.startswith("api"):
+         raise HTTPException(status_code=404, detail="API endpoint not found")
 
-        try:
-            # Try to serve the file from dist
-            file_path = os.path.join(DIST_DIR, full_path)
-            if os.path.exists(file_path) and os.path.isfile(file_path):
-                return FileResponse(file_path)
-            # Otherwise serve index.html (for Angular routing)
-            index_path = os.path.join(DIST_DIR, "index.html")
-            if os.path.exists(index_path):
-                return FileResponse(index_path)
-            raise HTTPException(status_code=404, detail="Frontend files not found")
-        except HTTPException:
-            raise
-        except Exception as e:
-            print(f"[ERROR] Serving static file: {e}")
-            raise HTTPException(status_code=500, detail="Error serving frontend")
-    # Should not reach here, but return 404 if somehow API route not found
-    raise HTTPException(status_code=404, detail="Not found")
+    # Inak skús servovať Angular
+    if not os.path.exists(DIST_DIR):
+        # Ak sme v developmente a nemáme dist, aspoň niečo vypíš
+        if not is_production:
+            return {"message": "Development mode: Frontend dist not found"}
+        raise HTTPException(status_code=503, detail="Frontend not built yet")
+
+    try:
+        # 1. Skús, či je to konkrétny súbor (napr. main.js, styles.css)
+        file_path = os.path.join(DIST_DIR, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # 2. Pre všetko ostatné (vrátane '/') pošli index.html (Angular Routing)
+        index_path = os.path.join(DIST_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+            
+        raise HTTPException(status_code=404, detail="index.html not found")
+    except Exception as e:
+        print(f"[ERROR] Serving frontend: {e}")
+        raise HTTPException(status_code=500, detail="Error serving frontend")
 
 # Server sa spúšťa takto:
 # Lokálne: uvicorn main:app --reload
