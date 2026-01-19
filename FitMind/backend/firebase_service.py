@@ -135,32 +135,49 @@ class FirebaseService:
         try:
             # Získaj kolekciu záznamov pre používateľa
             coll_ref = self._db.collection('userFitnessProfiles').document(user_id).collection(coll_name)
-            # Zoraď podľa timestampu zostupne a obmedz počet
-            query = coll_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+            # Zoraď podľa timestampu zostupne a obmedz počet (berieme viac aby sme mohli filtrovať)
+            query = coll_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit * 2)
             docs = list(query.stream())
             
-            # Filtruj záznamy podľa počtu dní
-            cutoff_date = datetime.now() - timedelta(days=days)
+            # Použijeme offset-aware UTC čas pre porovnanie s Firestore
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
+            cutoff_date = now - timedelta(days=days)
+            
             results = []
             for doc in docs:
                 data = doc.to_dict()
+                data['id'] = doc.id
+                
                 if 'timestamp' in data:
                     ts = data['timestamp']
-                    # Konvertuj timestamp na datetime
-                    if hasattr(ts, 'timestamp'):
-                        doc_date = datetime.fromtimestamp(ts.timestamp())
-                    elif isinstance(ts, datetime):
-                        doc_date = ts
-                    else:
-                        continue
-                    # Pridaj len záznamy z posledných 'days' dní
-                    if doc_date >= cutoff_date:
-                        results.append(data)
+                    # Firestore Timestamp -> Python Datetime
+                    try:
+                        if hasattr(ts, 'to_datetime'):
+                            doc_date = ts.to_datetime()
+                        elif hasattr(ts, 'timestamp'):
+                            doc_date = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc)
+                        elif isinstance(ts, datetime):
+                            doc_date = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+                        else:
+                            # Ak je to niečo iné, skúsime to pridať bez filtra
+                            results.append(data)
+                            continue
+                            
+                        # Pridaj len záznamy z posledných 'days' dní
+                        if doc_date >= cutoff_date:
+                            results.append(data)
+                    except Exception as e:
+                        print(f"[DEBUG] Timestamp parse error: {e}")
+                        results.append(data) # Lepšie vrátiť niečo ako nič
                 else:
                     results.append(data)
+                    
             return results[:limit]
         except Exception as e:
             print(f"[WARNING] Chyba pri nacitani {entry_type}: {e}")
+            import traceback
+            print(traceback.format_exc())
             return []
     
     def save_entry(self, user_id: str, entry_type: str, data: Dict) -> bool:

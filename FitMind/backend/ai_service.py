@@ -33,9 +33,9 @@ class AIService:
 
     def _create_model(self, system_instruction: str = None):
         try:
-            # Použijeme gemini-pro - stabilný model podporovaný v1beta API
+            # Použijeme gemini-1.5-flash - moderný a podporovaný model
             self.model = genai.GenerativeModel(
-                model_name='gemini-pro',
+                model_name='gemini-1.5-flash',
                 tools=[self.tools],
                 system_instruction=system_instruction
             )
