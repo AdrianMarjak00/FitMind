@@ -22,15 +22,17 @@ async def verify_firebase_token(request: Request):
     try:
         # Over ID token pomocou Firebase Admin SDK
         decoded_token = auth.verify_id_token(id_token)
-        # Pridaj dekódovaný token (obsahuje uid) do state požiadavky
         request.state.user = decoded_token
         return decoded_token
+    except auth.ExpiredIdTokenError:
+        print("[AUTH ERROR] Token expired")
+        raise HTTPException(status_code=401, detail="Token expired")
+    except auth.InvalidIdTokenError:
+        print("[AUTH ERROR] Token invalid")
+        raise HTTPException(status_code=401, detail="Token invalid")
     except Exception as e:
-        print(f"[AUTH ERROR] {e}")
-        raise HTTPException(
-            status_code=401, 
-            detail="Invalid or expired token"
-        )
+        print(f"[AUTH ERROR] Unexpected: {e}")
+        raise HTTPException(status_code=401, detail=f"Authentication error: {str(e)}")
 
 async def check_admin_auth(request: Request):
     """
