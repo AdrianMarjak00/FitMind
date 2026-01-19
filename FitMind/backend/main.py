@@ -157,7 +157,11 @@ def chat(request: ChatRequest):
         print(f"[CHAT ERROR] {str(e)}")
         print(f"[CHAT ERROR TRACEBACK] {error_details}")
         # Vrátime aspoň nejakú odpoveď, aby sa frontend nezasekol
-        return {"odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže. Skúste to prosím neskôr.", "saved_entries": []}
+        return {
+            "odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže pri komunikácii s AI. Skúste to prosím o chvíľu.", 
+            "saved_entries": [],
+            "error_detail": str(e) if not is_production else None
+        }
 
 @app.get("/api/chart/{user_id}/{chart_type}", dependencies=[Depends(verify_firebase_token)])
 def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30):

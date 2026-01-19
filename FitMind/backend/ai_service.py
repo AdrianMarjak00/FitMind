@@ -21,9 +21,8 @@ class AIService:
             return
 
         try:
-            genai.configure(api_key=self.api_key, transport='rest')
-            # Inicializujeme model bez system_instruction zatiaľ,
-            # budeme ho meniť dynamicky podľa používateľa
+            # Revertujeme na default transport (gRPC), keďže máme vyriešené blokovanie event loopu
+            genai.configure(api_key=self.api_key)
             self._create_model()
             print("[OK] Gemini AI initialized successfully.")
         except Exception as e:
@@ -33,14 +32,32 @@ class AIService:
 
     def _create_model(self, system_instruction: str = None):
         try:
-            # Použijeme gemini-1.5-flash - moderný a podporovaný model
+            # Skúsime primárne najlepší model
+            model_name = 'gemini-1.5-flash'
             self.model = genai.GenerativeModel(
-                model_name='gemini-1.5-flash',
+                model_name=model_name,
                 tools=[self.tools],
                 system_instruction=system_instruction
             )
+            # Testovacie volanie (nepovinné tu, ale overíme či model existuje)
+            print(f"[DEBUG] Model {model_name} created.")
         except Exception as e:
-            print(f"[ERROR] Create model failed: {e}")
+            print(f"[WARNING] Model gemini-1.5-flash failed, trying gemini-pro: {e}")
+            try:
+                self.model = genai.GenerativeModel(
+                    model_name='gemini-pro',
+                    tools=[self.tools],
+                    system_instruction=system_instruction
+                )
+            except Exception as e2:
+                print(f"[ERROR] Both models failed. Available models are:")
+                try:
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            print(f" - {m.name}")
+                except:
+                    pass
+                raise e2
 
     def _get_tools(self):
         # Definície nástrojov (skrátené pre prehľadnosť ale funkčné)
