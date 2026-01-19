@@ -74,27 +74,36 @@ DÔLEŽITÉ:
         if not self.api_key:
             raise Exception("AI API kľúč nie je nastavený.")
 
-        # Vytvoríme inštanciu modelu LOKÁLNE pre každý request (thread-safe)
-        # Používame modely v poradí podľa stability
-        model_names = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+        # Zoznam modelov podľa priority pre r. 2026
+        models_to_try = [
+            'gemini-3-flash',      # Najnovší
+            'gemini-2.5-flash',    # Odporúčaný používateľom
+            'gemini-1.5-flash',    # Stabilný fallback
+            'gemini-pro'           # Legacy
+        ]
+        
         model = None
         last_err = None
 
-        for name in model_names:
+        for name in models_to_try:
             try:
                 model = genai.GenerativeModel(
                     model_name=name,
                     tools=[self._get_tools()],
                     system_instruction=system_prompt
                 )
-                print(f"[DEBUG] Using AI model: {name}")
+                # Skúsime krátky testovací stream aby sme videli či model naozaj existuje
+                print(f"[DEBUG] Trying model: {name}")
+                model.generate_content("hi", generation_config={"max_output_tokens": 1})
+                print(f"[DEBUG] Model {name} is active.")
                 break
             except Exception as e:
+                print(f"[DEBUG] Model {name} failed: {e}")
                 last_err = e
                 continue
         
         if not model:
-            raise Exception(f"Nepodarilo sa vybrať AI model: {last_err}")
+            raise Exception(f"Nepodarilo sa vybrať funkčný AI model. Posledná chyba: {last_err}")
 
         # Konverzia histórie pre Gemini
         gemini_history = []
@@ -129,7 +138,6 @@ DÔLEŽITÉ:
             if fc:
                 return MockResp("Pripravujem uloženie záznamu...", MockFC(fc.name, dict(fc.args)))
             
-            # Získanie textu (ošetrenie chýb pri blokovaných správach)
             try:
                 res_text = response.text
             except:
