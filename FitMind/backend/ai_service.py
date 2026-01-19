@@ -106,7 +106,7 @@ DÔLEŽITÉ:
                         fc = part.function_call
                         break
             
-            # Mock objects pre main.py
+            # Tvorba odpovede pre main.py
             class MockResponse:
                 def __init__(self, content, function_call=None):
                     self.content = content
@@ -118,9 +118,17 @@ DÔLEŽITÉ:
                     self.arguments = json.dumps(args)
 
             if fc:
-                return MockResponse(None, MockFC(fc.name, dict(fc.args)))
+                return MockResponse("Spracovávam vašu požiadavku...", MockFC(fc.name, dict(fc.args)))
             
-            return MockResponse(response.text)
+            # Robustnejšie získanie textu (v prípade safety filtrov môže response.text zlyhať)
+            res_text = "Nerozumiem, môžete to zopakovať inak?"
+            try:
+                if response.candidates and response.candidates[0].content.parts:
+                    res_text = response.text
+            except Exception:
+                res_text = "Ospravedlňujem sa, ale na túto správu nemôžem odpovedať z bezpečnostných dôvodov."
+
+            return MockResponse(res_text)
         except Exception as e:
             print(f"[ERROR] Chat call failed: {e}")
             raise e
