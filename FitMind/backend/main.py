@@ -26,6 +26,7 @@ from ai_service import AIService
 from stats_service import StatsService
 from coach_service import CoachService
 from middleware import (
+    RateLimitMiddleware,
     SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware,
     validate_user_id,
@@ -58,6 +59,8 @@ async def simple_log(request: Request, call_next):
         )
 
 # --- 2. BEZPEČNOSŤ ---
+# Rate limiting - max 100 požiadaviek za minútu na IP
+app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)
 
@@ -90,6 +93,10 @@ coach_service = CoachService(firebase)
 class ChatRequest(BaseModel):
     user_id: str
     message: str
+    
+    class Config:
+        # Validácia dĺžky správy
+        str_max_length = 2000
 
 # --- API ENDPOINTY ---
 
@@ -115,8 +122,21 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
     user_id = decoded_token.get("uid")
     if not user_id:
         raise HTTPException(status_code=401, detail="User ID not found in token")
+    
+    # Validácia user_id formátu
+    validate_user_id(user_id)
 
     message = request.message
+    
+    # Validácia dĺžky správy (dodatočná ochrana)
+    if not message or len(message.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(message) > 2000:
+        raise HTTPException(status_code=400, detail="Message too long (max 2000 characters)")
+    
+    # Sanitácia vstupu - odstránenie nebezpečných znakov
+    message = message.strip()
+    
     print(f"[CHAT] Request for user {user_id} (Token Verified)")
 
     # Kontrola denného limitu (5 správ/deň)
@@ -195,8 +215,12 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
     except Exception as e:
         print(f"[CHAT ERROR] {str(e)}")
         print(traceback.format_exc())
+        
+        # Použiť sanitizáciu chybových správ pre produkciu
+        error_message = sanitize_error_message(e, production=IS_PRODUCTION)
+        
         return {
-            "odpoved": "Ospravedlňujem sa, ale momentálne mám technické potiaže. Skúste to prosím o chvíľu.", 
+            "odpoved": error_message, 
             "saved_entries": [],
             "error_detail": str(e) if not IS_PRODUCTION else None
         }

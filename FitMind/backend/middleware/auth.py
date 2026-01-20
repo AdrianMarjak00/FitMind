@@ -6,11 +6,8 @@ async def verify_firebase_token(request: Request):
     """
     Middleware na overenie Firebase ID tokenu v hlavičke Authorization.
     Očakáva formát: Authorization: Bearer <token>
+    🔒 SECURITY: Auth je VŽDY povinný - žiadne SKIP_AUTH flags!
     """
-    # Preskoč overenie v development móde ak je nastavené (voliteľné)
-    if os.getenv("SKIP_AUTH") == "true":
-        return None
-
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
@@ -30,9 +27,15 @@ async def verify_firebase_token(request: Request):
     except auth.InvalidIdTokenError:
         print(f"[AUTH ERROR] Token invalid (check Firebase Project ID) for request to {request.url.path}")
         raise HTTPException(status_code=401, detail="Token invalid")
+    except auth.RevokedIdTokenError:
+        print(f"[AUTH ERROR] Token revoked for request to {request.url.path}")
+        raise HTTPException(status_code=401, detail="Token revoked")
+    except ValueError as e:
+        print(f"[AUTH ERROR] Invalid token format: {str(e)}")
+        raise HTTPException(status_code=401, detail="Invalid token format")
     except Exception as e:
         print(f"[AUTH ERROR] Unexpected: {str(e)} for request to {request.url.path}")
-        raise HTTPException(status_code=401, detail=f"Authentication error: {str(e)}")
+        raise HTTPException(status_code=401, detail="Authentication failed")
 
 async def check_admin_auth(request: Request):
     """

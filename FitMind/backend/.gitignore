@@ -1,28 +1,67 @@
+# 🔒 Kritické citlivé súbory - MUSIA byť v .gitignore!
+*.env
+.env
+.env.local
+.env.production
+serviceAccountKey.json
+firebase-adminsdk*.json
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
 venv/
-env/
 ENV/
-
-# Logs
-logs/
-*.log
-
-# Environment
-.env
-.env.local
-
-# Firebase - all service account files
-firebase-service-account*.json
-*firebase-adminsdk*.json
-*service-account*.json
+env/
+.venv
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
