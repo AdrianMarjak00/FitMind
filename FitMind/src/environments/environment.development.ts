@@ -1,5 +1,5 @@
 export const environment = {
   production: false,
-  // Render backend URL
-  apiUrl: 'https://fitmind-backend-fvq7.onrender.com/api'
+  // Local backend URL pre testovanie
+  apiUrl: 'http://localhost:8000/api'
 };
