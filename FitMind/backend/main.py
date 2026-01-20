@@ -108,17 +108,32 @@ def health():
 @app.post("/api/chat")
 def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_token)):
     """
-    AI Chat endpoint. 
-    VÝZNAMNÁ OPRAVA: Používame user_id priamo z tokenu, 
+    AI Chat endpoint s denným limitom 5 správ na používateľa.
+    VÝZNAMNÁ OPRAVA: Používame user_id priamo z tokenu,
     aby sme zabránili zdieľaniu histórie medzi používateľmi.
     """
     user_id = decoded_token.get("uid")
     if not user_id:
         raise HTTPException(status_code=401, detail="User ID not found in token")
-        
+
     message = request.message
     print(f"[CHAT] Request for user {user_id} (Token Verified)")
-    
+
+    # Kontrola denného limitu (5 správ/deň)
+    limit_check = firebase.check_daily_message_limit(user_id, daily_limit=5)
+    if not limit_check.get('allowed', False):
+        remaining = limit_check.get('remaining', 0)
+        reset_at = limit_check.get('reset_at', 'polnoc UTC')
+        return {
+            "odpoved": f"Dosiahli ste denný limit {5} správ. Zostávajúce správy: {remaining}. Limit sa obnoví o {reset_at}.",
+            "saved_entries": [],
+            "rate_limit": {
+                "limited": True,
+                "remaining": remaining,
+                "reset_at": reset_at
+            }
+        }
+
     try:
         # Načítaj kontext konkrétneho používateľa
         profile = firebase.get_user_profile(user_id)
@@ -160,8 +175,22 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         firebase.save_chat_message(user_id, 'user', message)
         if ai_odpoved:
             firebase.save_chat_message(user_id, 'assistant', ai_odpoved)
-        
-        return {"odpoved": ai_odpoved, "saved_entries": saved_entries}
+
+        # Inkrementuj počítadlo správ
+        firebase.increment_message_count(user_id)
+
+        # Zisti zostávajúce správy
+        updated_limit = firebase.check_daily_message_limit(user_id, daily_limit=5)
+        remaining = updated_limit.get('remaining', 0)
+
+        return {
+            "odpoved": ai_odpoved,
+            "saved_entries": saved_entries,
+            "rate_limit": {
+                "remaining": remaining,
+                "total": 5
+            }
+        }
         
     except Exception as e:
         print(f"[CHAT ERROR] {str(e)}")

@@ -391,10 +391,10 @@ class FirebaseService:
     def clear_chat_history(self, user_id: str) -> bool:
         """
         Vymaže konverzačnú históriu používateľa
-        
+
         Args:
             user_id: ID používateľa
-            
+
         Returns:
             True ak sa podarilo vymazať
         """
@@ -403,11 +403,127 @@ class FirebaseService:
         try:
             chat_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory')
             docs = chat_ref.stream()
-            
+
             for doc in docs:
                 doc.reference.delete()
-            
+
             return True
         except Exception as e:
             print(f"[ERROR] Chyba pri mazani chat historie: {e}")
+            return False
+
+    # === RATE LIMITING ===
+
+    def check_daily_message_limit(self, user_id: str, daily_limit: int = 5) -> Dict[str, any]:
+        """
+        Kontroluje denný limit správ pre používateľa
+
+        Args:
+            user_id: ID používateľa
+            daily_limit: Maximálny počet správ za deň (default: 5)
+
+        Returns:
+            Dict s 'allowed' (bool), 'remaining' (int), 'reset_at' (str)
+        """
+        if not self.is_connected():
+            return {'allowed': False, 'remaining': 0, 'error': 'Firebase not connected'}
+
+        try:
+            today = datetime.now().strftime('%Y-%m-%d')
+            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            doc = user_ref.get()
+
+            if not doc.exists:
+                # Nový používateľ - vytvor profil
+                user_ref.set({
+                    'userId': user_id,
+                    'createdAt': firestore.SERVER_TIMESTAMP,
+                    'ai_usage': {
+                        'date': today,
+                        'message_count': 0
+                    }
+                })
+                return {'allowed': True, 'remaining': daily_limit, 'reset_at': 'midnight UTC'}
+
+            data = doc.to_dict()
+            ai_usage = data.get('ai_usage', {})
+            usage_date = ai_usage.get('date', '')
+            message_count = ai_usage.get('message_count', 0)
+
+            # Reset ak je nový deň
+            if usage_date != today:
+                user_ref.update({
+                    'ai_usage': {
+                        'date': today,
+                        'message_count': 0
+                    }
+                })
+                return {'allowed': True, 'remaining': daily_limit, 'reset_at': 'midnight UTC'}
+
+            # Kontrola limitu
+            remaining = daily_limit - message_count
+            allowed = remaining > 0
+
+            return {
+                'allowed': allowed,
+                'remaining': max(0, remaining),
+                'reset_at': 'midnight UTC'
+            }
+
+        except Exception as e:
+            print(f"[ERROR] Chyba pri kontrole rate limitu: {e}")
+            return {'allowed': False, 'remaining': 0, 'error': str(e)}
+
+    def increment_message_count(self, user_id: str) -> bool:
+        """
+        Zvýši počítadlo správ pre dnešný deň
+
+        Args:
+            user_id: ID používateľa
+
+        Returns:
+            True ak sa podarilo inkrementovať
+        """
+        if not self.is_connected():
+            return False
+
+        try:
+            today = datetime.now().strftime('%Y-%m-%d')
+            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            doc = user_ref.get()
+
+            if not doc.exists:
+                user_ref.set({
+                    'userId': user_id,
+                    'createdAt': firestore.SERVER_TIMESTAMP,
+                    'ai_usage': {
+                        'date': today,
+                        'message_count': 1
+                    }
+                })
+                return True
+
+            data = doc.to_dict()
+            ai_usage = data.get('ai_usage', {})
+            usage_date = ai_usage.get('date', '')
+            message_count = ai_usage.get('message_count', 0)
+
+            # Reset ak je nový deň
+            if usage_date != today:
+                user_ref.update({
+                    'ai_usage': {
+                        'date': today,
+                        'message_count': 1
+                    }
+                })
+            else:
+                # Inkrementuj existujúce počítadlo
+                user_ref.update({
+                    'ai_usage.message_count': message_count + 1
+                })
+
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Chyba pri inkrementovani message count: {e}")
             return False
