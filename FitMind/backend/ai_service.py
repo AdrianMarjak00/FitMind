@@ -91,36 +91,16 @@ TVOJE PRAVIDLÁ:
         if not self.api_key:
             raise Exception("AI API kľúč nie je nastavený.")
 
-        # Zoznam modelov podľa priority pre r. 2026
-        models_to_try = [
-            'gemini-3-flash',      # Najnovší
-            'gemini-2.5-flash',    # Odporúčaný používateľom
-            'gemini-1.5-flash',    # Stabilný fallback
-            'gemini-pro'           # Legacy
-        ]
-        
-        model = None
-        last_err = None
-
-        for name in models_to_try:
-            try:
-                model = genai.GenerativeModel(
-                    model_name=name,
-                    tools=[self._get_tools()],
-                    system_instruction=system_prompt
-                )
-                # Skúsime krátky testovací stream aby sme videli či model naozaj existuje
-                print(f"[DEBUG] Trying model: {name}")
-                model.generate_content("hi", generation_config={"max_output_tokens": 1})
-                print(f"[DEBUG] Model {name} is active.")
-                break
-            except Exception as e:
-                print(f"[DEBUG] Model {name} failed: {e}")
-                last_err = e
-                continue
-        
-        if not model:
-            raise Exception(f"Nepodarilo sa vybrať funkčný AI model. Posledná chyba: {last_err}")
+        # Použijeme gemini-2.5-flash - jediný fungujúci model v 2026
+        try:
+            model = genai.GenerativeModel(
+                model_name='gemini-2.5-flash',
+                tools=[self._get_tools()],
+                system_instruction=system_prompt
+            )
+        except Exception as e:
+            print(f"[ERROR] Failed to create model: {e}")
+            raise Exception(f"Nepodarilo sa vytvoriť AI model: {e}")
 
         # Konverzia histórie pre Gemini
         gemini_history = []
