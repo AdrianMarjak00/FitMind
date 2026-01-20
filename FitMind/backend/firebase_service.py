@@ -50,6 +50,8 @@ class FirebaseService:
             if not cred:
                 # Cesty ktoré skúsime
                 possible_paths = [
+                    "/etc/secrets/FIREBASE_CREDENTIALS", # Render Secret File
+                    "/etc/secrets/serviceAccountKey.json", # Alternatívny názov na Renderi
                     os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"),
                     os.path.join(os.path.dirname(__file__), "firebase-service-account.json"),
                     "serviceAccountKey.json",

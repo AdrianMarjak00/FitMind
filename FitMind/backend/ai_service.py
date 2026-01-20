@@ -22,10 +22,24 @@ class AIEncoder(json.JSONEncoder):
 
 class AIService:
     def __init__(self):
+        # 1. Skús environment variable (Lokálny .env alebo Render Env Var)
         self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         
+        # 2. Ak nie je v env, skús Render Secret File (pre extra bezpečnosť)
+        if not self.api_key:
+            secret_path = "/etc/secrets/GOOGLE_API_KEY"
+            if os.path.exists(secret_path):
+                try:
+                    with open(secret_path, "r") as f:
+                        self.api_key = f.read().strip()
+                    print("[INFO] AI Service: API Key načítaný zo Secret File.")
+                except Exception as e:
+                    print(f"[ERROR] Chyba pri čítaní Secret File: {e}")
+
         if self.api_key:
-            print(f"[DEBUG] AI Service: API Key detected ({self.api_key[:8]}...)")
+            # Maskujeme kľúč pre logy (ukážeme len posledné 4 znaky)
+            masked_key = f"...{self.api_key[-4:]}" if len(self.api_key) > 4 else "***"
+            print(f"[DEBUG] AI Service: API Key detected ({masked_key})")
             genai.configure(api_key=self.api_key)
         else:
             print("[WARNING] AI API key missing. AI will not work.")
