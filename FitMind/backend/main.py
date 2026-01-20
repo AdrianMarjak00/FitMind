@@ -115,7 +115,7 @@ def health():
 @app.post("/api/chat")
 def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_token)):
     """
-    AI Chat endpoint s denným limitom 5 správ na používateľa.
+    AI Chat endpoint s denným limitom 20 správ na používateľa.
     VÝZNAMNÁ OPRAVA: Používame user_id priamo z tokenu,
     aby sme zabránili zdieľaniu histórie medzi používateľmi.
     """
@@ -139,13 +139,13 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
     
     print(f"[CHAT] Request for user {user_id} (Token Verified)")
 
-    # Kontrola denného limitu (5 správ/deň)
-    limit_check = firebase.check_daily_message_limit(user_id, daily_limit=5)
+    # Kontrola denného limitu (20 správ/deň)
+    limit_check = firebase.check_daily_message_limit(user_id, daily_limit=20)
     if not limit_check.get('allowed', False):
         remaining = limit_check.get('remaining', 0)
         reset_at = limit_check.get('reset_at', 'polnoc UTC')
         return {
-            "odpoved": f"Dosiahli ste denný limit {5} správ. Zostávajúce správy: {remaining}. Limit sa obnoví o {reset_at}.",
+            "odpoved": f"Dosiahli ste denný limit {20} správ. Zostávajúce správy: {remaining}. Limit sa obnoví o {reset_at}.",
             "saved_entries": [],
             "rate_limit": {
                 "limited": True,
@@ -200,7 +200,7 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         firebase.increment_message_count(user_id)
 
         # Zisti zostávajúce správy
-        updated_limit = firebase.check_daily_message_limit(user_id, daily_limit=5)
+        updated_limit = firebase.check_daily_message_limit(user_id, daily_limit=20)
         remaining = updated_limit.get('remaining', 0)
 
         return {
@@ -208,7 +208,7 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
             "saved_entries": saved_entries,
             "rate_limit": {
                 "remaining": remaining,
-                "total": 5
+                "total": 20
             }
         }
         

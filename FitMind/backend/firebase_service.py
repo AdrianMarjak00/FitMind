@@ -416,13 +416,13 @@ class FirebaseService:
 
     # === RATE LIMITING ===
 
-    def check_daily_message_limit(self, user_id: str, daily_limit: int = 5) -> Dict[str, any]:
+    def check_daily_message_limit(self, user_id: str, daily_limit: int = 20) -> Dict[str, any]:
         """
         Kontroluje denný limit správ pre používateľa
 
         Args:
             user_id: ID používateľa
-            daily_limit: Maximálny počet správ za deň (default: 5)
+            daily_limit: Maximálny počet správ za deň (default: 20)
 
         Returns:
             Dict s 'allowed' (bool), 'remaining' (int), 'reset_at' (str)
@@ -451,7 +451,7 @@ class FirebaseService:
             ai_usage = data.get('ai_usage', {})
             usage_date = ai_usage.get('date', '')
             message_count = ai_usage.get('message_count', 0)
-
+ 
             # Reset ak je nový deň
             if usage_date != today:
                 user_ref.update({
