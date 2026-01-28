@@ -16,9 +16,9 @@ class StatsService:
     Obsahuje funkcie na výpočet súhrnov a trendov z dát používateľa
     """
     
-    def __init__(self):
-        """Inicializuje FirebaseService pre prístup k dátam"""
-        self.firebase = FirebaseService()
+    def __init__(self, firebase_service=None):
+        """Inicializuje FirebaseService pre prístup k dátam (podporuje dependency injection)"""
+        self.firebase = firebase_service or FirebaseService()
     
     def get_calories_summary(self, user_id: str, days: int = 7) -> Dict:
         """
