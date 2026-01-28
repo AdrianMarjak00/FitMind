@@ -1,7 +1,6 @@
 # FitMind Backend - Hlavný API server (STABLE VERSION)
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -30,6 +29,7 @@ from middleware import (
     SecurityHeadersMiddleware,
     RequestSizeLimitMiddleware,
     validate_user_id,
+    get_authorized_user_id,
     sanitize_error_message,
     verify_firebase_token,
     check_admin_auth
@@ -87,7 +87,7 @@ app.add_middleware(
 # Inicializuj služby (Singletons)
 firebase = FirebaseService()
 ai_service = AIService()
-stats_service = StatsService()
+stats_service = StatsService(firebase)
 coach_service = CoachService(firebase)
 
 class ChatRequest(BaseModel):
@@ -227,12 +227,13 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
 
 @app.get("/api/chart/{user_id}/{chart_type}")
 def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30, decoded_token: dict = Depends(verify_firebase_token)):
-    # Overenie že používateľ pozerá svoje dáta
-    token_uid = decoded_token.get("uid")
-    if token_uid != user_id:
-        print(f"[SECURITY] User {token_uid} tried to access data of {user_id}")
-        user_id = token_uid # Force users to see only their data
-        
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    
+    # Validácia chart_type - ochrana pred injection
+    allowed_types = {'calories', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
+    if chart_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Invalid chart type. Allowed: {', '.join(allowed_types)}")
+    
     try:
         data = stats_service.get_chart_data(user_id, chart_type, days)
         return {"chart_type": chart_type, "data": data, "days": days}
@@ -241,9 +242,7 @@ def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30, 
 
 @app.get("/api/stats/{user_id}")
 def get_stats_api(user_id: str, days: Optional[int] = 30, decoded_token: dict = Depends(verify_firebase_token)):
-    token_uid = decoded_token.get("uid")
-    if token_uid != user_id:
-        user_id = token_uid
+    user_id = get_authorized_user_id(user_id, decoded_token)
     return {
         "calories": stats_service.get_calories_summary(user_id, days),
         "exercise": stats_service.get_exercise_summary(user_id, days)
@@ -251,25 +250,19 @@ def get_stats_api(user_id: str, days: Optional[int] = 30, decoded_token: dict = 
 
 @app.get("/api/profile/{user_id}")
 def get_profile_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
-    token_uid = decoded_token.get("uid")
-    if token_uid != user_id:
-        user_id = token_uid
+    user_id = get_authorized_user_id(user_id, decoded_token)
     p = firebase.get_user_profile(user_id)
     return {"profile": p, "exists": p is not None}
 
 @app.get("/api/coach/recommendations/{user_id}")
 def get_recommendations_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
-    token_uid = decoded_token.get("uid")
-    if token_uid != user_id:
-        user_id = token_uid
+    user_id = get_authorized_user_id(user_id, decoded_token)
     recs = coach_service.get_personalized_recommendations(user_id)
     return {"user_id": user_id, "recommendations": recs, "count": len(recs)}
 
 @app.get("/api/chat/history/{user_id}")
 def get_history_api(user_id: str, limit: Optional[int] = 50, decoded_token: dict = Depends(verify_firebase_token)):
-    token_uid = decoded_token.get("uid")
-    if token_uid != user_id:
-        user_id = token_uid
+    user_id = get_authorized_user_id(user_id, decoded_token)
     hist = firebase.get_chat_history(user_id, limit)
     return {"messages": hist}
 
