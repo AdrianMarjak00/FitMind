@@ -91,9 +91,9 @@ stats_service = StatsService(firebase)
 coach_service = CoachService(firebase)
 
 class ChatRequest(BaseModel):
-    user_id: str
     message: str
-    
+    user_id: Optional[str] = None  # Optional - backend používa UID z tokenu
+
     class Config:
         # Validácia dĺžky správy
         str_max_length = 2000
