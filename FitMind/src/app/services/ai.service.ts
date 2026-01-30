@@ -59,15 +59,16 @@ export class AiService {
   // === CHAT FUNKCIE ===
 
   sendMessage(userId: string, message: string): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/chat`, { user_id: userId, message }).pipe(
+    // Backend získa user_id z JWT tokenu, nie z requestu (bezpečnosť)
+    return this.http.post<any>(`${this.baseUrl}/chat`, { message }).pipe(
       tap(response => {
         const userMsg: ChatMessage = { role: 'user', content: message, timestamp: new Date() };
-        const aiMsg: ChatMessage = { 
-          role: 'assistant', 
-          content: response.odpoved || response.message || 'Odpoveď pripravená', 
-          timestamp: new Date() 
+        const aiMsg: ChatMessage = {
+          role: 'assistant',
+          content: response.odpoved || response.message || 'Odpoveď pripravená',
+          timestamp: new Date()
         };
-        
+
         const currentMessages = this.messagesSubject.value;
         this.messagesSubject.next([...currentMessages, userMsg, aiMsg]);
       })
@@ -76,6 +77,26 @@ export class AiService {
 
   getChatHistory(userId: string, limit: number = 50): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/chat/history/${userId}?limit=${limit}`);
+  }
+
+  loadChatHistory(userId: string, limit: number = 50): void {
+    this.getChatHistory(userId, limit).subscribe({
+      next: (response) => {
+        if (response && response.messages) {
+          // Konvertuj Firestore správy na ChatMessage formát
+          const messages: ChatMessage[] = response.messages.map((msg: any) => ({
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)
+          }));
+          // Nahraď aktuálne správy históriou
+          this.messagesSubject.next(messages);
+        }
+      },
+      error: (err) => {
+        console.error('Error loading chat history:', err);
+      }
+    });
   }
 
   clearChatHistory(userId: string): Observable<any> {
