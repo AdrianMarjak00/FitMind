@@ -31,10 +31,14 @@
 
     <div class="actions">
       @if (!currentUser()) {
-        <a mat-button routerLink="/login" class="ghost-btn hide-tablet">Prihlásiť sa</a>
-        <a mat-flat-button color="primary" routerLink="/register" class="cta-btn">Registrácia</a>
+        <a mat-button routerLink="/login" class="login-ghost-btn hide-mobile">Prihlásiť sa</a>
+        <a mat-flat-button routerLink="/register" class="cta-btn btn-custom-green">Registrácia</a>
       } @else {
-        <button mat-icon-button class="logout-btn" (click)="logout()">
+        <button mat-icon-button class="settings-btn" routerLink="/settings" matTooltip="Nastavenia profilu">
+          <mat-icon>manage_accounts</mat-icon>
+        </button>
+
+        <button mat-icon-button class="logout-btn" (click)="logout()" matTooltip="Odhlásiť sa">
           <mat-icon>logout</mat-icon>
         </button>
       }
@@ -51,32 +55,38 @@
     <nav class="mobile-nav" (click)="$event.stopPropagation()">
       <div class="mobile-nav-header">
         <span class="logo">Fit<span>Mind</span></span>
+        <button mat-icon-button (click)="toggleMobileMenu()">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
       
       <div class="mobile-links">
-        <a mat-button routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="toggleMobileMenu()">
+        <a routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}" (click)="toggleMobileMenu()">
           <mat-icon>home</mat-icon> Domov
         </a>
-        <a mat-button routerLink="/jedalnicek" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+        <a routerLink="/jedalnicek" routerLinkActive="active-link" (click)="toggleMobileMenu()">
           <mat-icon>restaurant</mat-icon> Jedálničky
         </a>
-        <a mat-button routerLink="/training" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+        <a routerLink="/training" routerLinkActive="active-link" (click)="toggleMobileMenu()">
           <mat-icon>fitness_center</mat-icon> Tréningy
         </a>
         
         @if (currentUser()) {
-          <hr class="menu-divider">
-          <a mat-button routerLink="/dashboard" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+          <div class="menu-divider"></div>
+          <a routerLink="/dashboard" routerLinkActive="active-link" (click)="toggleMobileMenu()">
             <mat-icon>dashboard</mat-icon> Dashboard
           </a>
-          <a mat-button routerLink="/ai-chat" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+          <a routerLink="/ai-chat" routerLinkActive="active-link" (click)="toggleMobileMenu()">
             <mat-icon>chat</mat-icon> AI Chat
+          </a>
+          <a routerLink="/settings" routerLinkActive="active-link" (click)="toggleMobileMenu()">
+            <mat-icon>settings</mat-icon> Moje Nastavenia
           </a>
         }
 
         @if (!currentUser()) {
-          <hr class="menu-divider">
-          <a mat-button routerLink="/login" (click)="toggleMobileMenu()">
+          <div class="menu-divider"></div>
+          <a routerLink="/login" class="mobile-login-link" (click)="toggleMobileMenu()">
             <mat-icon>login</mat-icon> Prihlásiť sa
           </a>
         }
