@@ -2,6 +2,30 @@ from fastapi import Request, HTTPException
 from firebase_admin import auth
 import os
 
+# Development secret pre testovacie endpointy
+DEV_SECRET = os.getenv("DEV_SECRET", "")
+
+async def verify_dev_secret(request: Request):
+    """
+    Overí DEV_SECRET v hlavičke X-Dev-Secret.
+    Používa sa pre testovacie endpointy bez Firebase auth.
+    🔒 SECURITY: Endpoint je dostupný len s platným DEV_SECRET.
+    """
+    if not DEV_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="Test endpoints disabled (DEV_SECRET not configured)"
+        )
+
+    secret_header = request.headers.get("X-Dev-Secret")
+    if not secret_header or secret_header != DEV_SECRET:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing X-Dev-Secret header"
+        )
+
+    return {"dev_mode": True, "uid": "test-user-dev"}
+
 async def verify_firebase_token(request: Request):
     """
     Middleware na overenie Firebase ID tokenu v hlavičke Authorization.

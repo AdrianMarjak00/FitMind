@@ -32,7 +32,8 @@ from middleware import (
     get_authorized_user_id,
     sanitize_error_message,
     verify_firebase_token,
-    check_admin_auth
+    check_admin_auth,
+    verify_dev_secret
 )
 
 print(f"[START] Inicializujem FastAPI (Env: {'Prod' if IS_PRODUCTION else 'Dev'})...")
@@ -111,6 +112,77 @@ def api_status():
 @app.get("/api/health")
 def health():
     return {"status": "healthy", "timestamp": time.time()}
+
+# === TESTOVACIE ENDPOINTY (chránené DEV_SECRET) ===
+
+@app.post("/api/test/chat")
+def test_chat(request: ChatRequest, dev_auth: dict = Depends(verify_dev_secret)):
+    """
+    🧪 TESTOVACÍ endpoint pre AI chat - BEZ Firebase autentifikácie.
+    Vyžaduje hlavičku: X-Dev-Secret: <váš DEV_SECRET>
+
+    ⚠️ POZOR: Tento endpoint je len pre development/testovanie!
+    V produkcii používajte /api/chat s Firebase tokenom.
+    """
+    user_id = "test-user-dev"
+    message = request.message
+
+    if not message or len(message.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(message) > 2000:
+        raise HTTPException(status_code=400, detail="Message too long (max 2000 characters)")
+
+    message = message.strip()
+    print(f"[TEST CHAT] Request from dev mode: {message[:50]}...")
+
+    try:
+        # Zjednodušený test - bez Firebase kontextu
+        system_prompt = ai_service.create_system_prompt({}, {})
+        message_response = ai_service.chat(message, system_prompt, [])
+
+        ai_odpoved = message_response.content
+        saved_entries = []
+
+        if message_response.function_call:
+            fc_name = message_response.function_call.name
+            fc_args = json.loads(message_response.function_call.arguments)
+            print(f"[TEST CHAT] Function Call: {fc_name}")
+            saved_entries.append(f"[TEST] Function called: {fc_name} with args: {fc_args}")
+            if not ai_odpoved:
+                ai_odpoved = ai_service.get_final_response([])
+
+        return {
+            "odpoved": ai_odpoved,
+            "saved_entries": saved_entries,
+            "test_mode": True,
+            "note": "Toto je testovací režim - dáta sa neukladajú do Firebase"
+        }
+
+    except Exception as e:
+        print(f"[TEST CHAT ERROR] {str(e)}")
+        print(traceback.format_exc())
+        return {
+            "odpoved": f"Chyba AI: {str(e)}",
+            "saved_entries": [],
+            "test_mode": True,
+            "error": str(e)
+        }
+
+@app.get("/api/test/status")
+def test_status(dev_auth: dict = Depends(verify_dev_secret)):
+    """
+    🧪 TESTOVACÍ endpoint pre kontrolu stavu služieb.
+    Vyžaduje hlavičku: X-Dev-Secret: <váš DEV_SECRET>
+    """
+    return {
+        "status": "online",
+        "test_mode": True,
+        "firebase": "connected" if firebase.is_connected() else "disconnected",
+        "ai_key_configured": bool(ai_service.api_key),
+        "env": "development" if not IS_PRODUCTION else "production"
+    }
+
+# === PRODUKČNÉ ENDPOINTY ===
 
 @app.post("/api/chat")
 def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_token)):
@@ -283,3 +355,13 @@ def serve_angular(full_path: str):
     return HTMLResponse("<h1>FitMind Loading...</h1>", status_code=200)
 
 print("[START] Backend beží.")
+
+# Spustenie servera pri priamom spustení (python main.py)
+if __name__ == "__main__":
+    import uvicorn
+    print("\n" + "="*50)
+    print("🚀 Spúšťam FitMind Backend Server")
+    print("📖 API Docs: http://localhost:8000/docs")
+    print("🧪 Test endpoint: POST /api/test/chat")
+    print("="*50 + "\n")
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

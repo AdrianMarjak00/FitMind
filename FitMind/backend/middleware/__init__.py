@@ -7,7 +7,7 @@ from .security import (
     get_authorized_user_id,
     sanitize_error_message
 )
-from .auth import verify_firebase_token, check_admin_auth
+from .auth import verify_firebase_token, check_admin_auth, verify_dev_secret
 
 __all__ = [
     "RateLimitMiddleware",
@@ -17,5 +17,6 @@ __all__ = [
     "get_authorized_user_id",
     "sanitize_error_message",
     "verify_firebase_token",
-    "check_admin_auth"
+    "check_admin_auth",
+    "verify_dev_secret"
 ]

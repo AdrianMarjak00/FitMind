@@ -78,26 +78,35 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Adds security headers to all responses
     """
-    
+
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        
+
+        # Preskočiť CSP pre FastAPI docs (Swagger UI) v development móde
+        docs_paths = ["/docs", "/redoc", "/openapi.json"]
+        is_docs_path = any(request.url.path.startswith(p) for p in docs_paths)
+
+        if is_docs_path and not IS_PRODUCTION:
+            # Pre docs endpointy v dev móde - minimálne headers
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
+
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
+
         # HSTS - iba v produkcii (zabezpečuje že prehliadač použije HTTPS)
         if IS_PRODUCTION:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        
+
         # Content Security Policy - Relaxed for production and local development
         csp_rules = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com",
-            "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net",
+            "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
             "img-src 'self' data: https: blob:",
             "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
             "connect-src 'self' http://localhost:* https://*.googleapis.com https://*.firebaseio.com https://fitmind-backend-fvq7.onrender.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com",
@@ -105,7 +114,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "object-src 'none'"
         ]
         response.headers["Content-Security-Policy"] = "; ".join(csp_rules)
-        
+
         return response
 
 
