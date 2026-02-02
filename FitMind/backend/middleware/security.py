@@ -10,6 +10,10 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 from collections import defaultdict
 from datetime import datetime, timedelta
 import time
+import os
+
+# Zisti či sme v produkcii
+IS_PRODUCTION = os.getenv("ENV", "production").lower() == "production"
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -74,25 +78,35 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Adds security headers to all responses
     """
-    
+
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        
+
+        # Preskočiť CSP pre FastAPI docs (Swagger UI) v development móde
+        docs_paths = ["/docs", "/redoc", "/openapi.json"]
+        is_docs_path = any(request.url.path.startswith(p) for p in docs_paths)
+
+        if is_docs_path and not IS_PRODUCTION:
+            # Pre docs endpointy v dev móde - minimálne headers
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
+
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
-        # HSTS (only if using HTTPS in production)
-        # response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        
+
+        # HSTS - iba v produkcii (zabezpečuje že prehliadač použije HTTPS)
+        if IS_PRODUCTION:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
         # Content Security Policy - Relaxed for production and local development
         csp_rules = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com",
-            "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net",
+            "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
             "img-src 'self' data: https: blob:",
             "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
             "connect-src 'self' http://localhost:* https://*.googleapis.com https://*.firebaseio.com https://fitmind-backend-fvq7.onrender.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com",
@@ -100,7 +114,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "object-src 'none'"
         ]
         response.headers["Content-Security-Policy"] = "; ".join(csp_rules)
-        
+
         return response
 
 
@@ -144,6 +158,25 @@ def validate_user_id(user_id: str) -> None:
     # Basic alphanumeric check (adjust based on your Firebase user ID format)
     if not all(c.isalnum() or c in "-_" for c in user_id):
         raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+
+def get_authorized_user_id(user_id: str, decoded_token: dict) -> str:
+    """
+    Overí a vráti autorizované user_id z tokenu.
+    Ak sa user_id nezhoduje s tokenom, vráti token uid (bezpečnostná ochrana).
+    
+    Args:
+        user_id: User ID z URL parametra
+        decoded_token: Dekódovaný Firebase token
+        
+    Returns:
+        Bezpečné user_id (vždy z tokenu ak nesedí)
+    """
+    token_uid = decoded_token.get("uid")
+    if token_uid != user_id:
+        print(f"[SECURITY] User {token_uid} tried to access data of {user_id}")
+        return token_uid  # Force users to see only their data
+    return user_id
 
 
 def sanitize_error_message(error: Exception, production: bool = True) -> str:

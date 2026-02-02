@@ -49,6 +49,8 @@ export class AiChatComponent implements OnInit, OnDestroy {
       this.currentUser = user;
       this.userId = user?.uid || '';
       if (this.userId) {
+        // Načítaj chat históriu pri inicializácii
+        this.aiService.loadChatHistory(this.userId);
         this.loadRecommendations();
       }
     });

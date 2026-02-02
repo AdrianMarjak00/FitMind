@@ -16,6 +16,16 @@ class FirebaseService:
     _instance = None
     _db = None
     
+    # Mapovanie typov záznamov na názvy kolekcií v databáze (centralizované)
+    COLLECTION_MAP = {
+        'food': 'foodEntries',
+        'exercise': 'exerciseEntries',
+        'stress': 'stressEntries',
+        'mood': 'moodEntries',
+        'sleep': 'sleepEntries',
+        'weight': 'weightEntries'
+    }
+    
     def __new__(cls):
         """Vytvorí novú inštanciu len ak ešte neexistuje"""
         if cls._instance is None:
@@ -120,17 +130,7 @@ class FirebaseService:
         if not self.is_connected():
             return []
         
-        # Mapovanie typov záznamov na názvy kolekcií v databáze
-        collection_map = {
-            'food': 'foodEntries',
-            'exercise': 'exerciseEntries',
-            'stress': 'stressEntries',
-            'mood': 'moodEntries',
-            'sleep': 'sleepEntries',
-            'weight': 'weightEntries'
-        }
-        
-        coll_name = collection_map.get(entry_type)
+        coll_name = self.COLLECTION_MAP.get(entry_type)
         if not coll_name:
             return []
         
@@ -194,17 +194,7 @@ class FirebaseService:
         if not self.is_connected():
             return False
         
-        # Mapovanie typov záznamov na názvy kolekcií
-        collection_map = {
-            'food': 'foodEntries',
-            'exercise': 'exerciseEntries',
-            'stress': 'stressEntries',
-            'mood': 'moodEntries',
-            'sleep': 'sleepEntries',
-            'weight': 'weightEntries'
-        }
-        
-        coll_name = collection_map.get(entry_type)
+        coll_name = self.COLLECTION_MAP.get(entry_type)
         if not coll_name:
             return False
         

@@ -14,7 +14,8 @@ class AIEncoder(json.JSONEncoder):
         if hasattr(obj, 'timestamp'):
             try:
                 return datetime.fromtimestamp(obj.timestamp()).isoformat()
-            except:
+            except Exception:
+                # Ak timestamp nie je validný, skúsime ďalšie metódy serializácie
                 pass
         if isinstance(obj, datetime):
             return obj.isoformat()
