@@ -369,12 +369,25 @@ class FirebaseService:
             messages = []
             for doc in reversed(docs):
                 data = doc.to_dict()
-                # Vráť len role a content pre API
+                # Konvertuj Firestore timestamp na ISO string
+                timestamp = None
+                if 'timestamp' in data and data['timestamp']:
+                    ts = data['timestamp']
+                    try:
+                        if hasattr(ts, 'isoformat'):
+                            timestamp = ts.isoformat()
+                        elif hasattr(ts, 'timestamp'):
+                            from datetime import datetime, timezone
+                            timestamp = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc).isoformat()
+                    except Exception:
+                        timestamp = None
+
                 messages.append({
                     'role': data.get('role', 'user'),
-                    'content': data.get('content', '')
+                    'content': data.get('content', ''),
+                    'timestamp': timestamp
                 })
-            
+
             return messages
         except Exception as e:
             print(f"[ERROR] Chyba pri nacitani chat historie: {e}")
@@ -519,3 +532,211 @@ class FirebaseService:
         except Exception as e:
             print(f"[ERROR] Chyba pri inkrementovani message count: {e}")
             return False
+
+    # === KONVERZÁCIE ===
+
+    def create_conversation(self, user_id: str, title: str = "Nová konverzácia") -> Optional[str]:
+        """
+        Vytvorí novú konverzáciu pre používateľa
+
+        Returns:
+            ID novej konverzácie alebo None pri chybe
+        """
+        if not self.is_connected():
+            return None
+        try:
+            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations')
+            doc_ref = conv_ref.add({
+                'title': title,
+                'createdAt': firestore.SERVER_TIMESTAMP,
+                'updatedAt': firestore.SERVER_TIMESTAMP,
+                'lastMessage': ''
+            })
+            return doc_ref[1].id
+        except Exception as e:
+            print(f"[ERROR] Chyba pri vytváraní konverzácie: {e}")
+            return None
+
+    def get_conversations(self, user_id: str, limit: int = 50) -> List[Dict]:
+        """
+        Získa zoznam konverzácií používateľa
+        """
+        if not self.is_connected():
+            return []
+        try:
+            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations')
+            query = conv_ref.order_by('updatedAt', direction=firestore.Query.DESCENDING).limit(limit)
+            docs = list(query.stream())
+
+            conversations = []
+            for doc in docs:
+                data = doc.to_dict()
+                # Konvertuj timestamps na ISO stringy
+                created_at = None
+                updated_at = None
+                if data.get('createdAt'):
+                    ts = data['createdAt']
+                    try:
+                        if hasattr(ts, 'isoformat'):
+                            created_at = ts.isoformat()
+                        elif hasattr(ts, 'timestamp'):
+                            from datetime import timezone
+                            created_at = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc).isoformat()
+                    except Exception:
+                        pass
+                if data.get('updatedAt'):
+                    ts = data['updatedAt']
+                    try:
+                        if hasattr(ts, 'isoformat'):
+                            updated_at = ts.isoformat()
+                        elif hasattr(ts, 'timestamp'):
+                            from datetime import timezone
+                            updated_at = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc).isoformat()
+                    except Exception:
+                        pass
+
+                conversations.append({
+                    'id': doc.id,
+                    'title': data.get('title', 'Bez názvu'),
+                    'createdAt': created_at,
+                    'updatedAt': updated_at,
+                    'lastMessage': data.get('lastMessage', '')
+                })
+
+            return conversations
+        except Exception as e:
+            print(f"[ERROR] Chyba pri načítaní konverzácií: {e}")
+            return []
+
+    def delete_conversation(self, user_id: str, conversation_id: str) -> bool:
+        """
+        Vymaže konverzáciu aj s jej správami
+        """
+        if not self.is_connected():
+            return False
+        try:
+            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conversation_id)
+
+            # Najprv vymaž všetky správy v konverzácii
+            messages_ref = conv_ref.collection('messages')
+            for msg_doc in messages_ref.stream():
+                msg_doc.reference.delete()
+
+            # Potom vymaž konverzáciu
+            conv_ref.delete()
+            return True
+        except Exception as e:
+            print(f"[ERROR] Chyba pri mazaní konverzácie: {e}")
+            return False
+
+    def get_conversation_messages(self, user_id: str, conversation_id: str, limit: int = 50) -> List[Dict]:
+        """
+        Získa správy pre konkrétnu konverzáciu
+        """
+        if not self.is_connected():
+            return []
+        try:
+            messages_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conversation_id).collection('messages')
+            query = messages_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+            docs = list(query.stream())
+
+            messages = []
+            for doc in reversed(docs):
+                data = doc.to_dict()
+                timestamp = None
+                if 'timestamp' in data and data['timestamp']:
+                    ts = data['timestamp']
+                    try:
+                        if hasattr(ts, 'isoformat'):
+                            timestamp = ts.isoformat()
+                        elif hasattr(ts, 'timestamp'):
+                            from datetime import timezone
+                            timestamp = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc).isoformat()
+                    except Exception:
+                        pass
+
+                messages.append({
+                    'role': data.get('role', 'user'),
+                    'content': data.get('content', ''),
+                    'timestamp': timestamp
+                })
+
+            return messages
+        except Exception as e:
+            print(f"[ERROR] Chyba pri načítaní správ konverzácie: {e}")
+            return []
+
+    def save_conversation_message(self, user_id: str, conversation_id: str, role: str, content: str) -> bool:
+        """
+        Uloží správu do konverzácie a aktualizuje lastMessage
+        """
+        if not self.is_connected():
+            return False
+        try:
+            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conversation_id)
+
+            # Ulož správu
+            conv_ref.collection('messages').add({
+                'role': role,
+                'content': content,
+                'timestamp': firestore.SERVER_TIMESTAMP
+            })
+
+            # Aktualizuj konverzáciu
+            preview = content[:50] + '...' if len(content) > 50 else content
+            conv_ref.update({
+                'updatedAt': firestore.SERVER_TIMESTAMP,
+                'lastMessage': preview
+            })
+
+            return True
+        except Exception as e:
+            print(f"[ERROR] Chyba pri ukladaní správy do konverzácie: {e}")
+            return False
+
+    def get_or_create_default_conversation(self, user_id: str) -> Optional[str]:
+        """
+        Získa alebo vytvorí predvolenú konverzáciu pre používateľa.
+        Migruje existujúcu chatHistory ak existuje.
+        """
+        if not self.is_connected():
+            return None
+        try:
+            # Skontroluj či existujú konverzácie
+            conversations = self.get_conversations(user_id, limit=1)
+            if conversations:
+                return conversations[0]['id']
+
+            # Vytvor novú konverzáciu
+            conv_id = self.create_conversation(user_id, "Môj prvý chat")
+            if not conv_id:
+                return None
+
+            # Migruj existujúcu chatHistory ak existuje
+            old_history = self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory')
+            old_docs = list(old_history.order_by('timestamp', direction=firestore.Query.ASCENDING).stream())
+
+            if old_docs:
+                conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conv_id)
+                for doc in old_docs:
+                    data = doc.to_dict()
+                    conv_ref.collection('messages').add({
+                        'role': data.get('role', 'user'),
+                        'content': data.get('content', ''),
+                        'timestamp': data.get('timestamp', firestore.SERVER_TIMESTAMP)
+                    })
+
+                # Aktualizuj lastMessage
+                if old_docs:
+                    last_data = old_docs[-1].to_dict()
+                    last_content = last_data.get('content', '')
+                    preview = last_content[:50] + '...' if len(last_content) > 50 else last_content
+                    conv_ref.update({
+                        'lastMessage': preview,
+                        'title': 'Predošlá konverzácia'
+                    })
+
+            return conv_id
+        except Exception as e:
+            print(f"[ERROR] Chyba pri get_or_create_default_conversation: {e}")
+            return None
