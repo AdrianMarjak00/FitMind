@@ -1,116 +1,175 @@
+$primary: #3ddc84;
+$bg-dark: #050505;
+$transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+
 .main-header {
-  height: 72px !important;
-  background: rgba(5, 5, 5, 0.85) !important;
-  backdrop-filter: blur(14px);
+  height: 80px !important;
+  background: rgba(5, 5, 5, 0.8) !important;
+  backdrop-filter: blur(20px) saturate(180%);
   position: sticky;
   top: 0;
   z-index: 1000;
   padding: 0 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .header-container {
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: 1280px;
+  max-width: 1300px;
   margin: 0 auto;
-  padding: 0 22px;
+  padding: 0 24px;
 }
 
 /* ---------- LOGO ---------- */
 .logo-wrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   cursor: pointer;
+  text-decoration: none;
+  
+  .logo-icon {
+    background: linear-gradient(135deg, $primary, darken($primary, 20%));
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    mat-icon { color: #000; font-size: 22px; width: 22px; height: 22px; }
+  }
 }
 
 .logo {
-  font-size: 1.65rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  color: #ffffff;
-  span { color: #3ddc84; }
+  font-size: 1.7rem;
+  font-weight: 950;
+  letter-spacing: -1px;
+  color: #fff;
+  span { color: $primary; text-shadow: 0 0 15px rgba($primary, 0.3); }
 }
 
 /* ---------- DESKTOP NAV ---------- */
 .desktop-nav {
   display: flex;
-  gap: 6px;
-  margin-right: 18px;
+  gap: 8px;
+  margin: 0 20px;
 
-  @media (max-width: 992px) {
-    display: none;
-  }
+  @media (max-width: 1024px) { display: none; }
 
   a {
-    font-weight: 500;
-    opacity: 0.75;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.7);
+    padding: 8px 16px !important;
     border-radius: 12px;
-    transition: all 0.25s ease;
+    transition: $transition;
+
+    &:hover { color: #fff; background: rgba(255,255,255,0.05); }
 
     &.active-link {
-      opacity: 1;
-      color: #3ddc84;
-      background: rgba(61, 220, 132, 0.12);
+      color: $primary;
+      background: rgba($primary, 0.1);
     }
   }
 }
 
-/* ---------- ACTIONS ---------- */
+/* ---------- ACTIONS & BUTTONS ---------- */
 .actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.cta-btn {
-  height: 40px;
-  border-radius: 14px;
+// NOVÁ IKONA NASTAVENÍ
+.settings-btn {
+  color: rgba(255, 255, 255, 0.7);
+  transition: $transition;
+
+  &:hover {
+    color: $primary;
+    background: rgba($primary, 0.1);
+    transform: rotate(15deg);
+  }
+  
+  mat-icon {
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+  }
+}
+
+.btn-custom-green {
+  background-color: $primary !important;
+  color: black !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  height: 45px !important;
+  padding: 0 25px !important;
+  transition: $transition !important;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba($primary, 0.4) !important;
+  }
+}
+
+.login-ghost-btn {
+  color: white !important;
   font-weight: 600;
+  opacity: 0.8;
+  &:hover { opacity: 1; }
+  @media (max-width: 600px) { display: none; }
+}
+
+.logout-btn {
+  color: #ff4d4d;
+  transition: $transition;
+  &:hover { 
+    background: rgba(255, 77, 77, 0.1);
+    transform: scale(1.1);
+  }
 }
 
 .mobile-menu-btn {
   display: none;
-  color: white;
-
-  @media (max-width: 992px) {
-    display: inline-flex;
-  }
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  @media (max-width: 1024px) { display: inline-flex; }
 }
 
-.spacer { flex: 1 1 auto; }
+.spacer { flex: 1; }
 
-/* ---------- MOBILNÉ MENU STYLES ---------- */
+/* ---------- MOBILE MENU ---------- */
 .mobile-menu-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
   z-index: 2000;
   display: flex;
   justify-content: flex-end;
+  animation: fadeIn 0.3s ease;
 }
 
 .mobile-nav {
-  width: 80%;
-  max-width: 300px;
-  background: #0a0a0a;
+  width: 85%;
+  max-width: 320px;
+  background: #080808;
   height: 100%;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -5px 0 20px rgba(0,0,0,0.5);
-  border-left: 1px solid rgba(255,255,255,0.1);
+  padding: 30px;
+  box-shadow: -10px 0 40px rgba(0,0,0,0.8);
+  border-left: 1px solid rgba(255,255,255,0.05);
+  animation: slideIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 
   .mobile-nav-header {
-    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
     padding-bottom: 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
   }
 
   .mobile-links {
@@ -121,31 +180,33 @@
     a {
       display: flex;
       align-items: center;
-      justify-content: flex-start;
-      gap: 12px;
+      gap: 15px;
       font-size: 1.1rem;
-      padding: 12px !important;
-      color: rgba(255,255,255,0.8);
-      border-radius: 12px;
-      width: 100%;
+      font-weight: 500;
+      padding: 14px 20px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      border-radius: 14px;
+      transition: $transition;
 
-      mat-icon { margin-right: 8px; }
+      mat-icon { font-size: 22px; color: $primary; }
 
       &.active-link {
-        color: #3ddc84;
-        background: rgba(61, 220, 132, 0.1);
+        background: rgba($primary, 0.1);
+        color: $primary;
+        font-weight: 700;
       }
+      
+      &:active { background: rgba(255,255,255,0.05); }
     }
   }
 }
 
 .menu-divider {
-  border: 0;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  height: 1px;
+  background: rgba(255,255,255,0.05);
   margin: 15px 0;
 }
 
-/* Skrytie na tabletoch pre prihlásenie ak treba */
-@media (max-width: 600px) {
-  .hide-tablet { display: none; }
-}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }

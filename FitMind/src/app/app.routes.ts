@@ -10,6 +10,7 @@ import { DashboardComponent } from './components/dashboard/dashboard';
 import { Reviews } from './reviews/reviews';
 import { JedalnicekComponent } from './components/jedalnicek/jedalnicek';
 import { Training } from './components/training/training';
+import { SettingsComponent } from './components/settings/settings'; // Importuj nový komponent
 import { AdminGuard } from '../guards/admin.guard';
 
 export const routes: Routes = [
@@ -23,6 +24,7 @@ export const routes: Routes = [
     { path: 'jedalnicek', component: JedalnicekComponent },
     { path: 'training', component: Training },
     { path: 'ai-chat', component: AiChatComponent },
+    { path: 'settings', component: SettingsComponent }, 
 
     { path: '**', redirectTo: '' }
 ];

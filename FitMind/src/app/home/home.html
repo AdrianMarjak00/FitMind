@@ -1,3 +1,22 @@
+<div *ngIf="!areCookiesAccepted" class="cookie-overlay">
+  <div class="cookie-card">
+    <div class="cookie-content">
+      <div class="cookie-icon-wrapper">
+        <mat-icon>cookie</mat-icon>
+      </div>
+      <div class="cookie-text">
+        <h3>Súkromie a Cookies</h3>
+        <p>Naša platforma využíva cookies na optimalizáciu tvojho progresu a personalizáciu obsahu.</p>
+      </div>
+    </div>
+    <div class="cookie-actions">
+      <button mat-flat-button class="btn-accept" (click)="acceptCookies()">
+        SÚHLASÍM
+      </button>
+    </div>
+  </div>
+</div>
+
 <section class="hero">
   <div class="hero-glow-1"></div>
   <div class="hero-glow-2"></div>
@@ -13,7 +32,7 @@
       </p>
 
       <div class="hero-actions">
-        <button mat-flat-button color="primary" routerLink="/register" class="btn-main">
+        <button mat-flat-button routerLink="/register" class="btn-main btn-custom-green">
           VYTVORIŤ ÚČET ZDARMA
         </button>
       </div>
@@ -83,40 +102,3 @@
     </div>
   </div>
 </section>
-<footer class="main-footer">
-  <div class="container footer-container">
-
-    <!-- Left -->
-    <div class="footer-brand">
-      <span class="footer-logo">Fit<span>Mind</span></span>
-      <p class="footer-text">
-        Inteligentná fitness platforma novej generácie.
-      </p>
-    </div>
-
-    <!-- Center -->
-    <div class="footer-payments">
-      <span class="payment-label">Platby čoskoro</span>
-      <div class="payment-icons">
-        <mat-icon>credit_card</mat-icon>
-        <mat-icon>payments</mat-icon>
-        <mat-icon>account_balance_wallet</mat-icon>
-      </div>
-    </div>
-
-    <!-- Right -->
-    <div class="footer-socials">
-      <a href="#" aria-label="Facebook">
-        <span>Facebook</span>
-      </a>
-      <a href="#" aria-label="Instagram">
-        <span>Instagram</span>
-      </a>
-    </div>
-
-  </div>
-
-  <div class="footer-bottom">
-    © {{ currentYear }} FitMind. Všetky práva vyhradené.
-  </div>
-</footer>
