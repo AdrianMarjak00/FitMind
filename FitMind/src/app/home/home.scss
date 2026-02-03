@@ -10,19 +10,18 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   padding: 0 20px;
 }
 
-/* Spoločné štýly pre nadpisy sekcií */
 .section-intro {
   text-align: center;
   margin-bottom: 60px;
-  .title-lg { 
-    font-size: clamp(2rem, 5vw, 3.5rem); 
+  .title-lg {
+    font-size: clamp(2rem, 5vw, 3.5rem);
     font-weight: 900;
     span { color: $primary; }
   }
   .subtitle-md { color: $text-gray; font-size: 1.1rem; margin-top: 10px; }
 }
 
-/* ================= HERO ================= */
+/* ================= HERO (Responzívny s pôvodnými prvkami) ================= */
 .hero {
   position: relative;
   min-height: 100vh;
@@ -62,14 +61,9 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     font-size: clamp(2.5rem, 8vw, 5.5rem);
     font-weight: 950;
     line-height: 0.85;
-    margin-bottom: 20px;
+    margin: 20px 0;
     letter-spacing: -2px;
     span { color: $primary; text-shadow: 0 0 40px rgba($primary, 0.4); }
-  }
-  .hero-subtitle {
-    font-size: clamp(1.1rem, 2.5vw, 1.8rem);
-    color: #eee;
-    margin-bottom: 25px;
   }
   .hero-description {
     color: $text-gray;
@@ -83,15 +77,16 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 
 .hero-image-box {
   flex: 0.7;
-  .hero-img { 
-    width: 100%; 
-    max-width: 400px; 
-    height: auto; 
-    border-radius: 40px; 
-    filter: drop-shadow(0 20px 50px rgba(0,0,0,0.5)); 
+  .hero-img {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    border-radius: 40px;
+    filter: drop-shadow(0 20px 50px rgba(0,0,0,0.5));
   }
 }
 
+/* PÔVODNÉ TLAČIDLO */
 .btn-custom-green {
   background-color: $primary !important;
   color: black !important;
@@ -99,12 +94,15 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   height: 60px !important;
   padding: 0 35px !important;
   border-radius: 12px !important;
+  transition: all 0.3s ease !important;
   &:hover {
     background-color: lighten($primary, 5%) !important;
     box-shadow: 0 10px 30px rgba($primary, 0.4) !important;
+    transform: translateY(-2px);
   }
 }
 
+/* PÔVODNÉ ŠTATISTIKY - Responzívne upravené */
 .hero-stats-container {
   display: inline-flex;
   gap: 30px;
@@ -112,17 +110,31 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   background: rgba(255,255,255, 0.02);
   border: 1px solid rgba(255,255,255, 0.07);
   border-radius: 24px;
+  margin-top: 20px;
+  
   .stat-value { color: $primary; font-weight: 900; font-size: 1.8rem; }
   .stat-label { color: #777; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; }
-  .stat-divider { width: 1px; background: rgba(255,255,255,0.1); @media (max-width: 600px) { display: none; } }
-  @media (max-width: 600px) { display: grid; grid-template-columns: 1fr; width: 100%; padding: 20px; }
+  .stat-divider { width: 1px; background: rgba(255,255,255,0.1); }
+  
+  @media (max-width: 600px) { 
+    display: grid; 
+    grid-template-columns: 1fr; 
+    width: 100%; 
+    padding: 20px;
+    .stat-divider { display: none; }
+  }
 }
 
 /* ================= NAVIGATION ================= */
 .navigation-section { padding: 100px 0; background-color: $bg-black; }
-.nav-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+.nav-cards-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+  gap: 30px; 
+}
 .nav-card {
   position: relative; height: 380px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: $transition;
+  overflow: hidden;
   .card-glass-bg { position: absolute; inset: 0; backdrop-filter: blur(10px); background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent); }
   .card-content {
     position: relative; z-index: 5; padding: 40px; height: 100%; display: flex; flex-direction: column;
@@ -134,65 +146,37 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     p { color: #888; flex-grow: 1; }
     .card-link { color: $primary; font-weight: 800; display: flex; align-items: center; gap: 10px; text-transform: uppercase; font-size: 0.9rem; }
   }
-  &:hover { transform: translateY(-15px); border-color: rgba($primary, 0.3); .icon-box { background: $primary; mat-icon { color: black; } } }
+  &:hover { transform: translateY(-15px); border-color: rgba($primary, 0.3); }
 }
 
-/* ================= GALLERY (BENTO GRID) ================= */
+/* ================= OPRAVENÁ GALÉRIA (Responzívna) ================= */
 .gallery-section {
   padding: 100px 0;
   background-color: $bg-black;
 
   .image-grid {
     display: grid;
+    // Automaticky mení počet stĺpcov podľa obrazovky
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    grid-auto-rows: 220px;
-    gap: 20px;
+    gap: 30px;
 
     .grid-item {
       position: relative;
       overflow: hidden;
-      border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0a0a0a;
+      height: 350px; // Fixná výška pre symetriu
       
       img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
-        transition: transform 0.8s ease;
+        display: block;
+        object-fit: cover; // OPRAVA: vyplní box bez čiernych okrajov
+        transition: transform 0.6s ease;
       }
 
-      .img-caption {
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(8px);
-        color: white;
-        padding: 6px 16px;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        border: 1px solid rgba($primary, 0.3);
-        opacity: 0;
-        transform: translateY(10px);
-        transition: $transition;
-      }
-
-      &:hover {
-        img { transform: scale(1.1); }
-        .img-caption { opacity: 1; transform: translateY(0); }
-      }
-
-      &.tall { grid-row: span 2; }
-      &.wide { grid-column: span 2; }
-
-      @media (max-width: 992px) {
-        &.wide { grid-column: span 1; }
-      }
-      @media (max-width: 768px) {
-        grid-row: span 1 !important;
-        height: 300px;
-      }
+      &:hover img { transform: scale(1.05); }
     }
   }
 }
@@ -222,9 +206,12 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 .footer-bottom { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); color: #555; font-size: 0.8rem; }
 
 /* ================= COOKIE BANNER ================= */
-.cookie-overlay { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; width: 95%; max-width: 500px; }
+.cookie-overlay { 
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+  z-index: 9999; width: 95%; max-width: 500px; 
+}
 .cookie-card {
-  background: #0a0a0a; border: 1.5px solid $primary; border-radius: 20px; padding: 20px; 
+  background: #0a0a0a; border: 1.5px solid $primary; border-radius: 20px; padding: 20px;
   display: flex; align-items: center; justify-content: space-between; gap: 15px;
   @media (max-width: 600px) { flex-direction: column; text-align: center; }
 }
