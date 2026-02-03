@@ -21,7 +21,7 @@
       </a>
       @if (currentUser()) {
         <a mat-button routerLink="/dashboard" routerLinkActive="active-link">
-          Dashboard
+          Tabuľky
         </a>
         <a mat-button routerLink="/ai-chat" routerLinkActive="active-link">
           AI Chat
@@ -74,7 +74,7 @@
         @if (currentUser()) {
           <div class="menu-divider"></div>
           <a routerLink="/dashboard" routerLinkActive="active-link" (click)="toggleMobileMenu()">
-            <mat-icon>dashboard</mat-icon> Dashboard
+            <mat-icon>dashboard</mat-icon> Tabuľky
           </a>
           <a routerLink="/ai-chat" routerLinkActive="active-link" (click)="toggleMobileMenu()">
             <mat-icon>chat</mat-icon> AI Chat
