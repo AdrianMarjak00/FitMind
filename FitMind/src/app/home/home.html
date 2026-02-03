@@ -10,7 +10,7 @@
       </div>
     </div>
     <div class="cookie-actions">
-      <button mat-flat-button class="btn-accept" (click)="acceptCookies()">
+      <button mat-flat-button class="btn-custom-green btn-cookie" (click)="acceptCookies()">
         SÚHLASÍM
       </button>
     </div>
@@ -22,7 +22,7 @@
   <div class="hero-glow-2"></div>
 
   <div class="container hero-wrapper">
-    <div class="hero-content">
+    <div class="hero-content fade-in-left">
       <span class="badge">LIMITS ARE ONLY ILLUSIONS</span>
       <h1 class="hero-title">Fit<span>Mind</span></h1>
       <h2 class="hero-subtitle">Posuň svoje hranice za hranicu možného.</h2>
@@ -55,14 +55,14 @@
       </div>
     </div>
 
-    <div class="hero-image-box">
-      <img src="/assets/fotka1.png" alt="Fitness Progres" class="hero-img" loading="eager">
+    <div class="hero-image-box fade-in-right">
+      <img src="/assets/logoTrans.png" alt="Fitness Progres" class="hero-img">
       <div class="image-overlay-glow"></div>
     </div>
   </div>
 </section>
 
-<section class="navigation-section">
+<section class="navigation-section scroll-reveal">
   <div class="container">
     <div class="section-intro">
       <h2 class="title-lg">Všetko, čo potrebuješ <span>na jednom mieste</span></h2>
@@ -70,7 +70,7 @@
     </div>
 
     <div class="nav-cards-grid">
-      <div class="nav-card card-training" routerLink="/training">
+      <div class="nav-card card-training" routerLink="/training" style="--d: 0.1s">
         <div class="card-glass-bg"></div>
         <div class="card-content">
           <div class="icon-box"><mat-icon>fitness_center</mat-icon></div>
@@ -80,7 +80,7 @@
         </div>
       </div>
 
-      <div class="nav-card card-diet" routerLink="/jedalnicek">
+      <div class="nav-card card-diet" routerLink="/jedalnicek" style="--d: 0.2s">
         <div class="card-glass-bg"></div>
         <div class="card-content">
           <div class="icon-box"><mat-icon>restaurant</mat-icon></div>
@@ -90,7 +90,7 @@
         </div>
       </div>
 
-      <div class="nav-card card-reviews" routerLink="/review">
+      <div class="nav-card card-reviews" routerLink="/review" style="--d: 0.3s">
         <div class="card-glass-bg"></div>
         <div class="card-content">
           <div class="icon-box"><mat-icon>groups</mat-icon></div>
@@ -99,6 +99,21 @@
           <span class="card-link">Recenzie <mat-icon>north_east</mat-icon></span>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="gallery-section scroll-reveal">
+  <div class="container">
+    <div class="section-intro">
+      <h2 class="title-lg">Fotky od <span>Vás</span></h2>
+    </div>
+
+    <div class="image-grid">
+      <div class="grid-item" style="--d: 0.1s"><img src="/assets/cvicenie.jpg" alt="Tréning"></div>
+      <div class="grid-item" style="--d: 0.2s"><img src="/assets/strava.jpg" alt="Strava"></div>
+      <div class="grid-item" style="--d: 0.3s"><img src="/assets/komunita.jpg" alt="Komunita"></div>
+      <div class="grid-item" style="--d: 0.4s"><img src="/assets/vysledky.jpg" alt="Výsledky"></div>
     </div>
   </div>
 </section>

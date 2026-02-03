@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,30 +10,34 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   templateUrl: './home.html',
   styleUrls: ['./home.scss'],
-  imports: [
-    CommonModule,
-    RouterModule,
-    MatButtonModule,
-    MatCardModule,
-    MatIconModule
-  ]
+  imports: [CommonModule, RouterModule, MatButtonModule, MatCardModule, MatIconModule]
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit {
   currentYear: number = new Date().getFullYear();
-  // Predvolene skryté, kým neoveríme stav v ngOnInit
-  areCookiesAccepted: boolean = true; 
+  areCookiesAccepted: boolean = false;
 
-  constructor() {}
+  constructor(private el: ElementRef) {}
 
   ngOnInit() {
-    // Kontrola, či užívateľ už v minulosti súhlasil
-    const consent = localStorage.getItem('cookiesAccepted');
-    this.areCookiesAccepted = consent === 'true';
+    const consent = sessionStorage.getItem('cookiesAcceptedSession');
+    this.areCookiesAccepted = (consent === 'true');
+  }
+
+  ngAfterViewInit() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    const elements = this.el.nativeElement.querySelectorAll('.scroll-reveal');
+    elements.forEach((el: HTMLElement) => observer.observe(el));
   }
 
   acceptCookies() {
-    // Trvalé uloženie súhlasu v prehliadači
-    localStorage.setItem('cookiesAccepted', 'true');
+    sessionStorage.setItem('cookiesAcceptedSession', 'true');
     this.areCookiesAccepted = true;
   }
 }

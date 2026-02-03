@@ -94,10 +94,14 @@ coach_service = CoachService(firebase)
 class ChatRequest(BaseModel):
     message: str
     user_id: Optional[str] = None  # Optional - backend používa UID z tokenu
+    conversation_id: Optional[str] = None  # ID konverzácie (ak None, použije sa default)
 
     class Config:
         # Validácia dĺžky správy
         str_max_length = 2000
+
+class CreateConversationRequest(BaseModel):
+    title: Optional[str] = "Nová konverzácia"
 
 # --- API ENDPOINTY ---
 
@@ -227,33 +231,41 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         }
 
     try:
+        # Získaj alebo vytvor konverzáciu
+        conversation_id = request.conversation_id
+        if not conversation_id:
+            conversation_id = firebase.get_or_create_default_conversation(user_id)
+
         # Načítaj kontext konkrétneho používateľa
         profile = firebase.get_user_profile(user_id)
         entries = {
             'food': firebase.get_entries(user_id, 'food', days=3),
             'exercise': firebase.get_entries(user_id, 'exercise', days=3)
         }
-        # História len pre tohto používateľa
-        history = firebase.get_chat_history(user_id, limit=8)
-        
+        # História z konverzácie
+        if conversation_id:
+            history = firebase.get_conversation_messages(user_id, conversation_id, limit=8)
+        else:
+            history = firebase.get_chat_history(user_id, limit=8)
+
         system_prompt = ai_service.create_system_prompt(profile or {}, entries)
-        
+
         # Volanie AI - teraz stateless (vytvára model vnútri)
         message_response = ai_service.chat(message, system_prompt, history)
-        
+
         ai_odpoved = message_response.content
         saved_entries = []
-        
+
         # Spracovanie funkcií (uloženie do DB)
         if message_response.function_call:
             fc_name = message_response.function_call.name
             fc_args = json.loads(message_response.function_call.arguments)
             print(f"[CHAT] Function Call: {fc_name} for {user_id}")
-            
+
             mapping = {
-                'save_food_entry': 'food', 
-                'save_exercise_entry': 'exercise', 
-                'save_mood_entry': 'mood', 
+                'save_food_entry': 'food',
+                'save_exercise_entry': 'exercise',
+                'save_mood_entry': 'mood',
                 'save_weight_entry': 'weight'
             }
             if fc_name in mapping:
@@ -262,11 +274,17 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
                     # Ak AI neposlalo text spoločne s funkciou, doplníme generický
                     if not ai_odpoved or ai_odpoved.startswith("Jasné, už to zapisujem"):
                         ai_odpoved = ai_service.get_final_response([])
-        
-        # Uloženie do histórie používateľa
-        firebase.save_chat_message(user_id, 'user', message)
-        if ai_odpoved:
-            firebase.save_chat_message(user_id, 'assistant', ai_odpoved)
+
+        # Uloženie do konverzácie
+        if conversation_id:
+            firebase.save_conversation_message(user_id, conversation_id, 'user', message)
+            if ai_odpoved:
+                firebase.save_conversation_message(user_id, conversation_id, 'assistant', ai_odpoved)
+        else:
+            # Fallback na starú chatHistory
+            firebase.save_chat_message(user_id, 'user', message)
+            if ai_odpoved:
+                firebase.save_chat_message(user_id, 'assistant', ai_odpoved)
 
         # Inkrementuj počítadlo správ
         firebase.increment_message_count(user_id)
@@ -337,6 +355,40 @@ def get_history_api(user_id: str, limit: Optional[int] = 50, decoded_token: dict
     user_id = get_authorized_user_id(user_id, decoded_token)
     hist = firebase.get_chat_history(user_id, limit)
     return {"messages": hist}
+
+# === KONVERZÁCIE ===
+
+@app.get("/api/conversations/{user_id}")
+def get_conversations_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    """Získa zoznam všetkých konverzácií používateľa"""
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    conversations = firebase.get_conversations(user_id)
+    return {"conversations": conversations}
+
+@app.post("/api/conversations/{user_id}")
+def create_conversation_api(user_id: str, request: CreateConversationRequest, decoded_token: dict = Depends(verify_firebase_token)):
+    """Vytvorí novú konverzáciu"""
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    conv_id = firebase.create_conversation(user_id, request.title or "Nová konverzácia")
+    if not conv_id:
+        raise HTTPException(status_code=500, detail="Failed to create conversation")
+    return {"conversation_id": conv_id}
+
+@app.delete("/api/conversations/{user_id}/{conversation_id}")
+def delete_conversation_api(user_id: str, conversation_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    """Vymaže konverzáciu"""
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    success = firebase.delete_conversation(user_id, conversation_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete conversation")
+    return {"deleted": True}
+
+@app.get("/api/conversations/{user_id}/{conversation_id}/messages")
+def get_conversation_messages_api(user_id: str, conversation_id: str, limit: Optional[int] = 50, decoded_token: dict = Depends(verify_firebase_token)):
+    """Získa správy pre konkrétnu konverzáciu"""
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    messages = firebase.get_conversation_messages(user_id, conversation_id, limit)
+    return {"messages": messages}
 
 # === SERVOVANIE FRONTENDU ===
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

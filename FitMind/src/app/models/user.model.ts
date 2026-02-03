@@ -6,7 +6,7 @@ export type PrimaryGoal = 'lose_weight' | 'gain_weight' | 'maintain_weight' | 'b
 export type DietType = 'none' | 'vegetarian' | 'vegan' | 'keto' | 'paleo' | 'mediterranean' | 'low_carb';
 
 export const ACTIVITY_LEVEL_LABELS: Record<ActivityLevel, string> = {
-    sedentary: 'Sed avý (žiadne cvičenie)',
+    sedentary: 'Sedavý (žiadne cvičenie)',
     lightly_active: 'Ľahko aktívny (1-3x týždenne)',
     moderately_active: 'Stredne aktívny (3-5x týždenne)',
     very_active: 'Veľmi aktívny (6-7x týždenne)',
@@ -15,7 +15,7 @@ export const ACTIVITY_LEVEL_LABELS: Record<ActivityLevel, string> = {
 
 export const GOAL_LABELS: Record<PrimaryGoal, string> = {
     lose_weight: 'Schudnúť',
-    gain_weight: 'Pribr ať',
+    gain_weight: 'Pribrať',
     maintain_weight: 'Udržať váhu',
     build_muscle: 'Budovať svaly',
     improve_fitness: 'Zlepšiť kondíciu'
