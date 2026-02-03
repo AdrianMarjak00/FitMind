@@ -2,6 +2,7 @@ import { Component, signal, OnInit } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
@@ -14,6 +15,7 @@ import { User } from '@angular/fire/auth';
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
     RouterModule,
     CommonModule
   ],
@@ -43,6 +45,7 @@ export class Header implements OnInit {
     this.authService.logout().subscribe({
       next: () => {
         this.currentUser.set(null);
+        this.isMobileMenuOpen.set(false); // Zavrie menu po odhlásení
         this.router.navigate(['/login']);
       }
     });

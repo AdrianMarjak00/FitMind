@@ -1,0 +1,63 @@
+<section class="settings-page">
+  <div class="hero-glow"></div>
+
+  <div class="container">
+    <header class="settings-header">
+      <div class="main-badge">
+        <mat-icon>manage_accounts</mat-icon>
+        <span>MOJE NASTAVENIA</span>
+      </div>
+      <h1 class="title-lg">Tvoj <span>Profil</span></h1>
+      <p class="subtitle">Uprav si svoje údaje, aby sme mohli tvoj jedálniček a tréningy prispôsobiť tvojmu progresu.</p>
+    </header>
+
+    <mat-card class="settings-card">
+      <mat-card-content>
+        <form class="settings-form">
+          <div class="input-group">
+            <mat-label>Prezývka / Meno</mat-label>
+            <mat-form-field appearance="outline">
+              <input matInput [(ngModel)]="user.displayName" name="displayName" placeholder="Napr. Peter">
+              <mat-icon matSuffix>person</mat-icon>
+            </mat-form-field>
+          </div>
+
+          <div class="row">
+            <div class="input-group">
+              <mat-label>Aktuálna váha (kg)</mat-label>
+              <mat-form-field appearance="outline">
+                <input matInput type="number" [(ngModel)]="user.weight" name="weight">
+                <mat-icon matSuffix>monitor_weight</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <div class="input-group">
+              <mat-label>Výška (cm)</mat-label>
+              <mat-form-field appearance="outline">
+                <input matInput type="number" [(ngModel)]="user.height" name="height">
+                <mat-icon matSuffix>height</mat-icon>
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <mat-label>Tvoj hlavný cieľ</mat-label>
+            <mat-form-field appearance="outline">
+              <mat-select [(ngModel)]="user.goal" name="goal">
+                <mat-option value="loss">Redukcia tuku</mat-option>
+                <mat-option value="gain">Naberanie svalov</mat-option>
+                <mat-option value="balance">Udržiavanie formy</mat-option>
+              </mat-select>
+              <mat-icon matSuffix>ads_click</mat-icon>
+            </mat-form-field>
+          </div>
+
+          <button mat-raised-button class="save-btn" (click)="saveSettings()">
+            <mat-icon>save</mat-icon>
+            ULOŽIŤ NASTAVENIA
+          </button>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</section>
