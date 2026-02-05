@@ -74,6 +74,10 @@ $gold: #ffd700;
   margin: 0 auto;
   padding: 0 20px;
   align-items: stretch;
+
+  &.two-cards {
+    max-width: 800px;
+  }
 }
 
 .training-card {

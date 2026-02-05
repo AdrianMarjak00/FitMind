@@ -12,7 +12,9 @@ import { Reviews } from './reviews/reviews';
 import { JedalnicekComponent } from './components/jedalnicek/jedalnicek';
 import { Training } from './components/training/training';
 import { SettingsComponent } from './components/settings/settings';
+import { PaymentSuccessComponent } from './components/payment-success/payment-success';
 import { AdminGuard } from '../guards/admin.guard';
+import { AuthGuard } from '../guards/auth.guard';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -20,13 +22,14 @@ export const routes: Routes = [
     { path: 'register', component: RegisterComponent },
     { path: 'complete-profile', component: CompleteProfileComponent },
     { path: 'contact', component: Contact },
-    { path: 'dashboard', component: DashboardComponent },
+    { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
     { path: 'piechart', component: Piechart, canActivate: [AdminGuard] },
     { path: 'review', component: Reviews },
-    { path: 'jedalnicek', component: JedalnicekComponent },
-    { path: 'training', component: Training },
-    { path: 'ai-chat', component: AiChatComponent },
-    { path: 'settings', component: SettingsComponent }, 
+    { path: 'jedalnicek', component: JedalnicekComponent, canActivate: [AuthGuard] },
+    { path: 'training', component: Training, canActivate: [AuthGuard] },
+    { path: 'ai-chat', component: AiChatComponent, canActivate: [AuthGuard] },
+    { path: 'settings', component: SettingsComponent, canActivate: [AuthGuard] },
+    { path: 'payment-success', component: PaymentSuccessComponent, canActivate: [AuthGuard] },
 
     { path: '**', redirectTo: '' }
 ];

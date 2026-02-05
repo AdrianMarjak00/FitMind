@@ -117,8 +117,8 @@ export class AiService {
           this.messagesSubject.next(messages);
         }
       },
-      error: (err) => {
-        console.error('Error loading chat history:', err);
+      error: () => {
+        // Tiché zlyhanie - história sa nenačíta
       }
     });
   }
@@ -167,7 +167,7 @@ export class AiService {
           }
         }
       },
-      error: (err) => console.error('Error loading conversations:', err)
+      error: () => { /* Tiché zlyhanie */ }
     });
   }
 
@@ -217,7 +217,7 @@ export class AiService {
             this.messagesSubject.next(messages);
           }
         },
-        error: (err) => console.error('Error loading conversation messages:', err)
+        error: () => { /* Tiché zlyhanie */ }
       });
   }
 

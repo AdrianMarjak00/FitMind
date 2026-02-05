@@ -72,7 +72,7 @@ async def check_admin_auth(request: Request):
     
     # Tu môžeš pridať vlastnú logiku kontroly admina (napr. cez custom claims alebo Firestore)
     # V tomto projekte kontrolujeme admina v firebase_service
-    from firebase_service import FirebaseService
+    from firebase_databaza import FirebaseService
     firebase = FirebaseService()
     if not firebase.is_admin(user["uid"]):
         raise HTTPException(status_code=403, detail="Admin privileges required")
