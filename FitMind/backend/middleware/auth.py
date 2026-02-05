@@ -33,6 +33,15 @@ async def verify_firebase_token(request: Request):
     🔒 SECURITY: Auth je VŽDY povinný - žiadne SKIP_AUTH flags!
     """
     auth_header = request.headers.get("Authorization")
+    
+    # DEBUG LOGGING START
+    if not auth_header:
+        print(f"[AUTH DEBUG] No Authorization header received for {request.url.path}")
+    else:
+        token_preview = auth_header[:15] + "..." if len(auth_header) > 15 else auth_header
+        print(f"[AUTH DEBUG] Auth header received: {token_preview} for {request.url.path}")
+    # DEBUG LOGGING END
+
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=401, 
@@ -48,8 +57,12 @@ async def verify_firebase_token(request: Request):
     except auth.ExpiredIdTokenError:
         print(f"[AUTH ERROR] Token expired for request to {request.url.path}")
         raise HTTPException(status_code=401, detail="Token expired")
-    except auth.InvalidIdTokenError:
-        print(f"[AUTH ERROR] Token invalid (check Firebase Project ID) for request to {request.url.path}")
+    except auth.InvalidIdTokenError as e:
+        print(f"[AUTH ERROR] Token invalid for request to {request.url.path}")
+        print(f"[AUTH DEBUG] Error details: {str(e)}")
+        # Check if the error message contains project ID mismatch info
+        if "project id" in str(e).lower():
+            print(f"[AUTH HINT] Project ID mismatch! Backend expects token for its configured project.")
         raise HTTPException(status_code=401, detail="Token invalid")
     except auth.RevokedIdTokenError:
         print(f"[AUTH ERROR] Token revoked for request to {request.url.path}")
