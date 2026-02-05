@@ -53,6 +53,10 @@ export class RegisterComponent {
 
   medicalConditionsText = '';
 
+  // GDPR consent
+  gdprConsent = false;
+  marketingConsent = false;
+
   constructor(
     private auth: AuthService,
     private userFitnessService: UserFitnessService,
@@ -106,13 +110,38 @@ export class RegisterComponent {
       return;
     }
 
+    if (!this.gdprConsent) {
+      this.errorMsg = 'Musíte súhlasiť so spracovaním osobných údajov.';
+      return;
+    }
+
     this.isLoading = true;
 
+    // Najprv skontroluj či email už existuje v Firestore
+    this.auth.checkEmailExists(this.email).subscribe({
+      next: (exists) => {
+        if (exists) {
+          this.isLoading = false;
+          this.errorMsg = 'Tento e-mail už je registrovaný.';
+          return;
+        }
+
+        // Email neexistuje, pokračuj v registrácii
+        this.performRegistration();
+      },
+      error: () => {
+        // V prípade chyby pri kontrole pokračuj v registrácii
+        this.performRegistration();
+      }
+    });
+  }
+
+  private performRegistration(): void {
     this.auth.register(this.email, this.password).subscribe({
       next: user => {
         const userProfile: UserProfile = {
           userId: user.uid,
-          email: this.email,
+          email: this.email.toLowerCase(),
 
           firstName: this.profile.firstName || '',
           lastName: this.profile.lastName || '',
@@ -136,9 +165,20 @@ export class RegisterComponent {
 
         this.userFitnessService.createUserProfile(userProfile).subscribe({
           next: () => {
-            this.isLoading = false;
-            alert('✅ Účet bol úspešne vytvorený!');
-            this.router.navigate(['/dashboard']);
+            // Odošli verifikačný email
+            this.auth.sendVerificationEmail().subscribe({
+              next: () => {
+                this.isLoading = false;
+                alert('Účet bol vytvorený! Skontroluj svoj email pre overenie.');
+                this.router.navigate(['/dashboard']);
+              },
+              error: () => {
+                // Aj keď email zlyhá, účet je vytvorený
+                this.isLoading = false;
+                alert('Účet bol vytvorený!');
+                this.router.navigate(['/dashboard']);
+              }
+            });
           },
           error: () => {
             this.isLoading = false;

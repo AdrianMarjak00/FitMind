@@ -20,6 +20,68 @@ $shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.5);
   h1, h2, h3 { margin: 0; font-weight: 700; }
 }
 
+// --- EMAIL VERIFICATION BANNER ---
+.email-verification-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.15) 0%, rgba(255, 152, 0, 0.1) 100%);
+  border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+
+  .banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #ffc107;
+    font-size: 0.95rem;
+
+    mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+    }
+
+    .resend-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: inherit;
+      padding: 0;
+
+      &:hover {
+        color: $primary;
+      }
+    }
+  }
+
+  .close-banner {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
 // --- HERO SEKCIA ---
 .hero-section {
   padding: 40px 0;
