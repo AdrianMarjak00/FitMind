@@ -1,8 +1,7 @@
-# AI Service - Komunikácia s Google Gemini API
 import json
 from typing import Dict, List, Any, Optional
-import google.generativeai as genai
-from google.generativeai.types import FunctionDeclaration, Tool
+from google import genai
+from google.genai import types
 from datetime import datetime
 import os
 
@@ -37,50 +36,53 @@ class AIService:
                 except Exception as e:
                     print(f"[ERROR] Chyba pri čítaní Secret File: {e}")
 
+        self.client = None
         if self.api_key:
             # Maskujeme kľúč pre logy (ukážeme len posledné 4 znaky)
             masked_key = f"...{self.api_key[-4:]}" if len(self.api_key) > 4 else "***"
             print(f"[DEBUG] AI Service: API Key detected ({masked_key})")
-            genai.configure(api_key=self.api_key)
+            try:
+                self.client = genai.Client(api_key=self.api_key)
+            except Exception as e:
+                print(f"[ERROR] Failed to initialize Google GenAI Client: {e}")
         else:
             print("[WARNING] AI API key missing. AI will not work.")
 
     def _get_tools(self):
         """Definície nástrojov pre AI"""
-        declarations = [
-            FunctionDeclaration(
+        return [
+            types.FunctionDeclaration(
                 name="save_food_entry",
                 description="Uloží záznam o jedle s nutričnými hodnotami",
                 parameters={
-                    "type": "object", 
+                    "type": "OBJECT", 
                     "properties": {
-                        "name": {"type": "string", "description": "Názov jedla"}, 
-                        "calories": {"type": "number", "description": "Celkové kalórie (kcal)"},
-                        "protein": {"type": "number", "description": "Bielkoviny v gramoch"},
-                        "carbs": {"type": "number", "description": "Sacharidy v gramoch"},
-                        "fats": {"type": "number", "description": "Tuky v gramoch"},
-                        "mealType": {"type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"]}
+                        "name": {"type": "STRING", "description": "Názov jedla"}, 
+                        "calories": {"type": "NUMBER", "description": "Celkové kalórie (kcal)"},
+                        "protein": {"type": "NUMBER", "description": "Bielkoviny v gramoch"},
+                        "carbs": {"type": "NUMBER", "description": "Sacharidy v gramoch"},
+                        "fats": {"type": "NUMBER", "description": "Tuky v gramoch"},
+                        "mealType": {"type": "STRING", "enum": ["breakfast", "lunch", "dinner", "snack"]}
                     }, 
                     "required": ["name", "calories", "protein", "carbs", "fats"]
                 }
             ),
-            FunctionDeclaration(
+            types.FunctionDeclaration(
                 name="save_exercise_entry",
                 description="Uloží záznam o cvičení",
-                parameters={"type": "object", "properties": {"type": {"type": "string"}, "duration": {"type": "number"}}, "required": ["type", "duration"]}
+                parameters={"type": "OBJECT", "properties": {"type": {"type": "STRING"}, "duration": {"type": "NUMBER"}}, "required": ["type", "duration"]}
             ),
-            FunctionDeclaration(
+            types.FunctionDeclaration(
                 name="save_mood_entry",
                 description="Uloží záznam o nálade (1-10)",
-                parameters={"type": "object", "properties": {"score": {"type": "number"}}, "required": ["score"]}
+                parameters={"type": "OBJECT", "properties": {"score": {"type": "NUMBER"}}, "required": ["score"]}
             ),
-            FunctionDeclaration(
+            types.FunctionDeclaration(
                 name="save_weight_entry",
                 description="Uloží váhu v kg",
-                parameters={"type": "object", "properties": {"weight": {"type": "number"}}, "required": ["weight"]}
+                parameters={"type": "OBJECT", "properties": {"weight": {"type": "NUMBER"}}, "required": ["weight"]}
             )
         ]
-        return Tool(function_declarations=declarations)
 
     def create_system_prompt(self, profile: Dict, entries: Dict) -> str:
         # Serializácia profilu s ošetrením typov
@@ -103,35 +105,38 @@ TVOJE PRAVIDLÁ:
 """
 
     def chat(self, message: str, system_prompt: str, history: List[Dict] = None) -> Any:
-        if not self.api_key:
+        if not self.client:
             raise Exception("AI API kľúč nie je nastavený.")
 
-        # Použijeme gemini-2.5-flash - jediný fungujúci model v 2026
         try:
-            model = genai.GenerativeModel(
-                model_name='gemini-2.5-flash',
-                tools=[self._get_tools()],
-                system_instruction=system_prompt
+            # Konverzia histórie pre nový SDK
+            gemini_history = []
+            if history:
+                for msg in history:
+                    role = "user" if msg['role'] == "user" else "model"
+                    content = msg.get('content') or "Záznam bol úspešne uložený."
+                    gemini_history.append(types.Content(role=role, parts=[types.Part(text=content)]))
+
+            # Konfigurácia - v google-genai 0.1.0
+            config = types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                tools=[types.Tool(function_declarations=self._get_tools())]
             )
-        except Exception as e:
-            print(f"[ERROR] Failed to create model: {e}")
-            raise Exception(f"Nepodarilo sa vytvoriť AI model: {e}")
 
-        # Konverzia histórie pre Gemini
-        gemini_history = []
-        if history:
-            for msg in history:
-                role = "user" if msg['role'] == "user" else "model"
-                content = msg.get('content') or "Záznam bol úspešne uložený."
-                gemini_history.append({"role": role, "parts": [content]})
-
-        try:
-            chat_session = model.start_chat(history=gemini_history)
+            # Použijeme chat rozhranie (model je konfigurovateľný cez env premennú)
+            model_name = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
+            chat_session = self.client.chats.create(
+                model=model_name,
+                history=gemini_history,
+                config=config
+            )
+            
             response = chat_session.send_message(message)
             
-            # Kontrola či AI chce zavolať funkciu + získanie sprievodného textu
+            # Kontrola či AI chce zavolať funkciu
             fc = None
             text_parts = []
+            
             if response.candidates and response.candidates[0].content.parts:
                 for part in response.candidates[0].content.parts:
                     if part.function_call:
@@ -141,7 +146,7 @@ TVOJE PRAVIDLÁ:
             
             ai_text = " ".join(text_parts).strip()
             
-            # Pomocné triedy pre výsledok
+            # Pomocné triedy pre výsledok (kompatibilita s main.py)
             class MockResp:
                 def __init__(self, c, f=None):
                     self.content = c
@@ -153,7 +158,8 @@ TVOJE PRAVIDLÁ:
 
             if fc:
                 final_text = ai_text if ai_text else "Jasné, už to zapisujem do tvojho denníka."
-                return MockResp(final_text, MockFC(fc.name, dict(fc.args)))
+                # V novom SDK je fc.args už dict
+                return MockResp(final_text, MockFC(fc.name, fc.args))
             
             if not ai_text:
                 try:

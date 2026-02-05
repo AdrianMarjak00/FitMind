@@ -47,7 +47,6 @@ export class SettingsComponent {
   saveSettings() {
     // Uloženie do LocalStorage (pretrvá aj po refreshe)
     localStorage.setItem('userSettings', JSON.stringify(this.user));
-    console.log('Nastavenia uložené:', this.user);
     alert('Tvoje nastavenia boli úspešne uložené!');
   }
 }

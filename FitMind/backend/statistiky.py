@@ -2,13 +2,8 @@
 # Tento súbor obsahuje funkcie na výpočet štatistík z dát používateľa
 
 from typing import Dict, List
-from datetime import datetime, timedelta
 
-# Import FirebaseService - pokúsi sa relatívny import, ak zlyhá, použije absolútny
-try:
-    from .firebase_service import FirebaseService
-except ImportError:
-    from firebase_service import FirebaseService
+from firebase_databaza import FirebaseService
 
 class StatsService:
     """

@@ -98,7 +98,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
           setTimeout(() => { this.savedEntries = []; }, 5000);
         }
       },
-      error: (err) => { this.isLoading = false; console.error(err); },
+      error: () => { this.isLoading = false; },
       complete: () => this.isLoading = false
     });
   }
@@ -108,7 +108,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     if (confirm('Vymazať túto konverzáciu?')) {
       this.aiService.deleteConversation(this.userId, this.activeConversationId).subscribe({
         next: () => { this.savedEntries = []; },
-        error: (err) => console.error('Error deleting conversation:', err)
+        error: () => { /* Tiché zlyhanie */ }
       });
     }
   }
@@ -118,7 +118,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
   onNewConversation(): void {
     if (!this.userId) return;
     this.aiService.createConversation(this.userId).subscribe({
-      error: (err) => console.error('Error creating conversation:', err)
+      error: () => { /* Tiché zlyhanie */ }
     });
   }
 
@@ -134,7 +134,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
     if (!this.userId) return;
     if (confirm('Vymazať túto konverzáciu?')) {
       this.aiService.deleteConversation(this.userId, conversationId).subscribe({
-        error: (err) => console.error('Error deleting conversation:', err)
+        error: () => { /* Tiché zlyhanie */ }
       });
     }
   }

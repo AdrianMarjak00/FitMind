@@ -65,7 +65,10 @@ class FirebaseService:
                     os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"),
                     os.path.join(os.path.dirname(__file__), "firebase-service-account.json"),
                     "serviceAccountKey.json",
-                    "backend/serviceAccountKey.json"
+                    "backend/serviceAccountKey.json",
+                    "local/serviceAccountKey.json",
+                    "backend/local/serviceAccountKey.json",
+                    os.path.join(os.path.dirname(__file__), "local", "serviceAccountKey.json")
                 ]
                 
                 for path in possible_paths:
@@ -511,7 +514,6 @@ class FirebaseService:
             data = doc.to_dict()
             ai_usage = data.get('ai_usage', {})
             usage_date = ai_usage.get('date', '')
-            message_count = ai_usage.get('message_count', 0)
 
             # Reset ak je nový deň
             if usage_date != today:
@@ -522,9 +524,9 @@ class FirebaseService:
                     }
                 })
             else:
-                # Inkrementuj existujúce počítadlo
+                # Atomický inkrement - bezpečné aj pri súbežných requestoch
                 user_ref.update({
-                    'ai_usage.message_count': message_count + 1
+                    'ai_usage.message_count': firestore.Increment(1)
                 })
 
             return True
@@ -740,3 +742,154 @@ class FirebaseService:
         except Exception as e:
             print(f"[ERROR] Chyba pri get_or_create_default_conversation: {e}")
             return None
+
+    # === PLATBY ===
+
+    def save_payment_info(
+        self,
+        user_id: str,
+        stripe_customer_id: Optional[str],
+        plan_type: str,
+        status: str,
+        subscription_id: Optional[str] = None
+    ) -> bool:
+        """
+        Uloží informácie o platbe/subscription do profilu používateľa.
+
+        Args:
+            user_id: Firebase UID
+            stripe_customer_id: Stripe customer ID
+            plan_type: Typ plánu (basic, pro, premium)
+            status: Status (active, canceled, past_due)
+            subscription_id: Stripe subscription ID (pre premium)
+
+        Returns:
+            True ak sa podarilo uložiť
+        """
+        if not self.is_connected():
+            return False
+
+        try:
+            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+
+            update_data = {
+                'stripe_customer_id': stripe_customer_id,
+                f'active_plans.{plan_type}': {
+                    'status': status,
+                    'purchased_at': firestore.SERVER_TIMESTAMP,
+                    'updated_at': firestore.SERVER_TIMESTAMP,
+                    'subscription_id': subscription_id
+                }
+            }
+
+            # Pre spätnú kompatibilitu/jednoduchosť stále ukladáme aj do hlavného poľa
+            update_data['subscription'] = {
+                'plan_type': plan_type,
+                'status': status,
+                'purchased_at': firestore.SERVER_TIMESTAMP,
+                'updated_at': firestore.SERVER_TIMESTAMP,
+                'subscription_id': subscription_id
+            }
+
+            user_ref.update(update_data)
+            print(f"[FIREBASE] Payment info saved for user {user_id}, plan: {plan_type}")
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Chyba pri ukladaní payment info: {e}")
+            return False
+
+    def get_user_subscription(self, user_id: str) -> Optional[Dict]:
+        """
+        Získa informácie o subscription používateľa.
+
+        Returns:
+            Dict s plan_type, status, stripe_customer_id, atď. alebo None
+        """
+        if not self.is_connected():
+            return None
+
+        try:
+            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            doc = user_ref.get()
+
+            if not doc.exists:
+                return None
+
+            data = doc.to_dict()
+            subscription = data.get('subscription', {})
+            active_plans = data.get('active_plans', {})
+
+            # Pridaj stripe_customer_id ak existuje
+            if data.get('stripe_customer_id'):
+                subscription['stripe_customer_id'] = data['stripe_customer_id']
+            
+            # Pridaj všetky aktívne plány
+            subscription['active_plans'] = active_plans
+
+            return subscription if subscription else None
+
+        except Exception as e:
+            print(f"[ERROR] Chyba pri načítaní subscription: {e}")
+            return None
+
+    def update_subscription_status(
+        self,
+        user_id: str,
+        status: str,
+        period_end: Optional[int] = None,
+        subscription_id: Optional[str] = None,
+        plan_type: Optional[str] = None
+    ) -> bool:
+        """
+        Aktualizuje status subscription pre konkrétny plan.
+        """
+        if not self.is_connected():
+            return False
+
+        try:
+            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            doc = user_ref.get()
+            
+            if not doc.exists:
+                return False
+                
+            data = doc.to_dict()
+            active_plans = data.get('active_plans', {})
+            
+            # Ak nemáme plan_type, skúsime ho nájsť podľa subscription_id
+            if not plan_type and subscription_id:
+                for p_type, p_data in active_plans.items():
+                    if p_data.get('subscription_id') == subscription_id:
+                        plan_type = p_type
+                        break
+            
+            # Ak stále nevieme plan_type, použijeme ten z hlavného subscription (pre istotu)
+            if not plan_type:
+                plan_type = data.get('subscription', {}).get('plan_type')
+
+            if not plan_type:
+                return False
+
+            update_data = {
+                f'active_plans.{plan_type}.status': status,
+                f'active_plans.{plan_type}.updated_at': firestore.SERVER_TIMESTAMP
+            }
+
+            # Tiež aktualizuj hlavné pole ak je to ten istý plán
+            if data.get('subscription', {}).get('plan_type') == plan_type:
+                update_data['subscription.status'] = status
+                update_data['subscription.updated_at'] = firestore.SERVER_TIMESTAMP
+
+            if period_end:
+                update_data[f'active_plans.{plan_type}.current_period_end'] = datetime.fromtimestamp(period_end)
+                if data.get('subscription', {}).get('plan_type') == plan_type:
+                    update_data['subscription.current_period_end'] = datetime.fromtimestamp(period_end)
+
+            user_ref.update(update_data)
+            print(f"[FIREBASE] Subscription status updated for user {user_id}, plan {plan_type}: {status}")
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Chyba pri aktualizácii subscription status: {e}")
+            return False

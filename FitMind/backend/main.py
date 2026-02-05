@@ -1,29 +1,31 @@
-# FitMind Backend - Hlavný API server (STABLE VERSION)
-from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from pydantic import BaseModel
-from typing import Optional
+# FitMind Backend - Hlavný API server (Refactored & Stable)
 import json
 import os
 import sys
 import time
 import traceback
-from datetime import datetime
+from typing import Optional, List, Dict, Any
+
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-# Pridaj aktuálny priečinok do sys.path
+# Pridaj aktuálny priečinok do sys.path pre lokálne importy
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Načítaj premenné prostredia
 load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), "local", ".env"))
 IS_PRODUCTION = os.getenv("ENV", "production").lower() == "production"
 
 # Import služieb
-from firebase_service import FirebaseService
-from ai_service import AIService
-from stats_service import StatsService
-from coach_service import CoachService
+from firebase_databaza import FirebaseService
+from ai_trener import AIService
+from statistiky import StatsService
+from recenzie import CoachService
+from stripe_plat_brana import StripeService
 from middleware import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -36,10 +38,16 @@ from middleware import (
     verify_dev_secret
 )
 
-print(f"[START] Inicializujem FastAPI (Env: {'Prod' if IS_PRODUCTION else 'Dev'})...")
-app = FastAPI(title="FitMind AI Backend")
+# --- KONFIGURÁCIA APLIKÁCIE ---
+app = FastAPI(
+    title="FitMind AI Backend",
+    description="Backend API pre inteligentnú fitness a wellness platformu FitMind",
+    version="2.0.0"
+)
 
-# --- 1. JEDNODUCHÝ LOGGER ---
+# --- MIDDLEWARE ---
+
+# 1. Logger
 @app.middleware("http")
 async def simple_log(request: Request, call_next):
     start_time = time.time()
@@ -59,13 +67,12 @@ async def simple_log(request: Request, call_next):
             content={"error": "Internal Server Error", "message": str(e)}
         )
 
-# --- 2. BEZPEČNOSŤ ---
-# Rate limiting - max 100 požiadaviek za minútu na IP
+# 2. Bezpečnostné middleware
 app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_size=10 * 1024 * 1024)
 
-# --- 3. CORS KONFIGURÁCIA ---
+# 3. CORS
 allowed_origins = [
     "https://www.fit-mind.sk",
     "https://fit-mind.sk",
@@ -80,67 +87,61 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Dev-Secret", "X-Requested-With"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining"]
 )
 
-# Inicializuj služby (Singletons)
+# --- INICIALIZÁCIA SLUŽIEB (Singletons) ---
 firebase = FirebaseService()
 ai_service = AIService()
 stats_service = StatsService(firebase)
 coach_service = CoachService(firebase)
+stripe_service = StripeService()
 
+# --- MODELY DÁT ---
 class ChatRequest(BaseModel):
-    message: str
-    user_id: Optional[str] = None  # Optional - backend používa UID z tokenu
-    conversation_id: Optional[str] = None  # ID konverzácie (ak None, použije sa default)
-
-    class Config:
-        # Validácia dĺžky správy
-        str_max_length = 2000
+    message: str = Field(..., max_length=2000)
+    conversation_id: Optional[str] = None
 
 class CreateConversationRequest(BaseModel):
     title: Optional[str] = "Nová konverzácia"
 
-# --- API ENDPOINTY ---
+class CreateCheckoutRequest(BaseModel):
+    plan_type: str  # "basic", "pro"
+    success_url: str
+    cancel_url: str
 
-@app.get("/api/status")
+# --- API ENDPOINTY: SYSTÉM ---
+
+@app.get("/api/status", tags=["System"])
 def api_status():
+    """Vráti stav pripojenia k externým službám."""
     return {
         "status": "online", 
         "firebase": "connected" if firebase.is_connected() else "disconnected",
-        "ai": "operational" # Zjednodušený status
+        "ai": "operational",
+        "env": "production" if IS_PRODUCTION else "development"
     }
 
-@app.get("/api/health")
+@app.get("/api/health", tags=["System"])
 def health():
+    """Základný healthcheck pre deployment platformy (napr. Render)."""
     return {"status": "healthy", "timestamp": time.time()}
 
-# === TESTOVACIE ENDPOINTY (chránené DEV_SECRET) ===
+# --- API ENDPOINTY: TESTOVANIE (Development only) ---
 
-@app.post("/api/test/chat")
+@app.post("/api/test/chat", tags=["Test"])
 def test_chat(request: ChatRequest, dev_auth: dict = Depends(verify_dev_secret)):
     """
-    🧪 TESTOVACÍ endpoint pre AI chat - BEZ Firebase autentifikácie.
-    Vyžaduje hlavičku: X-Dev-Secret: <váš DEV_SECRET>
-
-    ⚠️ POZOR: Tento endpoint je len pre development/testovanie!
-    V produkcii používajte /api/chat s Firebase tokenom.
+    🧪 TESTOVACÍ endpoint pre AI chat bez nutnosti Firebase tokenu.
+    Vyžaduje hlavičku: X-Dev-Secret
     """
-    user_id = "test-user-dev"
-    message = request.message
-
-    if not message or len(message.strip()) == 0:
+    message = request.message.strip()
+    if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    if len(message) > 2000:
-        raise HTTPException(status_code=400, detail="Message too long (max 2000 characters)")
-
-    message = message.strip()
-    print(f"[TEST CHAT] Request from dev mode: {message[:50]}...")
 
     try:
-        # Zjednodušený test - bez Firebase kontextu
         system_prompt = ai_service.create_system_prompt({}, {})
         message_response = ai_service.chat(message, system_prompt, [])
 
@@ -150,7 +151,6 @@ def test_chat(request: ChatRequest, dev_auth: dict = Depends(verify_dev_secret))
         if message_response.function_call:
             fc_name = message_response.function_call.name
             fc_args = json.loads(message_response.function_call.arguments)
-            print(f"[TEST CHAT] Function Call: {fc_name}")
             saved_entries.append(f"[TEST] Function called: {fc_name} with args: {fc_args}")
             if not ai_odpoved:
                 ai_odpoved = ai_service.get_final_response([])
@@ -158,262 +158,221 @@ def test_chat(request: ChatRequest, dev_auth: dict = Depends(verify_dev_secret))
         return {
             "odpoved": ai_odpoved,
             "saved_entries": saved_entries,
-            "test_mode": True,
-            "note": "Toto je testovací režim - dáta sa neukladajú do Firebase"
+            "test_mode": True
         }
-
     except Exception as e:
-        print(f"[TEST CHAT ERROR] {str(e)}")
-        print(traceback.format_exc())
-        return {
-            "odpoved": f"Chyba AI: {str(e)}",
-            "saved_entries": [],
-            "test_mode": True,
-            "error": str(e)
-        }
+        return {"error": str(e), "test_mode": True}
 
-@app.get("/api/test/status")
+@app.get("/api/test/status", tags=["Test"])
 def test_status(dev_auth: dict = Depends(verify_dev_secret)):
-    """
-    🧪 TESTOVACÍ endpoint pre kontrolu stavu služieb.
-    Vyžaduje hlavičku: X-Dev-Secret: <váš DEV_SECRET>
-    """
+    """Preverenie konfigurácie v testovacom režime."""
     return {
-        "status": "online",
-        "test_mode": True,
-        "firebase": "connected" if firebase.is_connected() else "disconnected",
-        "ai_key_configured": bool(ai_service.api_key),
-        "env": "development" if not IS_PRODUCTION else "production"
+        "firebase_connected": firebase.is_connected(),
+        "ai_ready": bool(ai_service.api_key),
+        "stripe_ready": stripe_service.is_configured()
     }
 
-# === PRODUKČNÉ ENDPOINTY ===
+# --- API ENDPOINTY: AI CHAT ---
 
-@app.post("/api/chat")
+@app.post("/api/chat", tags=["AI Coach"])
 def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_token)):
-    """
-    AI Chat endpoint s denným limitom 20 správ na používateľa.
-    VÝZNAMNÁ OPRAVA: Používame user_id priamo z tokenu,
-    aby sme zabránili zdieľaniu histórie medzi používateľmi.
-    """
+    """Hlavný endpoint pre komunikáciu s AI trénerom."""
     user_id = decoded_token.get("uid")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="User ID not found in token")
-    
-    # Validácia user_id formátu
     validate_user_id(user_id)
-
-    message = request.message
     
-    # Validácia dĺžky správy (dodatočná ochrana)
-    if not message or len(message.strip()) == 0:
+    message = request.message.strip()
+    if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    if len(message) > 2000:
-        raise HTTPException(status_code=400, detail="Message too long (max 2000 characters)")
-    
-    # Sanitácia vstupu - odstránenie nebezpečných znakov
-    message = message.strip()
-    
-    print(f"[CHAT] Request for user {user_id} (Token Verified)")
 
-    # Kontrola denného limitu (20 správ/deň)
+    # 1. Kontrola limitov
     limit_check = firebase.check_daily_message_limit(user_id, daily_limit=20)
     if not limit_check.get('allowed', False):
-        remaining = limit_check.get('remaining', 0)
-        reset_at = limit_check.get('reset_at', 'polnoc UTC')
         return {
-            "odpoved": f"Dosiahli ste denný limit {20} správ. Zostávajúce správy: {remaining}. Limit sa obnoví o {reset_at}.",
-            "saved_entries": [],
-            "rate_limit": {
-                "limited": True,
-                "remaining": remaining,
-                "reset_at": reset_at
-            }
+            "odpoved": f"Dosiahli ste denný limit (20 správ). Obnoví sa o {limit_check.get('reset_at')}.",
+            "rate_limit": {"limited": True, "remaining": 0}
         }
 
     try:
-        # Získaj alebo vytvor konverzáciu
-        conversation_id = request.conversation_id
-        if not conversation_id:
-            conversation_id = firebase.get_or_create_default_conversation(user_id)
-
-        # Načítaj kontext konkrétneho používateľa
-        profile = firebase.get_user_profile(user_id)
+        # 2. Príprava kontextu
+        conv_id = request.conversation_id or firebase.get_or_create_default_conversation(user_id)
+        profile = firebase.get_user_profile(user_id) or {}
         entries = {
             'food': firebase.get_entries(user_id, 'food', days=3),
             'exercise': firebase.get_entries(user_id, 'exercise', days=3)
         }
-        # História z konverzácie
-        if conversation_id:
-            history = firebase.get_conversation_messages(user_id, conversation_id, limit=8)
-        else:
-            history = firebase.get_chat_history(user_id, limit=8)
+        history = firebase.get_conversation_messages(user_id, conv_id, limit=8)
+        
+        system_prompt = ai_service.create_system_prompt(profile, entries)
 
-        system_prompt = ai_service.create_system_prompt(profile or {}, entries)
-
-        # Volanie AI - teraz stateless (vytvára model vnútri)
-        message_response = ai_service.chat(message, system_prompt, history)
-
-        ai_odpoved = message_response.content
+        # 3. Volanie AI
+        response = ai_service.chat(message, system_prompt, history)
+        ai_odpoved = response.content
         saved_entries = []
 
-        # Spracovanie funkcií (uloženie do DB)
-        if message_response.function_call:
-            fc_name = message_response.function_call.name
-            fc_args = json.loads(message_response.function_call.arguments)
-            print(f"[CHAT] Function Call: {fc_name} for {user_id}")
-
+        # 4. Spracovanie zápisov (Function Calling)
+        if response.function_call:
+            fc_name = response.function_call.name
+            fc_args = json.loads(response.function_call.arguments)
+            
             mapping = {
                 'save_food_entry': 'food',
                 'save_exercise_entry': 'exercise',
                 'save_mood_entry': 'mood',
                 'save_weight_entry': 'weight'
             }
+            
             if fc_name in mapping:
                 if firebase.save_entry(user_id, mapping[fc_name], fc_args):
-                    saved_entries.append(f"Zaznamenané do {mapping[fc_name]}")
-                    # Ak AI neposlalo text spoločne s funkciou, doplníme generický
-                    if not ai_odpoved or ai_odpoved.startswith("Jasné, už to zapisujem"):
+                    saved_entries.append(f"Zaznamenané: {mapping[fc_name]}")
+                    if not ai_odpoved:
                         ai_odpoved = ai_service.get_final_response([])
 
-        # Uloženie do konverzácie
-        if conversation_id:
-            firebase.save_conversation_message(user_id, conversation_id, 'user', message)
-            if ai_odpoved:
-                firebase.save_conversation_message(user_id, conversation_id, 'assistant', ai_odpoved)
-        else:
-            # Fallback na starú chatHistory
-            firebase.save_chat_message(user_id, 'user', message)
-            if ai_odpoved:
-                firebase.save_chat_message(user_id, 'assistant', ai_odpoved)
-
-        # Inkrementuj počítadlo správ
+        # 5. Uloženie a aktualizácia limitov
+        firebase.save_conversation_message(user_id, conv_id, 'user', message)
+        if ai_odpoved:
+            firebase.save_conversation_message(user_id, conv_id, 'assistant', ai_odpoved)
+        
         firebase.increment_message_count(user_id)
-
-        # Zisti zostávajúce správy
-        updated_limit = firebase.check_daily_message_limit(user_id, daily_limit=20)
-        remaining = updated_limit.get('remaining', 0)
+        remaining = firebase.check_daily_message_limit(user_id, daily_limit=20).get('remaining', 0)
 
         return {
             "odpoved": ai_odpoved,
             "saved_entries": saved_entries,
-            "rate_limit": {
-                "remaining": remaining,
-                "total": 20
-            }
+            "rate_limit": {"remaining": remaining, "total": 20}
         }
-        
     except Exception as e:
-        print(f"[CHAT ERROR] {str(e)}")
-        print(traceback.format_exc())
-        
-        # Použiť sanitizáciu chybových správ pre produkciu
-        error_message = sanitize_error_message(e, production=IS_PRODUCTION)
-        
-        return {
-            "odpoved": error_message, 
-            "saved_entries": [],
-            "error_detail": str(e) if not IS_PRODUCTION else None
-        }
+        return {"odpoved": sanitize_error_message(e, IS_PRODUCTION), "error_detail": str(e) if not IS_PRODUCTION else None}
 
-@app.get("/api/chart/{user_id}/{chart_type}")
-def get_chart_data_api(user_id: str, chart_type: str, days: Optional[int] = 30, decoded_token: dict = Depends(verify_firebase_token)):
+# --- API ENDPOINTY: ŠTATISTIKY ---
+
+@app.get("/api/chart/{user_id}/{chart_type}", tags=["Statistics"])
+def get_chart_data_api(user_id: str, chart_type: str, days: int = 30, decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
-    
-    # Validácia chart_type - ochrana pred injection
     allowed_types = {'calories', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
     if chart_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Invalid chart type. Allowed: {', '.join(allowed_types)}")
+        raise HTTPException(status_code=400, detail="Invalid chart type")
     
-    try:
-        data = stats_service.get_chart_data(user_id, chart_type, days)
-        return {"chart_type": chart_type, "data": data, "days": days}
-    except Exception as e:
-        return {"chart_type": chart_type, "data": {}, "days": days, "error": str(e)}
+    return {"chart_type": chart_type, "data": stats_service.get_chart_data(user_id, chart_type, days), "days": days}
 
-@app.get("/api/stats/{user_id}")
-def get_stats_api(user_id: str, days: Optional[int] = 30, decoded_token: dict = Depends(verify_firebase_token)):
+@app.get("/api/stats/{user_id}", tags=["Statistics"])
+def get_stats_api(user_id: str, days: int = 30, decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
     return {
         "calories": stats_service.get_calories_summary(user_id, days),
         "exercise": stats_service.get_exercise_summary(user_id, days)
     }
 
-@app.get("/api/profile/{user_id}")
+# --- API ENDPOINTY: PROFIL A KONVERZÁCIE ---
+
+@app.get("/api/profile/{user_id}", tags=["User"])
 def get_profile_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
     p = firebase.get_user_profile(user_id)
     return {"profile": p, "exists": p is not None}
 
-@app.get("/api/coach/recommendations/{user_id}")
+@app.get("/api/coach/recommendations/{user_id}", tags=["User"])
 def get_recommendations_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
-    recs = coach_service.get_personalized_recommendations(user_id)
-    return {"user_id": user_id, "recommendations": recs, "count": len(recs)}
+    return {"recommendations": coach_service.get_personalized_recommendations(user_id)}
 
-@app.get("/api/chat/history/{user_id}")
-def get_history_api(user_id: str, limit: Optional[int] = 50, decoded_token: dict = Depends(verify_firebase_token)):
-    user_id = get_authorized_user_id(user_id, decoded_token)
-    hist = firebase.get_chat_history(user_id, limit)
-    return {"messages": hist}
-
-# === KONVERZÁCIE ===
-
-@app.get("/api/conversations/{user_id}")
+@app.get("/api/conversations/{user_id}", tags=["Conversations"])
 def get_conversations_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
-    """Získa zoznam všetkých konverzácií používateľa"""
     user_id = get_authorized_user_id(user_id, decoded_token)
-    conversations = firebase.get_conversations(user_id)
-    return {"conversations": conversations}
+    return {"conversations": firebase.get_conversations(user_id)}
 
-@app.post("/api/conversations/{user_id}")
+@app.post("/api/conversations/{user_id}", tags=["Conversations"])
 def create_conversation_api(user_id: str, request: CreateConversationRequest, decoded_token: dict = Depends(verify_firebase_token)):
-    """Vytvorí novú konverzáciu"""
     user_id = get_authorized_user_id(user_id, decoded_token)
-    conv_id = firebase.create_conversation(user_id, request.title or "Nová konverzácia")
+    conv_id = firebase.create_conversation(user_id, request.title)
     if not conv_id:
         raise HTTPException(status_code=500, detail="Failed to create conversation")
     return {"conversation_id": conv_id}
 
-@app.delete("/api/conversations/{user_id}/{conversation_id}")
+@app.delete("/api/conversations/{user_id}/{conversation_id}", tags=["Conversations"])
 def delete_conversation_api(user_id: str, conversation_id: str, decoded_token: dict = Depends(verify_firebase_token)):
-    """Vymaže konverzáciu"""
     user_id = get_authorized_user_id(user_id, decoded_token)
-    success = firebase.delete_conversation(user_id, conversation_id)
-    if not success:
+    if not firebase.delete_conversation(user_id, conversation_id):
         raise HTTPException(status_code=500, detail="Failed to delete conversation")
     return {"deleted": True}
 
-@app.get("/api/conversations/{user_id}/{conversation_id}/messages")
-def get_conversation_messages_api(user_id: str, conversation_id: str, limit: Optional[int] = 50, decoded_token: dict = Depends(verify_firebase_token)):
-    """Získa správy pre konkrétnu konverzáciu"""
+@app.get("/api/conversations/{user_id}/{conversation_id}/messages", tags=["Conversations"])
+def get_conversation_messages_api(user_id: str, conversation_id: str, limit: int = 50, decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
-    messages = firebase.get_conversation_messages(user_id, conversation_id, limit)
-    return {"messages": messages}
+    return {"messages": firebase.get_conversation_messages(user_id, conversation_id, limit)}
 
-# === SERVOVANIE FRONTENDU ===
+# --- API ENDPOINTY: PLATBY ---
+
+@app.post("/api/payment/create-checkout", tags=["Payment"])
+def create_checkout_session(request: CreateCheckoutRequest, decoded_token: dict = Depends(verify_firebase_token)):
+    user_id = decoded_token.get("uid")
+    user_email = decoded_token.get("email", "")
+
+    if request.plan_type == "free":
+        return {"session_id": "free_plan", "url": request.success_url + "?status=success&plan=free"}
+
+    if not stripe_service.is_configured():
+        raise HTTPException(status_code=503, detail="Payment service not configured")
+
+    result = stripe_service.create_checkout_session(user_id, user_email, request.plan_type, request.success_url, request.cancel_url)
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create checkout session")
+    return result
+
+@app.post("/api/payment/webhook", tags=["Payment"])
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+    event = stripe_service.verify_webhook_signature(payload, sig_header)
+    
+    if not event:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    data = event.get("data", {}).get("object", {})
+    etype = event.get("type")
+
+    try:
+        if etype == "checkout.session.completed":
+            user_id = data.get("metadata", {}).get("user_id")
+            plan = data.get("metadata", {}).get("plan_type")
+            if user_id and plan:
+                firebase.save_payment_info(user_id, data.get("customer"), plan, "active", data.get("subscription"))
+        elif etype in ["customer.subscription.updated", "customer.subscription.deleted"]:
+            user_id = data.get("metadata", {}).get("user_id")
+            status = "canceled" if etype.endswith("deleted") else data.get("status")
+            if user_id:
+                firebase.update_subscription_status(user_id, status, data.get("current_period_end"), data.get("id"))
+    except Exception as e:
+        print(f"[WEBHOOK ERROR] {e}")
+
+    return {"received": True}
+
+@app.get("/api/payment/status/{user_id}", tags=["Payment"])
+def get_payment_status(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    sub = firebase.get_user_subscription(user_id)
+    return {"user_id": user_id, "subscription": sub or {"plan_type": "free", "status": "none"}}
+
+# --- SERVOVANIE FRONTENDU ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_DIR = os.path.join(BASE_DIR, "dist", "FitMind", "browser")
 
-@app.get("/{full_path:path}")
+@app.get("/{full_path:path}", tags=["Frontend"])
 def serve_angular(full_path: str):
     if full_path.startswith("api"):
-        raise HTTPException(status_code=404, detail=f"API not found: /{full_path}")
+        raise HTTPException(status_code=404, detail="API route not found")
+    
     file_path = os.path.join(DIST_DIR, full_path)
     if full_path and os.path.isfile(file_path):
         return FileResponse(file_path)
+    
     index_path = os.path.join(DIST_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
+    
     return HTMLResponse("<h1>FitMind Loading...</h1>", status_code=200)
 
-print("[START] Backend beží.")
-
-# Spustenie servera pri priamom spustení (python main.py)
+# --- SPUSTENIE ---
 if __name__ == "__main__":
     import uvicorn
-    print("\n" + "="*50)
-    print("🚀 Spúšťam FitMind Backend Server")
-    print("📖 API Docs: http://localhost:8000/docs")
-    print("🧪 Test endpoint: POST /api/test/chat")
-    print("="*50 + "\n")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)
+    print(f"\n🚀 FitMind Backend štartuje na http://localhost:8000")
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=not IS_PRODUCTION)

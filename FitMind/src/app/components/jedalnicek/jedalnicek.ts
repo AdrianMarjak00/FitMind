@@ -33,6 +33,6 @@ export class JedalnicekComponent {
 
   // Príklad funkcie pre tlačidlo, ak by si ho neskôr pridal
   orderPlan(planName: string) {
-    console.log(`Používateľ si vybral: ${planName}`);
+    // TODO: Implementovať objednávku plánu
   }
 }
