@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,17 @@ import { MatIconModule } from '@angular/material/icon';
 export class HomeComponent implements OnInit, AfterViewInit {
   currentYear: number = new Date().getFullYear();
   areCookiesAccepted: boolean = false;
+
+  // Zoznam obrázkov pre galériu
+  images = [
+    { url: '/assets/cvicenie.jpg', alt: 'Tréning v plnom prúde' },
+    { url: '/assets/strava.jpg', alt: 'Zdravá a vyvážená strava' },
+    { url: '/assets/komunita.jpg', alt: 'Naša FitMind komunita' },
+    { url: '/assets/vysledky.jpg', alt: 'Reálne výsledky našich členov' }
+  ];
+
+  // Sledovanie aktuálne otvoreného obrázka (null znamená zavretú galériu)
+  currentIndex: number | null = null;
 
   constructor(private el: ElementRef) {}
 
@@ -34,6 +45,44 @@ export class HomeComponent implements OnInit, AfterViewInit {
 
     const elements = this.el.nativeElement.querySelectorAll('.scroll-reveal');
     elements.forEach((el: HTMLElement) => observer.observe(el));
+  }
+
+  // Galéria: Otvorenie
+  openGallery(index: number) {
+    this.currentIndex = index;
+    document.body.style.overflow = 'hidden'; // Zamedzí skrolovaniu stránky
+  }
+
+  // Galéria: Zatvorenie
+  closeGallery() {
+    this.currentIndex = null;
+    document.body.style.overflow = 'auto';
+  }
+
+  // Galéria: Nasledujúci obrázok
+  nextImage(event?: Event) {
+    if (event) event.stopPropagation();
+    if (this.currentIndex !== null) {
+      this.currentIndex = (this.currentIndex + 1) % this.images.length;
+    }
+  }
+
+  // Galéria: Predchádzajúci obrázok
+  prevImage(event?: Event) {
+    if (event) event.stopPropagation();
+    if (this.currentIndex !== null) {
+      this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+    }
+  }
+
+  // Ovládanie klávesnicou
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent) {
+    if (this.currentIndex !== null) {
+      if (event.key === 'ArrowRight') this.nextImage();
+      if (event.key === 'ArrowLeft') this.prevImage();
+      if (event.key === 'Escape') this.closeGallery();
+    }
   }
 
   acceptCookies() {
