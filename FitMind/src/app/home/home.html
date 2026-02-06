@@ -20,7 +20,6 @@
 <section class="hero">
   <div class="hero-glow-1"></div>
   <div class="hero-glow-2"></div>
-
   <div class="container hero-wrapper">
     <div class="hero-content">
       <span class="badge">LIMITS ARE ONLY ILLUSIONS</span>
@@ -30,13 +29,11 @@
         Nehľadaj výhovorky, hľadaj výsledky. FitMind ti prináša inteligentné tréningové
         systémy a výživu novej generácie v jednej aplikácii.
       </p>
-
       <div class="hero-actions">
         <button mat-flat-button routerLink="/register" class="btn-main btn-custom-green">
           VYTVORIŤ ÚČET ZDARMA
         </button>
       </div>
-
       <div class="hero-stats-container">
         <div class="stat-item">
           <span class="stat-value">10K+</span>
@@ -54,9 +51,14 @@
         </div>
       </div>
     </div>
+<<<<<<< HEAD
 
     <div class="hero-image-box">
       <img src="/assets/fotka1.png" alt="Fitness Progres" class="hero-img" loading="eager">
+=======
+    <div class="hero-image-box fade-in-right">
+      <img src="/assets/logoTrans.png" alt="Fitness Progres" class="hero-img">
+>>>>>>> Tomas4
       <div class="image-overlay-glow"></div>
     </div>
   </div>
@@ -68,7 +70,6 @@
       <h2 class="title-lg">Všetko, čo potrebuješ <span>na jednom mieste</span></h2>
       <p class="subtitle-md">Klikni na oblasť, ktorú chceš dnes vylepšiť.</p>
     </div>
-
     <div class="nav-cards-grid">
       <div class="nav-card card-training" routerLink="/training">
         <div class="card-glass-bg"></div>
@@ -79,8 +80,12 @@
           <span class="card-link">Zobraziť plány <mat-icon>north_east</mat-icon></span>
         </div>
       </div>
+<<<<<<< HEAD
 
       <div class="nav-card card-diet" routerLink="/jedalnicek">
+=======
+      <div class="nav-card card-diet" routerLink="/jedalnicek" style="--d: 0.2s">
+>>>>>>> Tomas4
         <div class="card-glass-bg"></div>
         <div class="card-content">
           <div class="icon-box"><mat-icon>restaurant</mat-icon></div>
@@ -89,8 +94,12 @@
           <span class="card-link">Zostaviť menu <mat-icon>north_east</mat-icon></span>
         </div>
       </div>
+<<<<<<< HEAD
 
       <div class="nav-card card-reviews" routerLink="/review">
+=======
+      <div class="nav-card card-reviews" routerLink="/review" style="--d: 0.3s">
+>>>>>>> Tomas4
         <div class="card-glass-bg"></div>
         <div class="card-content">
           <div class="icon-box"><mat-icon>groups</mat-icon></div>
@@ -101,4 +110,44 @@
       </div>
     </div>
   </div>
+<<<<<<< HEAD
 </section>
+=======
+</section>
+
+<section class="gallery-section scroll-reveal">
+  <div class="container">
+    <div class="section-intro">
+      <h2 class="title-lg">Fotky od <span>Vás</span></h2>
+    </div>
+    <div class="image-grid">
+      <div *ngFor="let img of images; let i = index" 
+           class="grid-item" 
+           [style.--d]="(i * 0.1 + 0.1) + 's'"
+           (click)="openGallery(i)">
+        <img [src]="img.url" [alt]="img.alt">
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="lightbox" *ngIf="currentIndex !== null" (click)="closeGallery()">
+  <span class="close-btn" (click)="closeGallery()">&times;</span>
+  
+  <button class="nav-btn prev" (click)="prevImage($event)">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+
+  <div class="lightbox-content" (click)="$event.stopPropagation()">
+    <img [src]="images[currentIndex].url" class="active-img">
+    <div class="img-caption">
+      <p>{{ images[currentIndex].alt }}</p>
+      <span>{{ currentIndex + 1 }} / {{ images.length }}</span>
+    </div>
+  </div>
+
+  <button class="nav-btn next" (click)="nextImage($event)">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+</div>
+>>>>>>> Tomas4

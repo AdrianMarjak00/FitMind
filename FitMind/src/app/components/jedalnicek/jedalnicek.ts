@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 
 // Importy pre Angular Material, ktoré opravia tvoje chyby v HTML
 import { MatCardModule } from '@angular/material/card';
@@ -17,7 +18,8 @@ import { MatButtonModule } from '@angular/material/button';
     MatIconModule,
     MatDividerModule,
     MatChipsModule,
-    MatButtonModule
+    MatButtonModule,
+    RouterModule
   ],
   templateUrl: './jedalnicek.html',
   styleUrl: './jedalnicek.scss'
