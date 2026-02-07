@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { Component, OnInit } from '@angular/core';
-=======
-import { Component, OnInit, AfterViewInit, ElementRef, HostListener } from '@angular/core';
->>>>>>> Tomas4
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,11 +21,8 @@ import { MatIconModule } from '@angular/material/icon';
 export class HomeComponent implements OnInit {
   currentYear: number = new Date().getFullYear();
   // Predvolene skryté, kým neoveríme stav v ngOnInit
-  areCookiesAccepted: boolean = true; 
+  areCookiesAccepted: boolean = true;
 
-<<<<<<< HEAD
-  constructor() {}
-=======
   // Zoznam obrázkov pre galériu
   images = [
     { url: '/assets/cvicenie.jpg', alt: 'Tréning v plnom prúde' },
@@ -41,8 +34,7 @@ export class HomeComponent implements OnInit {
   // Sledovanie aktuálne otvoreného obrázka (null znamená zavretú galériu)
   currentIndex: number | null = null;
 
-  constructor(private el: ElementRef) {}
->>>>>>> Tomas4
+  constructor() {}
 
   ngOnInit() {
     // Kontrola, či užívateľ už v minulosti súhlasil

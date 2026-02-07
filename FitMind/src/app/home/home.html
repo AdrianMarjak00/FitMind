@@ -51,14 +51,8 @@
         </div>
       </div>
     </div>
-<<<<<<< HEAD
-
-    <div class="hero-image-box">
-      <img src="/assets/fotka1.png" alt="Fitness Progres" class="hero-img" loading="eager">
-=======
     <div class="hero-image-box fade-in-right">
-      <img src="/assets/logoTrans.png" alt="Fitness Progres" class="hero-img">
->>>>>>> Tomas4
+      <img src="/assets/logoTrans.png" alt="Fitness Progres" class="hero-img" loading="eager">
       <div class="image-overlay-glow"></div>
     </div>
   </div>
@@ -80,12 +74,7 @@
           <span class="card-link">Zobraziť plány <mat-icon>north_east</mat-icon></span>
         </div>
       </div>
-<<<<<<< HEAD
-
-      <div class="nav-card card-diet" routerLink="/jedalnicek">
-=======
       <div class="nav-card card-diet" routerLink="/jedalnicek" style="--d: 0.2s">
->>>>>>> Tomas4
         <div class="card-glass-bg"></div>
         <div class="card-content">
           <div class="icon-box"><mat-icon>restaurant</mat-icon></div>
@@ -94,12 +83,7 @@
           <span class="card-link">Zostaviť menu <mat-icon>north_east</mat-icon></span>
         </div>
       </div>
-<<<<<<< HEAD
-
-      <div class="nav-card card-reviews" routerLink="/review">
-=======
       <div class="nav-card card-reviews" routerLink="/review" style="--d: 0.3s">
->>>>>>> Tomas4
         <div class="card-glass-bg"></div>
         <div class="card-content">
           <div class="icon-box"><mat-icon>groups</mat-icon></div>
@@ -110,9 +94,6 @@
       </div>
     </div>
   </div>
-<<<<<<< HEAD
-</section>
-=======
 </section>
 
 <section class="gallery-section scroll-reveal">
@@ -121,8 +102,8 @@
       <h2 class="title-lg">Fotky od <span>Vás</span></h2>
     </div>
     <div class="image-grid">
-      <div *ngFor="let img of images; let i = index" 
-           class="grid-item" 
+      <div *ngFor="let img of images; let i = index"
+           class="grid-item"
            [style.--d]="(i * 0.1 + 0.1) + 's'"
            (click)="openGallery(i)">
         <img [src]="img.url" [alt]="img.alt">
@@ -133,7 +114,7 @@
 
 <div class="lightbox" *ngIf="currentIndex !== null" (click)="closeGallery()">
   <span class="close-btn" (click)="closeGallery()">&times;</span>
-  
+
   <button class="nav-btn prev" (click)="prevImage($event)">
     <mat-icon>chevron_left</mat-icon>
   </button>
@@ -150,4 +131,3 @@
     <mat-icon>chevron_right</mat-icon>
   </button>
 </div>
->>>>>>> Tomas4
