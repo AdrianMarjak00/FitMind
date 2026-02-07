@@ -348,6 +348,35 @@ def create_checkout_session(request: CreateCheckoutRequest, decoded_token: dict 
         raise HTTPException(status_code=500, detail="Failed to create checkout session")
     return result
 
+@app.post("/api/payment/verify-session", tags=["Payment"])
+def verify_session(request: dict, decoded_token: dict = Depends(verify_firebase_token)):
+    user_id = decoded_token.get("uid")
+    session_id = request.get("session_id")
+    
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Missing session_id")
+        
+    # Overenie session v Stripe
+    try:
+        import stripe
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        if session.payment_status == "paid":
+            # Manual update DB
+            plan = session.metadata.get("plan_type", "basic")
+            customer_id = session.customer
+            subscription_id = session.subscription
+            
+            # Save to Firebase
+            firebase.save_payment_info(user_id, customer_id, plan, "active", subscription_id)
+            return {"status": "verified", "plan": plan}
+        else:
+            return {"status": "unpaid"}
+            
+    except Exception as e:
+        print(f"[VERIFY ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Verification failed")
+
 @app.post("/api/payment/webhook", tags=["Payment"])
 async def stripe_webhook(request: Request):
     payload = await request.body()
