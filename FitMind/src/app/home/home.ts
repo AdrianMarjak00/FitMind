@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,79 +10,34 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   templateUrl: './home.html',
   styleUrls: ['./home.scss'],
-  imports: [
-    CommonModule,
-    RouterModule,
-    MatButtonModule,
-    MatCardModule,
-    MatIconModule
-  ]
+  imports: [CommonModule, RouterModule, MatButtonModule, MatCardModule, MatIconModule]
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit {
   currentYear: number = new Date().getFullYear();
-  // Predvolene skryté, kým neoveríme stav v ngOnInit
-  areCookiesAccepted: boolean = true;
+  areCookiesAccepted: boolean = false;
 
-  // Zoznam obrázkov pre galériu
-  images = [
-    { url: '/assets/cvicenie.jpg', alt: 'Tréning v plnom prúde' },
-    { url: '/assets/strava.jpg', alt: 'Zdravá a vyvážená strava' },
-    { url: '/assets/komunita.jpg', alt: 'Naša FitMind komunita' },
-    { url: '/assets/vysledky.jpg', alt: 'Reálne výsledky našich členov' }
-  ];
-
-  // Sledovanie aktuálne otvoreného obrázka (null znamená zavretú galériu)
-  currentIndex: number | null = null;
-
-  constructor() {}
+  constructor(private el: ElementRef) {}
 
   ngOnInit() {
-    // Kontrola, či užívateľ už v minulosti súhlasil
-    const consent = localStorage.getItem('cookiesAccepted');
-    this.areCookiesAccepted = consent === 'true';
+    const consent = sessionStorage.getItem('cookiesAcceptedSession');
+    this.areCookiesAccepted = (consent === 'true');
   }
 
-  // Galéria: Otvorenie
-  openGallery(index: number) {
-    this.currentIndex = index;
-    document.body.style.overflow = 'hidden'; // Zamedzí skrolovaniu stránky
-  }
+  ngAfterViewInit() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
 
-  // Galéria: Zatvorenie
-  closeGallery() {
-    this.currentIndex = null;
-    document.body.style.overflow = 'auto';
-  }
-
-  // Galéria: Nasledujúci obrázok
-  nextImage(event?: Event) {
-    if (event) event.stopPropagation();
-    if (this.currentIndex !== null) {
-      this.currentIndex = (this.currentIndex + 1) % this.images.length;
-    }
-  }
-
-  // Galéria: Predchádzajúci obrázok
-  prevImage(event?: Event) {
-    if (event) event.stopPropagation();
-    if (this.currentIndex !== null) {
-      this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
-    }
-  }
-
-  // Ovládanie klávesnicou
-  @HostListener('document:keydown', ['$event'])
-  handleKeyboardEvent(event: KeyboardEvent) {
-    if (this.currentIndex !== null) {
-      if (event.key === 'ArrowRight') this.nextImage();
-      if (event.key === 'ArrowLeft') this.prevImage();
-      if (event.key === 'Escape') this.closeGallery();
-    }
+    const elements = this.el.nativeElement.querySelectorAll('.scroll-reveal');
+    elements.forEach((el: HTMLElement) => observer.observe(el));
   }
 
   acceptCookies() {
-    // Trvalé uloženie súhlasu v prehliadači
-    localStorage.setItem('cookiesAccepted', 'true');
+    sessionStorage.setItem('cookiesAcceptedSession', 'true');
     this.areCookiesAccepted = true;
   }
 }
