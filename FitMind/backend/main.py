@@ -374,5 +374,5 @@ def serve_angular(full_path: str):
 # --- SPUSTENIE ---
 if __name__ == "__main__":
     import uvicorn
-    print(f"\n🚀 FitMind Backend štartuje na http://localhost:8000")
+    print(f"\n[START] FitMind Backend startuje na http://localhost:8000")
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=not IS_PRODUCTION)
