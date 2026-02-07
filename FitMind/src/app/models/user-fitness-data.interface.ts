@@ -1,3 +1,4 @@
+// Záznamy o jedle
 export interface FoodEntry {
   id?: string;
   name: string;
@@ -9,7 +10,8 @@ export interface FoodEntry {
   mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }
 
-export interface ExerciseEntry {
+// Záznamy o tréningoch (workoutEntries)
+export interface WorkoutEntry {
   id?: string;
   type: string; // napr. "beh", "posilňovanie", "yoga"
   duration: number; // minúty
@@ -19,6 +21,7 @@ export interface ExerciseEntry {
   timestamp: Date | any;
 }
 
+// Záznamy o strese
 export interface StressEntry {
   id?: string;
   level: number; // 1-10
@@ -27,6 +30,7 @@ export interface StressEntry {
   timestamp: Date | any;
 }
 
+// Záznamy o nálade
 export interface MoodEntry {
   id?: string;
   score: number; // 1-5
@@ -34,6 +38,7 @@ export interface MoodEntry {
   timestamp: Date | any;
 }
 
+// Záznamy o spánku
 export interface SleepEntry {
   id?: string;
   hours: number;
@@ -41,45 +46,9 @@ export interface SleepEntry {
   timestamp: Date | any;
 }
 
+// Záznamy o váhe
 export interface WeightEntry {
   id?: string;
   weight: number; // kg
   timestamp: Date | any;
 }
-
-export interface UserFitnessProfile {
-  userId: string;
-  // Základné informácie
-  name?: string;
-  age?: number;
-  height?: number; // cm
-  gender?: 'male' | 'female' | 'other';
-  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
-  
-  // Ciele
-  goals?: string[]; // napr. ["schudnúť", "nabrať svaly"]
-  targetWeight?: number;
-  targetCalories?: number;
-  
-  // Problémy a preferencie
-  problems?: string[]; // napr. ["stres", "spánok"]
-  helps?: string[]; // napr. ["prechádzka", "dychové cvičenia"]
-  
-  // Denné záznamy
-  foodEntries?: FoodEntry[];
-  exerciseEntries?: ExerciseEntry[];
-  stressEntries?: StressEntry[];
-  moodEntries?: MoodEntry[];
-  sleepEntries?: SleepEntry[];
-  weightEntries?: WeightEntry[];
-  
-  // Metadata
-  createdAt?: Date | any;
-  updatedAt?: Date | any;
-}
-
-
-
-
-
-

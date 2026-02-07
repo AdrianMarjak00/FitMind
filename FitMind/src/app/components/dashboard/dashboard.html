@@ -186,7 +186,7 @@
 
           <!-- Cvičenie -->
           @if (activeTab === 'exercise') {
-          <form (ngSubmit)="addExerciseEntry()" class="entry-form">
+          <form (ngSubmit)="addWorkoutEntry()" class="entry-form">
             <mat-form-field appearance="outline">
               <mat-label>Typ cvičenia</mat-label>
               <mat-select [(ngModel)]="exerciseForm.type" name="type" required>
@@ -358,7 +358,13 @@
     <!-- PRAVÁ STRANA - Grafy a vizualizácie -->
     <main class="main-content">
       <div class="stats-header">
-        <h2>📊 Tvoje štatistiky</h2>
+        <div class="stats-title-row">
+          <h2>📊 Tvoje štatistiky</h2>
+          <button class="export-btn" (click)="exportToCSV()" [class.premium-only]="!isPremium" [title]="isPremium ? 'Exportovať dáta do CSV' : 'Dostupné len pre Premium'">
+            📥 Export
+            @if (!isPremium) { <span class="premium-badge">PRO</span> }
+          </button>
+        </div>
 
         <!-- 🗓️ VÝBER OBDOBIA -->
         <div class="period-selector">
@@ -424,7 +430,7 @@
             <div class="header-actions">
               <span class="badge">{{ getPeriodLabel() }}</span>
               <button class="details-btn" (click)="openDetailsPanel('exercise')">
-                📋 Detaily ({{ recentExerciseEntries.length }})
+                📋 Detaily ({{ recentWorkoutEntries.length }})
               </button>
             </div>
           </div>

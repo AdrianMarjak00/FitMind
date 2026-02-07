@@ -1,21 +1,23 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, collectionData, query, where, orderBy, limit, Timestamp, addDoc } from '@angular/fire/firestore';
-import { Observable, from, map, switchMap } from 'rxjs';
-import { UserFitnessProfile, FoodEntry, ExerciseEntry, StressEntry, MoodEntry, SleepEntry, WeightEntry } from '../models/user-fitness-data.interface';
+import { Observable, from, map } from 'rxjs';
+import { FoodEntry, WorkoutEntry, StressEntry, MoodEntry, SleepEntry, WeightEntry } from '../models/user-fitness-data.interface';
 import { UserProfile } from '../models/user-profile.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserFitnessService {
-  private readonly COLLECTION_NAME = 'userFitnessProfiles';
+  // Jediná hlavná kolekcia pre všetky údaje používateľov
   private readonly USERS_COLLECTION = 'users';
 
   constructor(private firestore: Firestore) {}
 
-  // ===== NOVÉ - PROFIL POUŽÍVATEĽA =====
-  
-  // Vytvoriť používateľský profil
+  // ===== PROFIL POUŽÍVATEĽA =====
+
+  /**
+   * Vytvorí používateľský profil pri registrácii
+   */
   createUserProfile(profile: UserProfile): Observable<void> {
     if (!profile.userId) {
       throw new Error('User ID is required');
@@ -29,8 +31,10 @@ export class UserFitnessService {
     return from(setDoc(userDoc, dataToSave));
   }
 
-  // Získať používateľský profil (nový formát)
-  getUserProfileNew(userId: string): Observable<UserProfile | null> {
+  /**
+   * Získa používateľský profil
+   */
+  getUserProfile(userId: string): Observable<UserProfile | null> {
     const userDoc = doc(this.firestore, this.USERS_COLLECTION, userId);
     return from(getDoc(userDoc)).pipe(
       map(docSnap => {
@@ -42,112 +46,149 @@ export class UserFitnessService {
     );
   }
 
-  // ===== STARÝ FORMÁT (KOMPATIBILITA) =====
-
-  // Získať alebo vytvoriť profil používateľa
-  getUserProfile(userId: string): Observable<UserFitnessProfile | null> {
-    const profileRef = doc(this.firestore, this.COLLECTION_NAME, userId);
-    return from(getDoc(profileRef)).pipe(
-      map(docSnap => {
-        if (docSnap.exists()) {
-          const data = docSnap.data() as UserFitnessProfile;
-          return { ...data, userId: docSnap.id };
-        }
-        return null;
-      })
-    );
+  /**
+   * Aktualizuje používateľský profil
+   */
+  updateProfile(userId: string, updates: Partial<UserProfile>): Observable<void> {
+    const userDoc = doc(this.firestore, this.USERS_COLLECTION, userId);
+    return from(updateDoc(userDoc, {
+      ...updates,
+      updatedAt: Timestamp.now()
+    }));
   }
 
-  // Vytvoriť alebo aktualizovať profil
-  saveUserProfile(profile: UserFitnessProfile): Observable<void> {
-    if (!profile.userId) {
-      throw new Error('User ID is required');
-    }
-    const profileRef = doc(this.firestore, this.COLLECTION_NAME, profile.userId);
-    const data = {
-      ...profile,
-      updatedAt: Timestamp.now(),
-      createdAt: profile.createdAt || Timestamp.now()
-    };
-    return from(setDoc(profileRef, data, { merge: true }));
-  }
+  // ===== ZÁZNAMY O JEDLE (foodEntries) =====
 
-  // Pridať záznam o jedle
   addFoodEntry(userId: string, entry: Omit<FoodEntry, 'id'>): Observable<string> {
-    const entryRef = collection(this.firestore, this.COLLECTION_NAME, userId, 'foodEntries');
+    const entryRef = collection(this.firestore, this.USERS_COLLECTION, userId, 'foodEntries');
     const data = {
       ...entry,
       timestamp: entry.timestamp || Timestamp.now()
     };
-    return from(addDoc(entryRef, data)).pipe(
-      map(ref => ref.id)
-    );
+    return from(addDoc(entryRef, data)).pipe(map(ref => ref.id));
   }
 
-  // Pridať záznam o cvičení
-  addExerciseEntry(userId: string, entry: Omit<ExerciseEntry, 'id'>): Observable<string> {
-    const entryRef = collection(this.firestore, this.COLLECTION_NAME, userId, 'exerciseEntries');
+  getFoodEntries(userId: string, days: number = 7): Observable<FoodEntry[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
+
+    const entriesRef = query(
+      collection(this.firestore, this.USERS_COLLECTION, userId, 'foodEntries'),
+      where('timestamp', '>=', cutoffTimestamp),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+    return collectionData(entriesRef, { idField: 'id' }) as Observable<FoodEntry[]>;
+  }
+
+  deleteFoodEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.USERS_COLLECTION, userId, 'foodEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  // ===== ZÁZNAMY O TRÉNINGOCH (workoutEntries) =====
+
+  addWorkoutEntry(userId: string, entry: Omit<WorkoutEntry, 'id'>): Observable<string> {
+    const entryRef = collection(this.firestore, this.USERS_COLLECTION, userId, 'workoutEntries');
     const data = {
       ...entry,
       timestamp: entry.timestamp || Timestamp.now()
     };
-    return from(addDoc(entryRef, data)).pipe(
-      map(ref => ref.id)
-    );
+    return from(addDoc(entryRef, data)).pipe(map(ref => ref.id));
   }
 
-  // Pridať záznam o strese
+  getWorkoutEntries(userId: string, days: number = 7): Observable<WorkoutEntry[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
+
+    const entriesRef = query(
+      collection(this.firestore, this.USERS_COLLECTION, userId, 'workoutEntries'),
+      where('timestamp', '>=', cutoffTimestamp),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+    return collectionData(entriesRef, { idField: 'id' }) as Observable<WorkoutEntry[]>;
+  }
+
+  deleteWorkoutEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.USERS_COLLECTION, userId, 'workoutEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  // ===== ZÁZNAMY O STRESE (stressEntries) =====
+
   addStressEntry(userId: string, entry: Omit<StressEntry, 'id'>): Observable<string> {
-    const entryRef = collection(this.firestore, this.COLLECTION_NAME, userId, 'stressEntries');
+    const entryRef = collection(this.firestore, this.USERS_COLLECTION, userId, 'stressEntries');
     const data = {
       ...entry,
       timestamp: entry.timestamp || Timestamp.now()
     };
-    return from(addDoc(entryRef, data)).pipe(
-      map(ref => ref.id)
-    );
+    return from(addDoc(entryRef, data)).pipe(map(ref => ref.id));
   }
 
-  // Pridať záznam o nálade
+  deleteStressEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.USERS_COLLECTION, userId, 'stressEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  // ===== ZÁZNAMY O NÁLADE (moodEntries) =====
+
   addMoodEntry(userId: string, entry: Omit<MoodEntry, 'id'>): Observable<string> {
-    const entryRef = collection(this.firestore, this.COLLECTION_NAME, userId, 'moodEntries');
+    const entryRef = collection(this.firestore, this.USERS_COLLECTION, userId, 'moodEntries');
     const data = {
       ...entry,
       timestamp: entry.timestamp || Timestamp.now()
     };
-    return from(addDoc(entryRef, data)).pipe(
-      map(ref => ref.id)
-    );
+    return from(addDoc(entryRef, data)).pipe(map(ref => ref.id));
   }
 
-  // Pridať záznam o spánku
+  deleteMoodEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.USERS_COLLECTION, userId, 'moodEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  // ===== ZÁZNAMY O SPÁNKU (sleepEntries) =====
+
   addSleepEntry(userId: string, entry: Omit<SleepEntry, 'id'>): Observable<string> {
-    const entryRef = collection(this.firestore, this.COLLECTION_NAME, userId, 'sleepEntries');
+    const entryRef = collection(this.firestore, this.USERS_COLLECTION, userId, 'sleepEntries');
     const data = {
       ...entry,
       timestamp: entry.timestamp || Timestamp.now()
     };
-    return from(addDoc(entryRef, data)).pipe(
-      map(ref => ref.id)
-    );
+    return from(addDoc(entryRef, data)).pipe(map(ref => ref.id));
   }
 
-  // Pridať záznam o váhe
+  deleteSleepEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.USERS_COLLECTION, userId, 'sleepEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  // ===== ZÁZNAMY O VÁHE (weightEntries) =====
+
   addWeightEntry(userId: string, entry: Omit<WeightEntry, 'id'>): Observable<string> {
-    const entryRef = collection(this.firestore, this.COLLECTION_NAME, userId, 'weightEntries');
+    const entryRef = collection(this.firestore, this.USERS_COLLECTION, userId, 'weightEntries');
     const data = {
       ...entry,
       timestamp: entry.timestamp || Timestamp.now()
     };
-    return from(addDoc(entryRef, data)).pipe(
-      map(ref => ref.id)
-    );
+    return from(addDoc(entryRef, data)).pipe(map(ref => ref.id));
   }
 
-  // Získať posledné záznamy (pre AI kontext)
+  deleteWeightEntry(userId: string, entryId: string): Observable<void> {
+    const entryDoc = doc(this.firestore, this.USERS_COLLECTION, userId, 'weightEntries', entryId);
+    return from(deleteDoc(entryDoc));
+  }
+
+  // ===== AGREGOVANÉ DÁTA PRE AI =====
+
+  /**
+   * Získa posledné záznamy pre AI kontext
+   */
   getRecentEntries(userId: string, days: number = 7): Observable<{
     food: FoodEntry[];
-    exercise: ExerciseEntry[];
+    workout: WorkoutEntry[];
     stress: StressEntry[];
     mood: MoodEntry[];
     sleep: SleepEntry[];
@@ -157,52 +198,17 @@ export class UserFitnessService {
     cutoffDate.setDate(cutoffDate.getDate() - days);
     const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
-    const foodRef = query(
-      collection(this.firestore, this.COLLECTION_NAME, userId, 'foodEntries'),
+    const createQuery = (subcollection: string, maxItems: number = 50) => query(
+      collection(this.firestore, this.USERS_COLLECTION, userId, subcollection),
       where('timestamp', '>=', cutoffTimestamp),
       orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-
-    const exerciseRef = query(
-      collection(this.firestore, this.COLLECTION_NAME, userId, 'exerciseEntries'),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-
-    const stressRef = query(
-      collection(this.firestore, this.COLLECTION_NAME, userId, 'stressEntries'),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-
-    const moodRef = query(
-      collection(this.firestore, this.COLLECTION_NAME, userId, 'moodEntries'),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-
-    const sleepRef = query(
-      collection(this.firestore, this.COLLECTION_NAME, userId, 'sleepEntries'),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-
-    const weightRef = query(
-      collection(this.firestore, this.COLLECTION_NAME, userId, 'weightEntries'),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(10)
+      limit(maxItems)
     );
 
     return new Observable(observer => {
       const result = {
         food: [] as FoodEntry[],
-        exercise: [] as ExerciseEntry[],
+        workout: [] as WorkoutEntry[],
         stress: [] as StressEntry[],
         mood: [] as MoodEntry[],
         sleep: [] as SleepEntry[],
@@ -220,82 +226,35 @@ export class UserFitnessService {
         }
       };
 
-      collectionData(foodRef, { idField: 'id' }).subscribe({
+      collectionData(createQuery('foodEntries'), { idField: 'id' }).subscribe({
         next: (data) => { result.food = data as FoodEntry[]; checkComplete(); },
-        error: () => { checkComplete(); }
+        error: () => checkComplete()
       });
 
-      collectionData(exerciseRef, { idField: 'id' }).subscribe({
-        next: (data) => { result.exercise = data as ExerciseEntry[]; checkComplete(); },
-        error: () => { checkComplete(); }
+      collectionData(createQuery('workoutEntries'), { idField: 'id' }).subscribe({
+        next: (data) => { result.workout = data as WorkoutEntry[]; checkComplete(); },
+        error: () => checkComplete()
       });
 
-      collectionData(stressRef, { idField: 'id' }).subscribe({
+      collectionData(createQuery('stressEntries'), { idField: 'id' }).subscribe({
         next: (data) => { result.stress = data as StressEntry[]; checkComplete(); },
-        error: () => { checkComplete(); }
+        error: () => checkComplete()
       });
 
-      collectionData(moodRef, { idField: 'id' }).subscribe({
+      collectionData(createQuery('moodEntries'), { idField: 'id' }).subscribe({
         next: (data) => { result.mood = data as MoodEntry[]; checkComplete(); },
-        error: () => { checkComplete(); }
+        error: () => checkComplete()
       });
 
-      collectionData(sleepRef, { idField: 'id' }).subscribe({
+      collectionData(createQuery('sleepEntries'), { idField: 'id' }).subscribe({
         next: (data) => { result.sleep = data as SleepEntry[]; checkComplete(); },
-        error: () => { checkComplete(); }
+        error: () => checkComplete()
       });
 
-      collectionData(weightRef, { idField: 'id' }).subscribe({
+      collectionData(createQuery('weightEntries', 10), { idField: 'id' }).subscribe({
         next: (data) => { result.weight = data as WeightEntry[]; checkComplete(); },
-        error: () => { checkComplete(); }
+        error: () => checkComplete()
       });
     });
   }
-
-  // Aktualizovať základné informácie profilu
-  updateProfile(userId: string, updates: Partial<UserFitnessProfile>): Observable<void> {
-    const profileRef = doc(this.firestore, this.COLLECTION_NAME, userId);
-    return from(updateDoc(profileRef, {
-      ...updates,
-      updatedAt: Timestamp.now()
-    }));
-  }
-
-  // ===== DELETE FUNKCIE =====
-  
-  deleteFoodEntry(userId: string, entryId: string): Observable<void> {
-    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'foodEntries', entryId);
-    return from(deleteDoc(entryDoc));
-  }
-
-  deleteExerciseEntry(userId: string, entryId: string): Observable<void> {
-    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'exerciseEntries', entryId);
-    return from(deleteDoc(entryDoc));
-  }
-
-  deleteStressEntry(userId: string, entryId: string): Observable<void> {
-    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'stressEntries', entryId);
-    return from(deleteDoc(entryDoc));
-  }
-
-  deleteMoodEntry(userId: string, entryId: string): Observable<void> {
-    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'moodEntries', entryId);
-    return from(deleteDoc(entryDoc));
-  }
-
-  deleteSleepEntry(userId: string, entryId: string): Observable<void> {
-    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'sleepEntries', entryId);
-    return from(deleteDoc(entryDoc));
-  }
-
-  deleteWeightEntry(userId: string, entryId: string): Observable<void> {
-    const entryDoc = doc(this.firestore, this.COLLECTION_NAME, userId, 'weightEntries', entryId);
-    return from(deleteDoc(entryDoc));
-  }
 }
-
-
-
-
-
-

@@ -112,6 +112,29 @@
     @if (!userId) { <div class="warning-message">⚠️ Pre použitie AI coacha sa musíte prihlásiť</div> }
     @if (!backendRunning && userId) { <div class="warning-message backend-warning">⚠️ Backend server nebeží!</div> }
 
+    <!-- Premium limit banner -->
+    @if (userId && !isPremium && !canSendMessage) {
+      <div class="upgrade-banner">
+        <div class="banner-content">
+          <span class="banner-icon">🔒</span>
+          <div class="banner-text">
+            <strong>Denný limit dosiahnutý!</strong>
+            <p>Vyčerpal si {{ FREE_DAILY_LIMIT }} správ na dnes. Prejdi na Premium pre neobmedzený prístup.</p>
+          </div>
+          <a routerLink="/training" class="upgrade-btn">Prejsť na Premium</a>
+        </div>
+      </div>
+    }
+
+    <!-- Message counter for free users -->
+    @if (userId && !isPremium && canSendMessage) {
+      <div class="message-counter">
+        <span class="counter-icon">💬</span>
+        <span>Zostáva ti <strong>{{ remainingMessages }}</strong> z {{ FREE_DAILY_LIMIT }} správ dnes</span>
+        <a routerLink="/training" class="upgrade-link">Neobmedzene?</a>
+      </div>
+    }
+
     <div class="messages-container">
       @for (msg of aiService.messages$ | async; track $index) {
         <div [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
@@ -125,9 +148,11 @@
       @if (isLoading) { <div class="loading-typing">AI Coach píše...</div> }
     </div>
 
-    <div class="input-container">
-      <input [(ngModel)]="message" (keyup.enter)="sendMessage()" placeholder="Napíš správu (napr. 'Zjedol som 2 vajcia')..." [disabled]="isLoading || !userId">
-      <button (click)="sendMessage()" [disabled]="isLoading || !message.trim() || !userId">{{ isLoading ? '⏳' : '📤' }}</button>
+    <div class="input-container" [class.disabled]="!canSendMessage">
+      <input [(ngModel)]="message" (keyup.enter)="sendMessage()"
+        [placeholder]="canSendMessage ? 'Napíš správu (napr. \'Zjedol som 2 vajcia\')...' : 'Denný limit dosiahnutý - prejdi na Premium'"
+        [disabled]="isLoading || !userId || !canSendMessage">
+      <button (click)="sendMessage()" [disabled]="isLoading || !message.trim() || !userId || !canSendMessage">{{ isLoading ? '⏳' : '📤' }}</button>
     </div>
   </div>
 </div>

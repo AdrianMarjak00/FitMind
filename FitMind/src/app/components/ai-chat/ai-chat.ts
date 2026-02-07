@@ -2,15 +2,17 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { AiService, ChatMessage, WeeklyReport, GoalProgress, Conversation } from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendStatusService } from '../../services/backend-status.service';
+import { PaymentService, SubscriptionStatus } from '../../services/payment.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { User } from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-ai-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe],
+  imports: [CommonModule, FormsModule, DatePipe, RouterModule],
   templateUrl: './ai-chat.html',
   styleUrls: ['./ai-chat.scss']
 })
@@ -40,10 +42,17 @@ export class AiChatComponent implements OnInit, OnDestroy {
   weeklyReport: WeeklyReport | null = null;
   goalProgress: GoalProgress | null = null;
 
+  // Premium / Message limits
+  readonly FREE_DAILY_LIMIT = 10;
+  isPremium = false;
+  messagesUsedToday = 0;
+  subscription: SubscriptionStatus | null = null;
+
   constructor(
     public aiService: AiService,
     private authService: AuthService,
-    private backendStatus: BackendStatusService
+    private backendStatus: BackendStatusService,
+    private paymentService: PaymentService
   ) {}
 
   ngOnInit(): void {
@@ -68,8 +77,48 @@ export class AiChatComponent implements OnInit, OnDestroy {
         // Načítaj konverzácie pri inicializácii
         this.aiService.loadConversations(this.userId);
         this.loadRecommendations();
+        this.loadSubscriptionStatus();
+        this.loadDailyMessageCount();
       }
     });
+  }
+
+  // === PREMIUM FUNKCIE ===
+
+  loadSubscriptionStatus(): void {
+    if (!this.userId) return;
+    this.paymentService.getPaymentStatus(this.userId).subscribe({
+      next: (response) => {
+        this.subscription = response.subscription;
+        this.isPremium = this.paymentService.hasPaidPlan(response.subscription);
+      },
+      error: () => {
+        this.isPremium = false;
+      }
+    });
+  }
+
+  loadDailyMessageCount(): void {
+    const today = new Date().toISOString().split('T')[0];
+    const storageKey = `ai_messages_${this.userId}_${today}`;
+    const stored = localStorage.getItem(storageKey);
+    this.messagesUsedToday = stored ? parseInt(stored, 10) : 0;
+  }
+
+  incrementMessageCount(): void {
+    const today = new Date().toISOString().split('T')[0];
+    const storageKey = `ai_messages_${this.userId}_${today}`;
+    this.messagesUsedToday++;
+    localStorage.setItem(storageKey, this.messagesUsedToday.toString());
+  }
+
+  get remainingMessages(): number {
+    if (this.isPremium) return Infinity;
+    return Math.max(0, this.FREE_DAILY_LIMIT - this.messagesUsedToday);
+  }
+
+  get canSendMessage(): boolean {
+    return this.isPremium || this.messagesUsedToday < this.FREE_DAILY_LIMIT;
   }
 
   ngOnDestroy(): void {
@@ -86,12 +135,18 @@ export class AiChatComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Kontrola limitu správ pre free používateľov
+    if (!this.canSendMessage) {
+      return; // UI zobrazí upgrade banner
+    }
+
     this.isLoading = true;
     this.savedEntries = [];
-    
+
     this.aiService.sendMessage(this.userId, this.message.trim()).subscribe({
       next: (response) => {
         this.message = '';
+        this.incrementMessageCount(); // Zvýš počítadlo správ
         if (response.saved_entries && response.saved_entries.length > 0) {
           this.savedEntries = response.saved_entries;
           setTimeout(() => { if (this.showInsights) this.refreshCurrentTab(); }, 1000);

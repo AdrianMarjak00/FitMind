@@ -15,8 +15,9 @@ import { Observable } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { UserFitnessService } from '../../services/user-fitness.service';
 import { ChartsService } from '../../services/charts.service';
+import { PaymentService, SubscriptionStatus } from '../../services/payment.service';
 import { UserProfile } from '../../models/user-profile.interface';
-import { FoodEntry, ExerciseEntry, WeightEntry, MoodEntry, SleepEntry, StressEntry } from '../../models/user-fitness-data.interface';
+import { FoodEntry, WorkoutEntry, WeightEntry, MoodEntry, SleepEntry, StressEntry } from '../../models/user-fitness-data.interface';
 import { User } from '@angular/fire/auth';
 
 @Component({
@@ -59,7 +60,7 @@ export class DashboardComponent implements OnInit {
 
   // Detailné záznamy
   recentFoodEntries: FoodEntry[] = [];
-  recentExerciseEntries: ExerciseEntry[] = [];
+  recentWorkoutEntries: WorkoutEntry[] = [];
   recentWeightEntries: WeightEntry[] = [];
   recentMoodEntries: MoodEntry[] = [];
   recentSleepEntries: SleepEntry[] = [];
@@ -129,10 +130,15 @@ export class DashboardComponent implements OnInit {
   showAISuggestions = true; // Zobrazené automaticky
   aiSuggestions: string[] = [];
 
+  // Premium
+  isPremium = false;
+  subscription: SubscriptionStatus | null = null;
+
   constructor(
     private authService: AuthService,
     private userFitnessService: UserFitnessService,
-    private chartsService: ChartsService
+    private chartsService: ChartsService,
+    private paymentService: PaymentService
   ) { }
 
   ngOnInit(): void {
@@ -151,12 +157,97 @@ export class DashboardComponent implements OnInit {
         this.loadWeeklyStats();
         this.loadCharts();
         this.loadRecentEntries();
+        this.loadSubscriptionStatus();
         // Načítaj AI návrhy po načítaní dát
         setTimeout(() => this.loadAISuggestions(), 1000);
       } else {
         this.loading = false;
       }
     });
+  }
+
+  // === PREMIUM FUNKCIE ===
+
+  loadSubscriptionStatus(): void {
+    if (!this.userId) return;
+    this.paymentService.getPaymentStatus(this.userId).subscribe({
+      next: (response) => {
+        this.subscription = response.subscription;
+        this.isPremium = this.paymentService.hasPaidPlan(response.subscription);
+      },
+      error: () => {
+        this.isPremium = false;
+      }
+    });
+  }
+
+  exportToCSV(): void {
+    if (!this.isPremium) {
+      alert('Export dát je dostupný len pre Premium používateľov.');
+      return;
+    }
+
+    const rows: string[] = [];
+
+    // Header
+    rows.push('Typ,Dátum,Názov/Typ,Hodnota,Detaily');
+
+    // Food entries
+    this.recentFoodEntries.forEach(e => {
+      const date = this.formatDateForExport(e.timestamp);
+      rows.push(`Jedlo,${date},${e.name},${e.calories} kcal,"P:${e.protein || 0}g C:${e.carbs || 0}g T:${e.fats || 0}g"`);
+    });
+
+    // Workout entries
+    this.recentWorkoutEntries.forEach(e => {
+      const date = this.formatDateForExport(e.timestamp);
+      rows.push(`Tréning,${date},${e.type},${e.duration} min,${e.intensity || ''}`);
+    });
+
+    // Weight entries
+    this.recentWeightEntries.forEach(e => {
+      const date = this.formatDateForExport(e.timestamp);
+      rows.push(`Váha,${date},-,${e.weight} kg,-`);
+    });
+
+    // Mood entries
+    this.recentMoodEntries.forEach(e => {
+      const date = this.formatDateForExport(e.timestamp);
+      rows.push(`Nálada,${date},-,${e.score}/10,${e.note || ''}`);
+    });
+
+    // Sleep entries
+    this.recentSleepEntries.forEach(e => {
+      const date = this.formatDateForExport(e.timestamp);
+      rows.push(`Spánok,${date},-,${e.hours} h,${e.quality || ''}`);
+    });
+
+    // Stress entries
+    this.recentStressEntries.forEach(e => {
+      const date = this.formatDateForExport(e.timestamp);
+      rows.push(`Stres,${date},-,${e.level}/10,${e.source || ''}`);
+    });
+
+    // Download
+    const csvContent = rows.join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `fitmind-export-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  }
+
+  formatDateForExport(timestamp: any): string {
+    if (!timestamp) return '';
+    let date: Date;
+    if (timestamp.toDate) {
+      date = timestamp.toDate();
+    } else if (timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      date = new Date(timestamp);
+    }
+    return date.toISOString().split('T')[0];
   }
 
   resendVerificationEmail(): void {
@@ -180,7 +271,7 @@ export class DashboardComponent implements OnInit {
     this.userFitnessService.getRecentEntries(this.userId, days).subscribe({
       next: entries => {
         this.recentFoodEntries = entries.food;
-        this.recentExerciseEntries = entries.exercise;
+        this.recentWorkoutEntries = entries.workout;
         this.recentWeightEntries = entries.weight;
         this.recentMoodEntries = entries.mood;
         this.recentSleepEntries = entries.sleep;
@@ -191,7 +282,7 @@ export class DashboardComponent implements OnInit {
   }
 
   loadUserProfile(): void {
-    this.userFitnessService.getUserProfileNew(this.userId).subscribe({
+    this.userFitnessService.getUserProfile(this.userId).subscribe({
       next: profile => {
         this.userProfile = profile;
         if (profile) {
@@ -407,13 +498,13 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  addExerciseEntry(): void {
+  addWorkoutEntry(): void {
     if (!this.userId || this.exerciseForm.duration <= 0) {
       alert('⚠️ Zadajte trvanie cvičenia');
       return;
     }
 
-    this.userFitnessService.addExerciseEntry(this.userId, {
+    this.userFitnessService.addWorkoutEntry(this.userId, {
       type: this.exerciseForm.type,
       duration: this.exerciseForm.duration,
       intensity: this.exerciseForm.intensity as any,
@@ -493,7 +584,7 @@ export class DashboardComponent implements OnInit {
   getSelectedEntries(): any[] {
     switch (this.selectedDetailType) {
       case 'food': return this.recentFoodEntries;
-      case 'exercise': return this.recentExerciseEntries;
+      case 'exercise': return this.recentWorkoutEntries;
       case 'weight': return this.recentWeightEntries;
       case 'mood': return this.recentMoodEntries;
       case 'sleep': return this.recentSleepEntries;
@@ -591,7 +682,7 @@ export class DashboardComponent implements OnInit {
         deleteObs = this.userFitnessService.deleteFoodEntry(this.userId, entryId);
         break;
       case 'exercise':
-        deleteObs = this.userFitnessService.deleteExerciseEntry(this.userId, entryId);
+        deleteObs = this.userFitnessService.deleteWorkoutEntry(this.userId, entryId);
         break;
       case 'weight':
         deleteObs = this.userFitnessService.deleteWeightEntry(this.userId, entryId);
