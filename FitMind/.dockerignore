@@ -1,0 +1,13 @@
+.git
+.angular
+node_modules
+__pycache__
+*.pyc
+venv
+.env
+dist
+.vscode
+.agent
+local
+serviceAccountKey.json
+firebase-service-account.json

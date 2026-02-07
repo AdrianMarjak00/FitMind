@@ -104,11 +104,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Content Security Policy - Relaxed for production and local development
         csp_rules = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net",
-            "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+            "script-src-elem 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://ssl.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
             "img-src 'self' data: https: blob:",
-            "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
+            "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
             "connect-src 'self' http://localhost:* https://*.googleapis.com https://*.firebaseio.com https://fitmind-backend-fvq7.onrender.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com",
             "frame-src 'self' https://fitmind-dba6a.firebaseapp.com",
             "object-src 'none'"
