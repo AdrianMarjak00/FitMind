@@ -16,6 +16,27 @@ from dotenv import load_dotenv
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Načítaj premenné prostredia
+def load_render_secrets():
+    """
+    Načíta Render 'Secret Files' z /etc/secrets/ do environment variables.
+    Rieši problém, keď užívateľ použil 'Secret Files' namiesto 'Environment Variables'.
+    """
+    secrets_dir = "/etc/secrets"
+    if os.path.exists(secrets_dir):
+        print(f"[System] Detegovaný priečinok {secrets_dir}, načítavam tajné súbory...")
+        for filename in os.listdir(secrets_dir):
+            file_path = os.path.join(secrets_dir, filename)
+            if os.path.isfile(file_path):
+                try:
+                    with open(file_path, "r") as f:
+                        content = f.read().strip()
+                        # Nastav hodnotu do environment variables
+                        os.environ[filename] = content
+                        print(f"[System] Načítaný secret do env: {filename}")
+                except Exception as e:
+                    print(f"[System] Chyba pri načítaní {filename}: {e}")
+
+load_render_secrets()
 load_dotenv()
 # V produkcii (Docker) sa premenné načítajú automaticky z prostredia (Render)
 # load_dotenv(os.path.join(os.path.dirname(__file__), "local", ".env"))
