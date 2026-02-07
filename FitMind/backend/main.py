@@ -21,6 +21,14 @@ load_dotenv()
 # load_dotenv(os.path.join(os.path.dirname(__file__), "local", ".env"))
 IS_PRODUCTION = os.getenv("ENV", "production").lower() == "production"
 
+# --- DIAGNOSTIKA PROSTREDIA (Dočasné pre debugging) ---
+print(f"[DEBUG] Spúšťam backend. IS_PRODUCTION={IS_PRODUCTION}")
+print(f"[DEBUG] Dostupné premenné prostredia (kľúče): {', '.join(os.environ.keys())}")
+if os.getenv("STRIPE_SECRET_KEY"):
+    print("[DEBUG] STRIPE_SECRET_KEY je nastavený (dĺžka: " + str(len(os.getenv("STRIPE_SECRET_KEY"))) + ")")
+else:
+    print("[DEBUG] POZOR! STRIPE_SECRET_KEY chýba!")
+
 # Import služieb
 from firebase_databaza import FirebaseService
 from ai_trener import AIService
