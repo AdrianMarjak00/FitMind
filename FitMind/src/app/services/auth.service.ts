@@ -92,8 +92,8 @@ export class AuthService {
   }
 
   // Odoslanie verifikačného emailu
-  sendVerificationEmail(): Observable<void> {
-    const user = this.auth.currentUser;
+  sendVerificationEmail(userToVerify?: User): Observable<void> {
+    const user = userToVerify || this.auth.currentUser;
     if (user) {
       return defer(() => this.ngZone.run(() => sendEmailVerification(user)));
     }

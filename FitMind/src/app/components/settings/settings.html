@@ -8,56 +8,217 @@
         <span>MOJE NASTAVENIA</span>
       </div>
       <h1 class="title-lg">Tvoj <span>Profil</span></h1>
-      <p class="subtitle">Uprav si svoje údaje, aby sme mohli tvoj jedálniček a tréningy prispôsobiť tvojmu progresu.</p>
+      <p class="subtitle">Uprav si svoje údaje a spravuj svoje predplatné.</p>
     </header>
 
-    <mat-card class="settings-card">
-      <mat-card-content>
-        <form class="settings-form">
-          <div class="input-group">
-            <mat-label>Prezývka / Meno</mat-label>
-            <mat-form-field appearance="outline">
-              <input matInput [(ngModel)]="user.displayName" name="displayName" placeholder="Napr. Peter">
-              <mat-icon matSuffix>person</mat-icon>
-            </mat-form-field>
-          </div>
+    <!-- Loading spinner -->
+    <div class="loading-container" *ngIf="isLoading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Načítavam profil...</p>
+    </div>
 
-          <div class="row">
+    <div class="settings-content" *ngIf="!isLoading">
+
+      <!-- Profilový obrázok -->
+      <mat-card class="settings-card profile-image-card">
+        <mat-card-content>
+          <h3>Profilový obrázok</h3>
+          <div class="profile-image-section">
+            <div class="profile-image-wrapper">
+              <img *ngIf="profileImageUrl" [src]="profileImageUrl" alt="Profilový obrázok" class="profile-image">
+              <div *ngIf="!profileImageUrl" class="profile-image-placeholder">
+                <mat-icon>person</mat-icon>
+              </div>
+              <div class="image-overlay" *ngIf="isUploadingImage">
+                <mat-spinner diameter="30"></mat-spinner>
+              </div>
+            </div>
+            <div class="profile-image-actions">
+              <input type="file" #fileInput accept="image/*" (change)="onImageSelected($event)" hidden>
+              <button mat-stroked-button color="primary" (click)="fileInput.click()" [disabled]="isUploadingImage">
+                <mat-icon>upload</mat-icon>
+                Nahrať fotku
+              </button>
+              <button mat-stroked-button color="warn" (click)="removeProfileImage()" *ngIf="profileImageUrl" [disabled]="isUploadingImage">
+                <mat-icon>delete</mat-icon>
+                Odstrániť
+              </button>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Predplatné -->
+      <mat-card class="settings-card subscription-card">
+        <mat-card-content>
+          <h3>Predplatné</h3>
+          <div class="subscription-info">
+            <div class="plan-badge" [class.premium]="isPaidPlan()">
+              <mat-icon>{{ isPaidPlan() ? 'star' : 'person' }}</mat-icon>
+              <span>{{ getPlanName() }}</span>
+            </div>
+            <p class="plan-description" *ngIf="!isPaidPlan()">
+              Aktivuj si platený plán pre neobmedzený prístup k AI trénerovi a ďalším funkciám.
+            </p>
+            <p class="plan-description" *ngIf="isPaidPlan()">
+              Máš aktívne predplatné. Ďakujeme za podporu!
+            </p>
+          </div>
+          <div class="subscription-actions">
+            <button mat-raised-button class="upgrade-btn" (click)="upgradePlan()" *ngIf="!isPaidPlan()">
+              <mat-icon>rocket_launch</mat-icon>
+              AKTIVOVAŤ PLÁN
+            </button>
+            <button mat-stroked-button color="primary" (click)="manageSubscription()" *ngIf="isPaidPlan()">
+              <mat-icon>settings</mat-icon>
+              SPRAVOVAŤ PREDPLATNÉ
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Osobné údaje -->
+      <mat-card class="settings-card">
+        <mat-card-content>
+          <h3>Osobné údaje</h3>
+          <form class="settings-form">
+            <div class="row">
+              <div class="input-group">
+                <mat-label>Meno</mat-label>
+                <mat-form-field appearance="outline">
+                  <input matInput [(ngModel)]="profile.firstName" name="firstName" placeholder="Tvoje meno">
+                  <mat-icon matSuffix>person</mat-icon>
+                </mat-form-field>
+              </div>
+              <div class="input-group">
+                <mat-label>Priezvisko</mat-label>
+                <mat-form-field appearance="outline">
+                  <input matInput [(ngModel)]="profile.lastName" name="lastName" placeholder="Tvoje priezvisko">
+                  <mat-icon matSuffix>badge</mat-icon>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="input-group">
+                <mat-label>Vek</mat-label>
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" [(ngModel)]="profile.age" name="age" min="1" max="120">
+                  <mat-icon matSuffix>cake</mat-icon>
+                </mat-form-field>
+              </div>
+              <div class="input-group">
+                <mat-label>Pohlavie</mat-label>
+                <mat-form-field appearance="outline">
+                  <mat-select [(ngModel)]="profile.gender" name="gender">
+                    <mat-option value="male">Muž</mat-option>
+                    <mat-option value="female">Žena</mat-option>
+                    <mat-option value="other">Iné</mat-option>
+                  </mat-select>
+                  <mat-icon matSuffix>wc</mat-icon>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="info-row">
+              <mat-icon>email</mat-icon>
+              <span>{{ userEmail }}</span>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Fyzické parametre -->
+      <mat-card class="settings-card">
+        <mat-card-content>
+          <h3>Fyzické parametre</h3>
+          <form class="settings-form">
+            <div class="row">
+              <div class="input-group">
+                <mat-label>Aktuálna váha (kg)</mat-label>
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" [(ngModel)]="profile.currentWeight" name="currentWeight" step="0.1">
+                  <mat-icon matSuffix>monitor_weight</mat-icon>
+                </mat-form-field>
+              </div>
+              <div class="input-group">
+                <mat-label>Cieľová váha (kg)</mat-label>
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" [(ngModel)]="profile.targetWeight" name="targetWeight" step="0.1">
+                  <mat-icon matSuffix>flag</mat-icon>
+                </mat-form-field>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="input-group">
+                <mat-label>Výška (cm)</mat-label>
+                <mat-form-field appearance="outline">
+                  <input matInput type="number" [(ngModel)]="profile.height" name="height">
+                  <mat-icon matSuffix>height</mat-icon>
+                </mat-form-field>
+              </div>
+              <div class="input-group">
+                <mat-label>BMI</mat-label>
+                <div class="bmi-display">
+                  <span class="bmi-value">{{ calculateBMI() }}</span>
+                  <span class="bmi-category">{{ getBMICategory() }}</span>
+                </div>
+              </div>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Fitness ciele -->
+      <mat-card class="settings-card">
+        <mat-card-content>
+          <h3>Fitness ciele</h3>
+          <form class="settings-form">
             <div class="input-group">
-              <mat-label>Aktuálna váha (kg)</mat-label>
+              <mat-label>Tvoj hlavný cieľ</mat-label>
               <mat-form-field appearance="outline">
-                <input matInput type="number" [(ngModel)]="user.weight" name="weight">
-                <mat-icon matSuffix>monitor_weight</mat-icon>
+                <mat-select [(ngModel)]="profile.fitnessGoal" name="fitnessGoal">
+                  <mat-option value="lose_weight">Redukcia tuku</mat-option>
+                  <mat-option value="gain_muscle">Naberanie svalov</mat-option>
+                  <mat-option value="maintain">Udržiavanie formy</mat-option>
+                  <mat-option value="improve_health">Zlepšenie zdravia</mat-option>
+                </mat-select>
+                <mat-icon matSuffix>ads_click</mat-icon>
               </mat-form-field>
             </div>
 
             <div class="input-group">
-              <mat-label>Výška (cm)</mat-label>
+              <mat-label>Úroveň aktivity</mat-label>
               <mat-form-field appearance="outline">
-                <input matInput type="number" [(ngModel)]="user.height" name="height">
-                <mat-icon matSuffix>height</mat-icon>
+                <mat-select [(ngModel)]="profile.activityLevel" name="activityLevel">
+                  <mat-option value="sedentary">Sedavý (žiadne cvičenie)</mat-option>
+                  <mat-option value="light">Mierne aktívny (1-2x týždenne)</mat-option>
+                  <mat-option value="moderate">Stredne aktívny (3-4x týždenne)</mat-option>
+                  <mat-option value="active">Aktívny (5-6x týždenne)</mat-option>
+                  <mat-option value="very_active">Veľmi aktívny (denne)</mat-option>
+                </mat-select>
+                <mat-icon matSuffix>directions_run</mat-icon>
               </mat-form-field>
             </div>
-          </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
 
-          <div class="input-group">
-            <mat-label>Tvoj hlavný cieľ</mat-label>
-            <mat-form-field appearance="outline">
-              <mat-select [(ngModel)]="user.goal" name="goal">
-                <mat-option value="loss">Redukcia tuku</mat-option>
-                <mat-option value="gain">Naberanie svalov</mat-option>
-                <mat-option value="balance">Udržiavanie formy</mat-option>
-              </mat-select>
-              <mat-icon matSuffix>ads_click</mat-icon>
-            </mat-form-field>
-          </div>
+      <!-- Tlačidlá -->
+      <div class="action-buttons">
+        <button mat-raised-button class="save-btn" (click)="saveProfile()" [disabled]="isSaving">
+          <mat-spinner diameter="20" *ngIf="isSaving"></mat-spinner>
+          <mat-icon *ngIf="!isSaving">save</mat-icon>
+          {{ isSaving ? 'UKLADÁM...' : 'ULOŽIŤ ZMENY' }}
+        </button>
 
-          <button mat-raised-button class="save-btn" (click)="saveSettings()">
-            <mat-icon>save</mat-icon>
-            ULOŽIŤ NASTAVENIA
-          </button>
-        </form>
-      </mat-card-content>
-    </mat-card>
+        <button mat-stroked-button class="logout-btn" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          ODHLÁSIŤ SA
+        </button>
+      </div>
+
+    </div>
   </div>
 </section>

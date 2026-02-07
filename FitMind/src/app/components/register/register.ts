@@ -10,6 +10,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
+import { sendEmailVerification, ActionCodeSettings } from '@angular/fire/auth';
+
 import { AuthService } from '../../services/auth.service';
 import { UserFitnessService } from '../../services/user-fitness.service';
 import { UserProfile } from '../../models/user-profile.interface';
@@ -165,20 +167,27 @@ export class RegisterComponent {
 
         this.userFitnessService.createUserProfile(userProfile).subscribe({
           next: () => {
-            // Odošli verifikačný email
-            this.auth.sendVerificationEmail().subscribe({
-              next: () => {
-                this.isLoading = false;
-                alert('Účet bol vytvorený! Skontroluj svoj email pre overenie.');
-                this.router.navigate(['/dashboard']);
-              },
-              error: () => {
-                // Aj keď email zlyhá, účet je vytvorený
-                this.isLoading = false;
-                alert('Účet bol vytvorený!');
-                this.router.navigate(['/dashboard']);
-              }
-            });
+            // Odoslať verifikačný email cez Firebase priamo
+            console.log('[REGISTER] Sending verification email to:', user.email);
+
+            const actionCodeSettings: ActionCodeSettings = {
+              url: 'https://fit-mind.sk/dashboard',
+              handleCodeInApp: false
+            };
+
+            sendEmailVerification(user, actionCodeSettings)
+              .then(() => {
+                console.log('[REGISTER] Verification email sent successfully!');
+              })
+              .catch((err) => {
+                console.error('[REGISTER] Verification email FAILED:', err);
+                console.error('[REGISTER] Error code:', err.code);
+                console.error('[REGISTER] Error message:', err.message);
+              });
+
+            this.isLoading = false;
+            alert('Účet bol úspešne vytvorený! Vitaj vo FitMind.');
+            this.router.navigate(['/dashboard']);
           },
           error: () => {
             this.isLoading = false;
@@ -199,4 +208,5 @@ export class RegisterComponent {
       }
     });
   }
+
 }

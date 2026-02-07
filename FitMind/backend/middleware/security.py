@@ -97,6 +97,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
+        # COOP - unsafe-none pre Firebase Auth popup (Google/Apple Sign-In)
+        # Najmenej reštriktívna politika pre kompatibilitu s popup autentifikáciou
+        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
+
         # HSTS - iba v produkcii (zabezpečuje že prehliadač použije HTTPS)
         if IS_PRODUCTION:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"

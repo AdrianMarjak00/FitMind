@@ -56,6 +56,7 @@ from ai_trener import AIService
 from statistiky import StatsService
 from recenzie import CoachService
 from stripe_plat_brana import StripeService
+from email_service import EmailService
 from middleware import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -128,6 +129,7 @@ ai_service = AIService()
 stats_service = StatsService(firebase)
 coach_service = CoachService(firebase)
 stripe_service = StripeService()
+email_service = EmailService()
 
 # --- MODELY DÁT ---
 class ChatRequest(BaseModel):
@@ -209,17 +211,40 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
     """Hlavný endpoint pre komunikáciu s AI trénerom."""
     user_id = decoded_token.get("uid")
     validate_user_id(user_id)
-    
+
     message = request.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-    # 1. Kontrola limitov
-    limit_check = firebase.check_daily_message_limit(user_id, daily_limit=20)
+    # 1. Zisti plán používateľa a nastav limity
+    subscription = firebase.get_user_subscription(user_id)
+    plan_type = subscription.get("plan_type", "free") if subscription else "free"
+    plan_status = subscription.get("status", "none") if subscription else "none"
+
+    # Limity podľa plánu (ak je subscription aktívna)
+    plan_limits = {
+        "free": 20,
+        "basic": 100,  # 100 správ denne pre basic
+        "pro": 500     # 500 správ denne pre pro (prakticky neobmedzené)
+    }
+
+    # Ak subscription nie je aktívna, použij free limit
+    if plan_status != "active":
+        daily_limit = plan_limits["free"]
+        effective_plan = "free"
+    else:
+        daily_limit = plan_limits.get(plan_type, 20)
+        effective_plan = plan_type
+
+    # 2. Kontrola limitov
+    limit_check = firebase.check_daily_message_limit(user_id, daily_limit=daily_limit)
     if not limit_check.get('allowed', False):
+        upgrade_msg = ""
+        if effective_plan == "free":
+            upgrade_msg = " Pre viac správ si aktivuj platený plán na /training."
         return {
-            "odpoved": f"Dosiahli ste denný limit (20 správ). Obnoví sa o {limit_check.get('reset_at')}.",
-            "rate_limit": {"limited": True, "remaining": 0}
+            "odpoved": f"Dosiahli ste denný limit ({daily_limit} správ).{upgrade_msg} Obnoví sa o {limit_check.get('reset_at')}.",
+            "rate_limit": {"limited": True, "remaining": 0, "plan": effective_plan}
         }
 
     try:
@@ -261,14 +286,14 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         firebase.save_conversation_message(user_id, conv_id, 'user', message)
         if ai_odpoved:
             firebase.save_conversation_message(user_id, conv_id, 'assistant', ai_odpoved)
-        
+
         firebase.increment_message_count(user_id)
-        remaining = firebase.check_daily_message_limit(user_id, daily_limit=20).get('remaining', 0)
+        remaining = firebase.check_daily_message_limit(user_id, daily_limit=daily_limit).get('remaining', 0)
 
         return {
             "odpoved": ai_odpoved,
             "saved_entries": saved_entries,
-            "rate_limit": {"remaining": remaining, "total": 20}
+            "rate_limit": {"remaining": remaining, "total": daily_limit, "plan": effective_plan}
         }
     except Exception as e:
         return {"odpoved": sanitize_error_message(e, IS_PRODUCTION), "error_detail": str(e) if not IS_PRODUCTION else None}
@@ -382,7 +407,7 @@ async def stripe_webhook(request: Request):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
     event = stripe_service.verify_webhook_signature(payload, sig_header)
-    
+
     if not event:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
@@ -393,23 +418,152 @@ async def stripe_webhook(request: Request):
         if etype == "checkout.session.completed":
             user_id = data.get("metadata", {}).get("user_id")
             plan = data.get("metadata", {}).get("plan_type")
+            customer_email = data.get("customer_details", {}).get("email") or data.get("customer_email")
+            amount = (data.get("amount_total", 0) or 0) / 100  # Stripe používa centy
+
             if user_id and plan:
+                # Ulož informácie o platbe
                 firebase.save_payment_info(user_id, data.get("customer"), plan, "active", data.get("subscription"))
-        elif etype in ["customer.subscription.updated", "customer.subscription.deleted"]:
+
+                # Odošli email o úspešnej platbe
+                if customer_email:
+                    profile = firebase.get_user_profile(user_id)
+                    first_name = profile.get("firstName", "Používateľ") if profile else "Používateľ"
+                    email_service.send_payment_success_email(customer_email, first_name, plan, amount)
+                    print(f"[EMAIL] Payment success email sent to {customer_email}")
+
+        elif etype == "customer.subscription.updated":
+            subscription_id = data.get("id")
+            status = data.get("status")
+            customer_id = data.get("customer")
+            plan_type = data.get("metadata", {}).get("plan_type")
+
+            # Nájdi používateľa podľa customer_id alebo subscription_id
             user_id = data.get("metadata", {}).get("user_id")
-            status = "canceled" if etype.endswith("deleted") else data.get("status")
+            if not user_id and customer_id:
+                # Skús nájsť cez Firebase
+                user_id = firebase.get_user_by_stripe_customer(customer_id)
+
             if user_id:
-                firebase.update_subscription_status(user_id, status, data.get("current_period_end"), data.get("id"))
+                firebase.update_subscription_status(user_id, status, data.get("current_period_end"), subscription_id, plan_type)
+
+                # Ak bola subscription obnovená (invoice.paid), odošli email
+                if status == "active":
+                    profile = firebase.get_user_profile(user_id)
+                    if profile and profile.get("email"):
+                        from datetime import datetime
+                        period_end = data.get("current_period_end")
+                        next_date = datetime.fromtimestamp(period_end).strftime("%d.%m.%Y") if period_end else "N/A"
+                        amount = (data.get("plan", {}).get("amount", 0) or 0) / 100
+                        email_service.send_subscription_renewed_email(
+                            profile["email"],
+                            profile.get("firstName", "Používateľ"),
+                            plan_type or "basic",
+                            amount,
+                            next_date
+                        )
+
+        elif etype == "customer.subscription.deleted":
+            subscription_id = data.get("id")
+            customer_id = data.get("customer")
+            plan_type = data.get("metadata", {}).get("plan_type")
+
+            user_id = data.get("metadata", {}).get("user_id")
+            if not user_id and customer_id:
+                user_id = firebase.get_user_by_stripe_customer(customer_id)
+
+            if user_id:
+                firebase.update_subscription_status(user_id, "canceled", data.get("current_period_end"), subscription_id, plan_type)
+
+                # Odošli email o zrušení
+                profile = firebase.get_user_profile(user_id)
+                if profile and profile.get("email"):
+                    from datetime import datetime
+                    period_end = data.get("current_period_end")
+                    end_date = datetime.fromtimestamp(period_end).strftime("%d.%m.%Y") if period_end else "N/A"
+                    email_service.send_subscription_canceled_email(
+                        profile["email"],
+                        profile.get("firstName", "Používateľ"),
+                        plan_type or "basic",
+                        end_date
+                    )
+
     except Exception as e:
         print(f"[WEBHOOK ERROR] {e}")
+        import traceback
+        print(traceback.format_exc())
 
     return {"received": True}
+
+@app.post("/api/payment/customer-portal", tags=["Payment"])
+def create_customer_portal(decoded_token: dict = Depends(verify_firebase_token)):
+    """Vytvorí URL pre Stripe Customer Portal na správu predplatného."""
+    user_id = decoded_token.get("uid")
+
+    if not stripe_service.is_configured():
+        raise HTTPException(status_code=503, detail="Payment service not configured")
+
+    # Získaj stripe_customer_id z Firebase
+    subscription = firebase.get_user_subscription(user_id)
+    customer_id = subscription.get("stripe_customer_id") if subscription else None
+
+    if not customer_id:
+        raise HTTPException(status_code=404, detail="No Stripe customer found. Please subscribe first.")
+
+    result = stripe_service.create_customer_portal_session(customer_id)
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create portal session")
+
+    return result
 
 @app.get("/api/payment/status/{user_id}", tags=["Payment"])
 def get_payment_status(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
     sub = firebase.get_user_subscription(user_id)
     return {"user_id": user_id, "subscription": sub or {"plan_type": "free", "status": "none"}}
+
+# --- API ENDPOINTY: EMAIL NOTIFIKÁCIE ---
+
+class SendWelcomeEmailRequest(BaseModel):
+    email: str
+    first_name: str
+
+@app.post("/api/email/welcome", tags=["Email"])
+def send_welcome_email_endpoint(request: SendWelcomeEmailRequest, decoded_token: dict = Depends(verify_firebase_token)):
+    """Odošle uvítací email novému používateľovi."""
+    if not email_service.is_configured():
+        return {"sent": False, "message": "Email service not configured"}
+
+    success = email_service.send_welcome_email(request.email, request.first_name)
+    return {"sent": success}
+
+# --- API ENDPOINTY: AKTUALIZÁCIA PROFILU ---
+
+class UpdateProfileRequest(BaseModel):
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    height: Optional[float] = None
+    currentWeight: Optional[float] = None
+    targetWeight: Optional[float] = None
+    fitnessGoal: Optional[str] = None
+    activityLevel: Optional[str] = None
+    profileImageUrl: Optional[str] = None
+
+@app.put("/api/profile/{user_id}", tags=["User"])
+def update_profile_api(user_id: str, request: UpdateProfileRequest, decoded_token: dict = Depends(verify_firebase_token)):
+    """Aktualizuje profil používateľa."""
+    user_id = get_authorized_user_id(user_id, decoded_token)
+
+    # Filtrovať len nenulové hodnoty
+    updates = {k: v for k, v in request.model_dump().items() if v is not None}
+
+    if not updates:
+        return {"updated": False, "message": "No updates provided"}
+
+    success = firebase.update_profile(user_id, updates)
+    return {"updated": success}
 
 # --- SERVOVANIE FRONTENDU ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -153,7 +153,7 @@ class StripeService:
         }
         return plans.get(plan_type)
 
-    def create_customer_portal_session(self, customer_id: str, return_url: str) -> Optional[str]:
+    def create_customer_portal_session(self, customer_id: str, return_url: str = "https://fit-mind.sk/training") -> Optional[Dict[str, Any]]:
         """
         Vytvorí Stripe Customer Portal session pre správu subscription.
 
@@ -162,7 +162,7 @@ class StripeService:
             return_url: URL kam sa presmeruje po opustení portálu
 
         Returns:
-            URL pre portal alebo None pri chybe
+            Dict s URL pre portal alebo None pri chybe
         """
         if not self.is_configured():
             return None
@@ -172,7 +172,7 @@ class StripeService:
                 customer=customer_id,
                 return_url=return_url
             )
-            return session.url
+            return {"url": session.url}
         except stripe.error.StripeError as e:
             print(f"[STRIPE] Portal session error: {str(e)}")
             return None

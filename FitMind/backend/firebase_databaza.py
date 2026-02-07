@@ -833,6 +833,32 @@ class FirebaseService:
             print(f"[ERROR] Chyba pri načítaní subscription: {e}")
             return None
 
+    def get_user_by_stripe_customer(self, stripe_customer_id: str) -> Optional[str]:
+        """
+        Nájde používateľa podľa Stripe customer ID.
+
+        Args:
+            stripe_customer_id: Stripe customer ID
+
+        Returns:
+            User ID alebo None ak sa nenašiel
+        """
+        if not self.is_connected() or not stripe_customer_id:
+            return None
+
+        try:
+            users_ref = self._db.collection('userFitnessProfiles')
+            query = users_ref.where('stripe_customer_id', '==', stripe_customer_id).limit(1)
+            results = list(query.stream())
+
+            if results:
+                return results[0].id
+
+            return None
+        except Exception as e:
+            print(f"[ERROR] Chyba pri hľadaní používateľa podľa Stripe ID: {e}")
+            return None
+
     def update_subscription_status(
         self,
         user_id: str,
