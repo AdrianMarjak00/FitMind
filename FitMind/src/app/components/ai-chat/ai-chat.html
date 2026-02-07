@@ -1,32 +1,24 @@
 <div class="chat-layout-wrapper">
   <aside class="chat-history-sidebar" [class.open]="showHistory">
     <div class="sidebar-header">
-      <h4>📜 Konverzácie</h4>
-      <div class="sidebar-header-actions">
-        <button class="new-chat-btn" (click)="onNewConversation()" title="Nový chat">+</button>
-        <button class="mobile-close" (click)="showHistory = false">✕</button>
-      </div>
+      <h4>📜 História konverzácií</h4>
+      <button class="mobile-close" (click)="showHistory = false">✕</button>
     </div>
     <div class="history-items">
-      @if (conversations.length === 0) {
-        <div class="no-conversations">
-          <p>Zatiaľ žiadne konverzácie</p>
-          <button class="start-chat-btn" (click)="onNewConversation()">Začať nový chat</button>
+      <div class="history-item active">
+        <span class="status-dot"></span>
+        <div class="item-text">
+          <small>Práve teraz</small>
+          <p>Aktuálny tréningový chat</p>
         </div>
-      }
-      @for (conv of conversations; track conv.id) {
-        <div class="history-item" [class.active]="conv.id === activeConversationId" (click)="onConversationSelect(conv.id)">
-          <span class="status-dot" [class.gray]="conv.id !== activeConversationId"></span>
-          <div class="item-text">
-            <small>{{ conv.updatedAt | date:'dd.MM.yyyy HH:mm' }}</small>
-            <p>{{ conv.title }}</p>
-            @if (conv.lastMessage) {
-              <span class="last-message">{{ conv.lastMessage }}</span>
-            }
-          </div>
-          <button class="delete-conv-btn" (click)="onDeleteConversation($event, conv.id)" title="Vymazať">🗑️</button>
+      </div>
+      <div class="history-item disabled">
+        <span class="status-dot gray"></span>
+        <div class="item-text">
+          <small>Včera</small>
+          <p>Záznam stravy a kcal...</p>
         </div>
-      }
+      </div>
     </div>
   </aside>
 
@@ -113,12 +105,12 @@
     @if (!backendRunning && userId) { <div class="warning-message backend-warning">⚠️ Backend server nebeží!</div> }
 
     <div class="messages-container">
-      @for (msg of aiService.messages$ | async; track $index) {
+      @for (msg of aiService.messages$ | async; track msg.timestamp) {
         <div [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
           <div class="message-bubble">
             <strong>{{ msg.role === 'user' ? '👤 Ty:' : '🤖 AI:' }}</strong>
             <div class="message-content">{{ msg.content }}</div>
-            <small class="timestamp">{{ msg.timestamp | date:'HH:mm' }}</small>
+            <small class="timestamp">{{ msg.timestamp | date:'shortTime' }}</small>
           </div>
         </div>
       }

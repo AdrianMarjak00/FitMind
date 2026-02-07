@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== USERS COLLECTION (FOR USER PROFILES) =====
+    // This allows users to create and manage their profiles
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ===== USER FITNESS PROFILES =====
+    match /userFitnessProfiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /{sub=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // ===== REVIEWS COLLECTION =====
+    match /reviews/{reviewId} {
+      // Anyone can read reviews (they are public)
+      allow read: if true;
+      
+      // Only authenticated users can create reviews
+      allow create: if request.auth != null;
+      
+      // Only the author can update/delete their own review
+      allow update, delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
+
+    // ===== ADMINS COLLECTION =====
+    match /admins/{adminId} {
+      // Allow users to read their own admin status (if document exists)
+      allow read: if request.auth != null && request.auth.uid == adminId;
+      // Only existing admins can write
+      allow write: if false; 
+    }
+
+    // ===== CATCH-ALL (DENY EVERYTHING ELSE) =====
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

@@ -47,7 +47,6 @@ export class DashboardComponent implements OnInit {
   userId = '';
   userProfile: UserProfile | null = null;
   loading = true;
-  showEmailVerificationBanner = false;
 
   // Grafy
   caloriesChart: any = {};
@@ -140,11 +139,6 @@ export class DashboardComponent implements OnInit {
       this.currentUser = user;
       this.userId = user?.uid || '';
 
-      // Skontroluj či má overený email (iba pre email/password users)
-      if (user && user.providerData.some(p => p?.providerId === 'password')) {
-        this.showEmailVerificationBanner = !user.emailVerified;
-      }
-
       if (this.userId) {
         this.loadUserProfile();
         this.loadTodayStats();
@@ -157,21 +151,6 @@ export class DashboardComponent implements OnInit {
         this.loading = false;
       }
     });
-  }
-
-  resendVerificationEmail(): void {
-    this.authService.sendVerificationEmail().subscribe({
-      next: () => {
-        alert('Verifikačný email bol odoslaný! Skontroluj svoju schránku.');
-      },
-      error: () => {
-        alert('Nepodarilo sa odoslať email. Skús to znova neskôr.');
-      }
-    });
-  }
-
-  dismissEmailBanner(): void {
-    this.showEmailVerificationBanner = false;
   }
 
   // Načítaj posledné záznamy pre detailné zobrazenie

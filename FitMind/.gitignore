@@ -42,7 +42,7 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Security - Environment & Secrets (CRITICAL!)
+# Security - Environment & Secrets
 *.env
 .env.*
 !.env.example
@@ -50,12 +50,3 @@ Thumbs.db
 *.key
 *-key.json
 *service-account*.json
-serviceAccountKey.json
-**/serviceAccountKey.json
-firebase-*.json
-*credentials*.json
-*secret*.json
-
-# Backend secrets
-backend/.env
-backend/serviceAccountKey.json

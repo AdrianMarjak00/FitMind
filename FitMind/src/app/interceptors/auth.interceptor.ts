@@ -26,7 +26,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                 }
                 return next(req);
             }),
-            catchError(() => {
+            catchError(err => {
+                console.error('Auth Interceptor Error:', err);
                 return next(req);
             })
         );

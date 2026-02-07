@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { AiService, ChatMessage, WeeklyReport, GoalProgress, Conversation } from '../../services/ai.service';
+import { AiService, ChatMessage, WeeklyReport, GoalProgress } from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendStatusService } from '../../services/backend-status.service';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -21,21 +21,15 @@ export class AiChatComponent implements OnInit, OnDestroy {
   isLoading = false;
   savedEntries: string[] = [];
   private userSubscription?: Subscription;
-  private conversationsSubscription?: Subscription;
-  private activeConvSubscription?: Subscription;
 
   backendRunning = true;
-  showHistory = false;
-
-  // Conversations
-  conversations: Conversation[] = [];
-  activeConversationId: string | null = null;
+  showHistory = false; // <<< NOVÉ PRE SIDEBAR
 
   // Insights panel
   showInsights = false;
   activeTab: 'recommendations' | 'weekly' | 'goals' = 'recommendations';
   loadingInsights = false;
-
+  
   recommendations: string[] = [];
   weeklyReport: WeeklyReport | null = null;
   goalProgress: GoalProgress | null = null;
@@ -51,22 +45,12 @@ export class AiChatComponent implements OnInit, OnDestroy {
       this.backendRunning = isRunning;
     });
 
-    // Subscribe to conversations list
-    this.conversationsSubscription = this.aiService.conversations$.subscribe(convs => {
-      this.conversations = convs;
-    });
-
-    // Subscribe to active conversation ID
-    this.activeConvSubscription = this.aiService.activeConversationId$.subscribe(id => {
-      this.activeConversationId = id;
-    });
-
     this.userSubscription = this.authService.getCurrentUser().subscribe(user => {
       this.currentUser = user;
       this.userId = user?.uid || '';
       if (this.userId) {
-        // Načítaj konverzácie pri inicializácii
-        this.aiService.loadConversations(this.userId);
+        // Načítaj chat históriu pri inicializácii
+        this.aiService.loadChatHistory(this.userId);
         this.loadRecommendations();
       }
     });
@@ -74,8 +58,6 @@ export class AiChatComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.userSubscription?.unsubscribe();
-    this.conversationsSubscription?.unsubscribe();
-    this.activeConvSubscription?.unsubscribe();
   }
 
   sendMessage(): void {
@@ -98,43 +80,16 @@ export class AiChatComponent implements OnInit, OnDestroy {
           setTimeout(() => { this.savedEntries = []; }, 5000);
         }
       },
-      error: () => { this.isLoading = false; },
+      error: (err) => { this.isLoading = false; console.error(err); },
       complete: () => this.isLoading = false
     });
   }
 
   clearChat(): void {
-    if (!this.activeConversationId) return;
-    if (confirm('Vymazať túto konverzáciu?')) {
-      this.aiService.deleteConversation(this.userId, this.activeConversationId).subscribe({
-        next: () => { this.savedEntries = []; },
-        error: () => { /* Tiché zlyhanie */ }
-      });
-    }
-  }
-
-  // === CONVERSATION MANAGEMENT ===
-
-  onNewConversation(): void {
-    if (!this.userId) return;
-    this.aiService.createConversation(this.userId).subscribe({
-      error: () => { /* Tiché zlyhanie */ }
-    });
-  }
-
-  onConversationSelect(conversationId: string): void {
-    if (!this.userId || conversationId === this.activeConversationId) return;
-    this.aiService.switchConversation(this.userId, conversationId);
-    // Na mobile zavrieme sidebar
-    this.showHistory = false;
-  }
-
-  onDeleteConversation(event: Event, conversationId: string): void {
-    event.stopPropagation();
-    if (!this.userId) return;
-    if (confirm('Vymazať túto konverzáciu?')) {
-      this.aiService.deleteConversation(this.userId, conversationId).subscribe({
-        error: () => { /* Tiché zlyhanie */ }
+    if (confirm('Vymazať celú konverzáciu?')) {
+      this.aiService.clearChatHistory(this.userId).subscribe({
+        next: () => { this.aiService.clearChat(); this.savedEntries = []; },
+        error: () => this.aiService.clearChat()
       });
     }
   }
