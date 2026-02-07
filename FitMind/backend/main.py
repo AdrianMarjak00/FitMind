@@ -17,7 +17,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Načítaj premenné prostredia
 load_dotenv()
-load_dotenv(os.path.join(os.path.dirname(__file__), "local", ".env"))
+# V produkcii (Docker) sa premenné načítajú automaticky z prostredia (Render)
+# load_dotenv(os.path.join(os.path.dirname(__file__), "local", ".env"))
 IS_PRODUCTION = os.getenv("ENV", "production").lower() == "production"
 
 # Import služieb
