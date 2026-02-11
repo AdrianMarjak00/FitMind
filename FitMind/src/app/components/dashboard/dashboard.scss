@@ -1,6 +1,7 @@
 // --- PREMENNÉ ---
-$primary: #3ddc84; // Fitness zelená
-$primary-dark: #2eb86b;
+// Zmenená farba na tú sýtejšiu z druhého obrázka
+$primary: #3ddc84; 
+$primary-dark: #28af3f;
 $bg-body: #050505;
 $bg-card: #121212;
 $bg-widget: #1a1a1a;
@@ -151,7 +152,7 @@ $shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.5);
 
       .progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, $primary, #51ff89);
+        background: linear-gradient(90deg, $primary, lighten($primary, 15%));
         border-radius: 20px;
         transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
       }
@@ -250,13 +251,27 @@ $shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.5);
     gap: 10px;
   }
 
+  // Úprava tlačidla PRIDAŤ ZÁZNAM
   button[mat-flat-button] {
-    height: 50px;
-    border-radius: 12px;
-    font-weight: 700;
+    height: 52px;
+    border-radius: 14px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     margin-top: 10px;
+    background-color: $primary; // Použitie novej sýtej zelenej
+    color: #000; // Čierny text pre lepší kontrast na zelenej
+    transition: all 0.3s ease;
+
+    &:hover {
+      background-color: lighten($primary, 5%);
+      box-shadow: 0 4px 15px rgba($primary, 0.4);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
   }
 }
 
@@ -340,8 +355,8 @@ $shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.5);
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      background: rgba(61, 220, 132, 0.1);
-      border: 1px solid rgba(61, 220, 132, 0.3);
+      background: rgba($primary, 0.1);
+      border: 1px solid rgba($primary, 0.3);
       color: $primary;
       padding: 0.5rem 1rem;
       border-radius: 8px;
@@ -351,7 +366,7 @@ $shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.5);
       transition: all 0.2s;
 
       &:hover:not(.premium-only) {
-        background: rgba(61, 220, 132, 0.2);
+        background: rgba($primary, 0.2);
         border-color: $primary;
       }
 

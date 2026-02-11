@@ -26,21 +26,19 @@ export class ChartsService {
 
   constructor(private http: HttpClient) {}
 
+  // Pridaný timestamp zabraňuje cacheovaniu starých výsledkov v prehliadači
   getStats(userId: string, days: number = 30): Observable<StatsData> {
-    return this.http.get<StatsData>(`${this.apiUrl}/stats/${userId}?days=${days}`);
+    const t = new Date().getTime();
+    return this.http.get<StatsData>(`${this.apiUrl}/stats/${userId}?days=${days}&t=${t}`);
   }
 
   getChartData(userId: string, chartType: string, days: number = 30): Observable<ChartData> {
-    return this.http.get<ChartData>(`${this.apiUrl}/chart/${userId}/${chartType}?days=${days}`);
+    const t = new Date().getTime();
+    return this.http.get<ChartData>(`${this.apiUrl}/chart/${userId}/${chartType}?days=${days}&t=${t}`);
   }
 
   getEntries(userId: string, entryType: string, days: number = 30, limit: number = 100): Observable<any> {
-    return this.http.get(`${this.apiUrl}/entries/${userId}/${entryType}?days=${days}&limit=${limit}`);
+    const t = new Date().getTime();
+    return this.http.get(`${this.apiUrl}/entries/${userId}/${entryType}?days=${days}&limit=${limit}&t=${t}`);
   }
 }
-
-
-
-
-
-

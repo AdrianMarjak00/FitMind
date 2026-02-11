@@ -7,11 +7,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from "@angular/material/icon";
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Timestamp } from '@angular/fire/firestore';
+import { MatInputModule } from '@angular/material/input';
 
 @Component({
   selector: 'app-reviews',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, ReactiveFormsModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, ReactiveFormsModule, MatInputModule],
   templateUrl: './reviews.html',
   styleUrls: ['./reviews.scss']
 })
