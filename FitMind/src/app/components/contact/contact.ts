@@ -1,8 +1,7 @@
-// src/app/contact/contact.ts
-
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; 
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 
 // Angular Material Imports
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +15,7 @@ import { MatInputModule } from '@angular/material/input';
   imports: [
     CommonModule,
     FormsModule,
+    HttpClientModule,
     MatCardModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -25,14 +25,33 @@ import { MatInputModule } from '@angular/material/input';
   styleUrl: './contact.scss'
 })
 export class Contact {
+  private http = inject(HttpClient);
+
   contactData = {
     name: '',
     email: '',
     message: ''
   };
 
+  isSubmitted = false;
+  isLoading = false;
+
   onSubmitContact() {
-    alert('Vaša správa bola odoslaná. Ďakujeme!');
-    this.contactData = { name: '', email: '', message: '' };
+    this.isLoading = true;
+    // SEM VLOŽ SVOJE FORMSPREE ID
+    const formspreeUrl = 'https://formspree.io/f/xwvnoazj'; 
+
+    this.http.post(formspreeUrl, this.contactData).subscribe({
+      next: () => {
+        this.isSubmitted = true;
+        this.isLoading = false;
+        this.contactData = { name: '', email: '', message: '' };
+      },
+      error: (err) => {
+        this.isLoading = false;
+        console.error('Chyba pri odosielaní:', err);
+        alert('Ups! Niečo sa nepodarilo. Skontrolujte pripojenie alebo Formspree ID.');
+      }
+    });
   }
 }

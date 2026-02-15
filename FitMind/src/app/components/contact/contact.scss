@@ -1,37 +1,173 @@
+/* 1. HLAVNÝ KONTAJNER */
 .contact {
   min-height: calc(100vh - 64px);
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 2rem;
+  // Tvoj pôvodný zelený gradient
   background: radial-gradient(circle at top, #0f2f1f, #050505);
+  transition: all 0.3s ease;
 }
 
+/* 2. KARTA FORMULÁRA */
 .contact-card {
   width: 100%;
   max-width: 480px;
   background: #0f0f0f;
   padding: 2.5rem;
   border-radius: 16px;
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.7);
+  border: 1px solid #1a1a1a;
 }
 
+/* 3. TEXTY */
 h2 {
   text-align: center;
   margin-bottom: 0.5rem;
   color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
   text-align: center;
   margin-bottom: 2rem;
   color: #aaa;
+  font-size: 0.95rem;
 }
 
 .full-width {
   width: 100%;
 }
 
-button {
+/* 4. ÚPRAVA ANGULAR MATERIAL POLÍ (DARK MODE) */
+:host ::ng-deep {
+  .mat-mdc-form-field {
+    margin-bottom: 0.5rem;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    background-color: #161616 !important;
+    border-radius: 8px 8px 0 0 !important;
+  }
+
+  .mat-mdc-form-field-label {
+    color: #888 !important;
+  }
+
+  .mat-mdc-input-element {
+    color: white !important;
+  }
+
+  /* Linka pod inputom */
+  .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-line-ripple::before {
+    border-bottom-color: #333 !important;
+  }
+
+  /* Farba linky pri kliknutí (Focus) */
+  .mdc-text-field--focused .mdc-line-ripple::after {
+    border-bottom-color: #3ce281 !important;
+  }
+}
+
+/* 5. TLAČIDLO (PODĽA TVOJHO OBRÁZKA) */
+.main-btn {
   margin-top: 1.5rem;
+  height: 56px;
+  // Presná zelená z tvojho screenshotu
+  background-color: #3ce281 !important; 
+  color: #000000 !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover:not(:disabled) {
+    background-color: #2ecc71 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(60, 226, 129, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background-color: #2d4d3a !important;
+    color: #555 !important;
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+/* 6. ÚSPEŠNÉ ODOSLANIE (ĎAKUJEME) */
+.success-container {
+  text-align: center;
+  padding: 1rem 0;
+  animation: slideUp 0.5s ease-out;
+
+  .success-icon {
+    font-size: 5rem;
+    color: #3ce281;
+    margin-bottom: 1rem;
+    line-height: 1;
+  }
+
+  .info-text {
+    color: #eee;
+    font-size: 1.1rem;
+    margin: 1.5rem 0;
+    
+    strong {
+      color: #3ce281;
+    }
+  }
+
+  .back-button {
+    margin-top: 1rem;
+    color: #3ce281;
+    border-color: #3ce281;
+    border-radius: 10px;
+    
+    &:hover {
+      background-color: rgba(60, 226, 129, 0.1);
+    }
+  }
+}
+
+/* 7. RESPONZIVITA (MOBILY A TABLETY) */
+@media (max-width: 600px) {
+  .contact {
+    padding: 1rem;
+    align-items: flex-start; // Posunie formulár vyššie, aby klávesnica nezavadzala
+    padding-top: 3rem;
+  }
+
+  .contact-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  .main-btn {
+    height: 50px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Animácia pre plynulý prechod */
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
 }

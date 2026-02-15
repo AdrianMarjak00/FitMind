@@ -1,27 +1,52 @@
 <section class="contact">
   <mat-card class="contact-card">
-    <h2>Kontaktujte nás</h2>
-    <p class="subtitle">Radi odpovieme na akékoľvek otázky</p>
+    
+    <div *ngIf="!isSubmitted; else thankYouMessage">
+      <h2>Kontaktujte nás</h2>
+      <p class="subtitle">Radi odpovieme na akékoľvek otázky</p>
 
-    <form (ngSubmit)="onSubmitContact()">
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Meno</mat-label>
-        <input matInput [(ngModel)]="contactData.name" name="name" required />
-      </mat-form-field>
+      <form (ngSubmit)="contactForm.form.valid && onSubmitContact()" #contactForm="ngForm">
+        
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Meno</mat-label>
+          <input matInput [(ngModel)]="contactData.name" name="name" required #name="ngModel" />
+          <mat-error *ngIf="name.invalid">Meno je povinné</mat-error>
+        </mat-form-field>
 
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Email</mat-label>
-        <input matInput type="email" [(ngModel)]="contactData.email" name="email" required />
-      </mat-form-field>
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" [(ngModel)]="contactData.email" name="email" required email #email="ngModel" />
+          <mat-error *ngIf="email.invalid">Zadajte platný email</mat-error>
+        </mat-form-field>
 
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Správa</mat-label>
-        <textarea matInput rows="5" [(ngModel)]="contactData.message" name="message" required></textarea>
-      </mat-form-field>
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Správa</mat-label>
+          <textarea matInput rows="5" [(ngModel)]="contactData.message" name="message" required #message="ngModel"></textarea>
+          <mat-error *ngIf="message.invalid">Správa nemôže byť prázdna</mat-error>
+        </mat-form-field>
 
-      <button mat-flat-button color="primary" class="full-width" type="submit">
-        Odoslať správu
-      </button>
-    </form>
+        <button 
+          mat-flat-button 
+          class="full-width main-btn" 
+          type="submit"
+          [disabled]="contactForm.form.invalid || isLoading">
+          {{ isLoading ? 'Odosielam...' : 'Odoslať správu' }}
+        </button>
+      </form>
+    </div>
+
+    <ng-template #thankYouMessage>
+      <div class="success-container">
+        <div class="success-icon">✓</div>
+        <h2>Ďakujeme!</h2>
+        <p class="subtitle">Vaša správa bola úspešne odoslaná.</p>
+        <p class="info-text">Odpovieme vám <strong>do 24 hodín</strong>.</p>
+        
+        <button mat-stroked-button class="back-button" (click)="isSubmitted = false">
+          Poslať ďalšiu správu
+        </button>
+      </div>
+    </ng-template>
+
   </mat-card>
 </section>
