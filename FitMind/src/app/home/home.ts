@@ -1,8 +1,7 @@
-import { Component, OnInit, AfterViewInit, ElementRef, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, AfterViewInit, ElementRef, HostListener, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
@@ -10,13 +9,11 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   templateUrl: './home.html',
   styleUrls: ['./home.scss'],
-  imports: [CommonModule, RouterModule, MatButtonModule, MatCardModule, MatIconModule]
+  imports: [CommonModule, RouterModule, MatButtonModule, MatIconModule]
 })
 export class HomeComponent implements OnInit, AfterViewInit {
-  currentYear: number = new Date().getFullYear();
   areCookiesAccepted: boolean = false;
-
-  // Zoznam obrázkov pre galériu
+  currentIndex: number | null = null;
   images = [
     { url: '/assets/cvicenie.jpg', alt: 'Tréning v plnom prúde' },
     { url: '/assets/strava.jpg', alt: 'Zdravá a vyvážená strava' },
@@ -24,42 +21,50 @@ export class HomeComponent implements OnInit, AfterViewInit {
     { url: '/assets/vysledky.jpg', alt: 'Reálne výsledky našich členov' }
   ];
 
-  // Sledovanie aktuálne otvoreného obrázka (null znamená zavretú galériu)
-  currentIndex: number | null = null;
-
-  constructor(private el: ElementRef) {}
+  constructor(
+    private el: ElementRef,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {}
 
   ngOnInit() {
-    const consent = sessionStorage.getItem('cookiesAcceptedSession');
-    this.areCookiesAccepted = (consent === 'true');
+    if (isPlatformBrowser(this.platformId)) {
+      // RESET SCROLLU pri načítaní (ochrana proti zaseknutiu z galérie)
+      document.body.style.overflow = 'auto';
+      
+      const consent = sessionStorage.getItem('cookiesAcceptedSession');
+      this.areCookiesAccepted = (consent === 'true');
+    }
   }
 
   ngAfterViewInit() {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('active');
-        }
-      });
-    }, { threshold: 0.1 });
+    if (isPlatformBrowser(this.platformId)) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+          }
+        });
+      }, { threshold: 0.1 });
 
-    const elements = this.el.nativeElement.querySelectorAll('.scroll-reveal');
-    elements.forEach((el: HTMLElement) => observer.observe(el));
+      const elements = this.el.nativeElement.querySelectorAll('.scroll-reveal');
+      elements.forEach((el: HTMLElement) => observer.observe(el));
+    }
   }
 
-  // Galéria: Otvorenie
   openGallery(index: number) {
     this.currentIndex = index;
-    document.body.style.overflow = 'hidden'; // Zamedzí skrolovaniu stránky
+    if (isPlatformBrowser(this.platformId)) {
+      document.body.style.overflow = 'hidden'; // Zamkne scroll len počas otvorenej galérie
+    }
   }
 
-  // Galéria: Zatvorenie
   closeGallery() {
     this.currentIndex = null;
-    document.body.style.overflow = 'auto';
+    if (isPlatformBrowser(this.platformId)) {
+      document.body.style.overflow = 'auto'; // Vráti scroll späť
+    }
   }
 
-  // Galéria: Nasledujúci obrázok
   nextImage(event?: Event) {
     if (event) event.stopPropagation();
     if (this.currentIndex !== null) {
@@ -67,7 +72,6 @@ export class HomeComponent implements OnInit, AfterViewInit {
     }
   }
 
-  // Galéria: Predchádzajúci obrázok
   prevImage(event?: Event) {
     if (event) event.stopPropagation();
     if (this.currentIndex !== null) {
@@ -75,7 +79,6 @@ export class HomeComponent implements OnInit, AfterViewInit {
     }
   }
 
-  // Ovládanie klávesnicou
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
     if (this.currentIndex !== null) {

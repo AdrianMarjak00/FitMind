@@ -11,16 +11,21 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 body, html {
-  overflow-x: hidden; // Absolútny zákaz horizontálneho scrollu
+  /* OPRAVA: overflow-x nesmie ovplyvňovať scrollovanie smerom dole */
+  overflow-x: hidden; 
+  overflow-y: auto; 
   background-color: $bg-black;
   color: white;
-  font-family: 'Inter', sans-serif; // Alebo tvoj preferovaný font
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  height: auto; /* Zabezpečí, že výška nie je useknutá */
 }
 
 .page-wrapper {
   width: 100%;
-  overflow-x: hidden;
   position: relative;
+  display: block;
+  /* Odstránené overflow: hidden, ktoré mohlo dusiť obsah */
 }
 
 .container {
@@ -55,7 +60,11 @@ body, html {
   display: flex;
   align-items: center;
   padding: 100px 0;
-  overflow: hidden;
+  /* OPRAVA: Na mobile nesmie byť výška fixná na obrazovku, inak sa k obsahu pod tým neodscrolluješ */
+  @media (max-width: 992px) {
+    min-height: auto;
+    padding: 120px 0 60px 0;
+  }
 
   .hero-wrapper {
     display: flex;
@@ -65,7 +74,6 @@ body, html {
     @media (max-width: 992px) {
       flex-direction: column;
       text-align: center;
-      padding-top: 40px;
     }
   }
 }
@@ -151,8 +159,8 @@ body, html {
   margin-top: 30px;
 
   @media (max-width: 600px) {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex; /* Zmenené z Grid na Flex pre lepšiu kompatibilitu mobilov */
+    flex-direction: column;
     width: 100%;
     gap: 20px;
     padding: 30px;
@@ -271,7 +279,7 @@ body, html {
   }
 }
 
-/* --- COOKIES (ZJEDNOTENÝ VIZUÁL) --- */
+/* --- COOKIES --- */
 .cookie-overlay {
   position: fixed;
   bottom: 20px;
