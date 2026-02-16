@@ -11,21 +11,19 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 body, html {
-  /* OPRAVA: overflow-x nesmie ovplyvňovať scrollovanie smerom dole */
   overflow-x: hidden; 
   overflow-y: auto; 
   background-color: $bg-black;
   color: white;
   font-family: 'Inter', sans-serif;
   width: 100%;
-  height: auto; /* Zabezpečí, že výška nie je useknutá */
+  height: auto;
 }
 
 .page-wrapper {
   width: 100%;
   position: relative;
   display: block;
-  /* Odstránené overflow: hidden, ktoré mohlo dusiť obsah */
 }
 
 .container {
@@ -60,7 +58,6 @@ body, html {
   display: flex;
   align-items: center;
   padding: 100px 0;
-  /* OPRAVA: Na mobile nesmie byť výška fixná na obrazovku, inak sa k obsahu pod tým neodscrolluješ */
   @media (max-width: 992px) {
     min-height: auto;
     padding: 120px 0 60px 0;
@@ -159,7 +156,7 @@ body, html {
   margin-top: 30px;
 
   @media (max-width: 600px) {
-    display: flex; /* Zmenené z Grid na Flex pre lepšiu kompatibilitu mobilov */
+    display: flex;
     flex-direction: column;
     width: 100%;
     gap: 20px;
@@ -260,8 +257,13 @@ body, html {
 .gallery-section { padding-bottom: 100px; }
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
   
   .grid-item {
     aspect-ratio: 1/1;
@@ -279,52 +281,130 @@ body, html {
   }
 }
 
-/* --- COOKIES --- */
+/* --- UPRAVENÉ COOKIES --- */
 .cookie-overlay {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 90%;
-  max-width: 600px;
-  z-index: 10000;
+  width: 95%;
+  max-width: 750px;
+  z-index: 99999; // Zvýšený index pre istotu
+  pointer-events: all; // Aby sa dalo na tlačidlá klikať
+  animation: fadeInUp 0.5s ease-out;
 }
 
 .cookie-card {
   background: #0d0d0d;
-  border: 1px solid $primary;
-  border-radius: 20px;
-  padding: 20px 25px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  border: 1px solid rgba($primary, 0.3);
+  border-radius: 24px;
+  padding: 25px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.9);
 
   .cookie-container {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 20px;
+  }
+}
 
-    @media (max-width: 768px) {
-      flex-direction: column;
-      text-align: center;
+.cookie-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  @media (max-width: 600px) { flex-direction: column; text-align: center; }
+
+  .cookie-icon-wrapper mat-icon {
+    color: $primary;
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .cookie-text {
+    h3 { font-size: 1.2rem; margin-bottom: 4px; color: white; margin-top: 0; }
+    p { font-size: 0.85rem; color: $text-gray; line-height: 1.5; margin: 0; }
+  }
+}
+
+.cookie-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: rgba(255,255,255,0.03);
+  padding: 15px;
+  border-radius: 16px;
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+
+  .setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+
+    .setting-info {
+      span { display: block; font-size: 0.85rem; font-weight: 700; color: white; }
+      small { font-size: 0.7rem; color: #666; }
+    }
+
+    .status-icon-locked { color: #444; font-size: 18px; width: 18px; height: 18px; }
+    .cookie-checkbox {
+      accent-color: $primary;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
     }
   }
+}
 
-  .cookie-content {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    @media (max-width: 768px) { flex-direction: column; }
+.cookie-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  @media (max-width: 768px) { flex-direction: column; }
 
-    mat-icon { color: $primary; font-size: 32px; width: 32px; height: 32px; }
-    h3 { font-size: 1rem; margin-bottom: 2px; }
-    p { font-size: 0.8rem; color: #777; line-height: 1.4; }
+  .btn-manage {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: 0.3s;
+    &:hover { color: white; }
   }
 
-  .btn-cookie {
+  .main-btns {
+    display: flex;
+    gap: 12px;
+    @media (max-width: 600px) { width: 100%; flex-direction: column; }
+  }
+
+  .btn-reject {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    border-radius: 12px;
+    padding: 0 25px;
+    height: 50px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+    &:hover { background: rgba(255,0,0,0.1); border-color: #ff4d4d; color: #ff4d4d; }
+  }
+
+  .btn-accept {
     height: 50px !important;
-    padding: 0 25px !important;
-    white-space: nowrap;
-    @media (max-width: 768px) { width: 100%; }
+    padding: 0 30px !important;
+    min-width: 160px;
+    font-size: 0.85rem !important;
   }
 }
 

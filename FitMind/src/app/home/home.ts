@@ -12,8 +12,11 @@ import { MatIconModule } from '@angular/material/icon';
   imports: [CommonModule, RouterModule, MatButtonModule, MatIconModule]
 })
 export class HomeComponent implements OnInit, AfterViewInit {
+
   areCookiesAccepted: boolean = false;
+  showCookieDetails: boolean = false;
   currentIndex: number | null = null;
+
   images = [
     { url: '/assets/cvicenie.jpg', alt: 'Tréning v plnom prúde' },
     { url: '/assets/strava.jpg', alt: 'Zdravá a vyvážená strava' },
@@ -28,11 +31,20 @@ export class HomeComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
-      // RESET SCROLLU pri načítaní (ochrana proti zaseknutiu z galérie)
+
       document.body.style.overflow = 'auto';
-      
-      const consent = sessionStorage.getItem('cookiesAcceptedSession');
-      this.areCookiesAccepted = (consent === 'true');
+
+      // Kontrola, či už banner bol počas tejto návštevy zobrazený
+      const bannerShown = sessionStorage.getItem('cookieBannerShown');
+
+      if (!bannerShown) {
+        // Prvá návšteva po otvorení webu
+        this.areCookiesAccepted = false;
+        sessionStorage.setItem('cookieBannerShown', 'true');
+      } else {
+        // Už bol zobrazený
+        this.areCookiesAccepted = true;
+      }
     }
   }
 
@@ -51,17 +63,29 @@ export class HomeComponent implements OnInit, AfterViewInit {
     }
   }
 
+  toggleCookieDetails(): void {
+    this.showCookieDetails = !this.showCookieDetails;
+  }
+
+  acceptCookies(): void {
+    this.areCookiesAccepted = true;
+  }
+
+  rejectCookies(): void {
+    this.areCookiesAccepted = true;
+  }
+
   openGallery(index: number) {
     this.currentIndex = index;
     if (isPlatformBrowser(this.platformId)) {
-      document.body.style.overflow = 'hidden'; // Zamkne scroll len počas otvorenej galérie
+      document.body.style.overflow = 'hidden';
     }
   }
 
   closeGallery() {
     this.currentIndex = null;
     if (isPlatformBrowser(this.platformId)) {
-      document.body.style.overflow = 'auto'; // Vráti scroll späť
+      document.body.style.overflow = 'auto';
     }
   }
 
@@ -86,10 +110,5 @@ export class HomeComponent implements OnInit, AfterViewInit {
       if (event.key === 'ArrowLeft') this.prevImage();
       if (event.key === 'Escape') this.closeGallery();
     }
-  }
-
-  acceptCookies() {
-    sessionStorage.setItem('cookiesAcceptedSession', 'true');
-    this.areCookiesAccepted = true;
   }
 }
