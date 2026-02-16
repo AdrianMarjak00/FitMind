@@ -107,7 +107,35 @@ class AIService:
             }
         )
 
-        return [nastroj_jedlo, nastroj_cvicenie, nastroj_nalada, nastroj_vaha]
+        nastroj_spanok = types.FunctionDeclaration(
+            name="save_sleep_entry",
+            description="Uloží dĺžku a kvalitu spánku.",
+            parameters={
+                "type": "OBJECT",
+                "properties": {
+                    "hours": {"type": "NUMBER", "description": "Počet hodín spánku"},
+                    "quality": {"type": "STRING", "enum": ["poor", "fair", "good", "excellent"]},
+                    "date": {"type": "STRING", "description": "ISO 8601 dátum a čas"}
+                },
+                "required": ["hours", "quality"]
+            }
+        )
+
+        nastroj_stres = types.FunctionDeclaration(
+            name="save_stress_entry",
+            description="Uloží úroveň stresu.",
+            parameters={
+                "type": "OBJECT",
+                "properties": {
+                    "level": {"type": "NUMBER", "description": "Úroveň stresu 1-10"},
+                    "source": {"type": "STRING", "description": "Zdroj alebo spúšťač stresu"},
+                    "date": {"type": "STRING", "description": "ISO 8601 dátum a čas"}
+                },
+                "required": ["level"]
+            }
+        )
+
+        return [nastroj_jedlo, nastroj_cvicenie, nastroj_nalada, nastroj_vaha, nastroj_spanok, nastroj_stres]
 
     def create_system_prompt(self, profil_uzivatela, historia_zaznamov):
         def prevod_datumu(objekt):

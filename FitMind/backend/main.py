@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import Optional, List, Dict, Any
 
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -343,10 +343,12 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         # response.function_calls je teraz zoznam objektov UdajeOFunkcii
         if response.function_calls:
             mapping = {
-                'save_food_entry': 'food',
-                'save_exercise_entry': 'exercise',
-                'save_mood_entry': 'mood',
-                'save_weight_entry': 'weight'
+                "save_food_entry": "food",
+                "save_exercise_entry": "exercise",
+                "save_mood_entry": "mood",
+                "save_weight_entry": "weight",
+                "save_sleep_entry": "sleep",
+                "save_stress_entry": "stress"
             }
             
             for fc in response.function_calls:
@@ -413,7 +415,7 @@ def get_entries_api(user_id: str, entry_type: str, days: int = 30, limit: int = 
     return firebase.get_entries(user_id, entry_type, days, limit)
 
 @app.post("/api/entries/{user_id}/{entry_type}", tags=["Entries"])
-def add_entry_api(user_id: str, entry_type: str, request: Request, data: dict, decoded_token: dict = Depends(verify_firebase_token)):
+def add_entry_api(user_id: str, entry_type: str, data: dict = Body(...), decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
     allowed_types = {'food', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
     if entry_type not in allowed_types:

@@ -98,97 +98,34 @@ class StatsService:
             "count": len(entries)
         }
     
-    def get_mood_trend(self, user_id: str, days: int = 30) -> List[Dict]:
-        """
-        Získa trend nálady (záznamy zoradené podľa času)
+    def _safe_timestamp(self, entry: Dict):
+        """Pomocná funkcia na získanie porovnateľného času zo záznamu."""
+        ts = entry.get('timestamp')
+        if not ts:
+            return 0
         
-        Args:
-            user_id: ID používateľa
-            days: Počet dní späť (default 30)
-        """
-        entries = self.firebase.get_entries(user_id, 'mood', days)
-        # Zoraď záznamy podľa timestampu a vráť ako zoznam slovníkov
-        return [
-            {
-                "date": e.get('timestamp'),
-                "score": e.get('score', 0),
-                "note": e.get('note', '')
-            }
-            for e in sorted(entries, key=lambda x: x.get('timestamp', 0))
-        ]
-    
-    def get_stress_trend(self, user_id: str, days: int = 30) -> List[Dict]:
-        """
-        Získa trend stresu (záznamy zoradené podľa času)
+        # Firestore Timestamp objekt
+        if hasattr(ts, 'timestamp'):
+            return ts.timestamp()
         
-        Args:
-            user_id: ID používateľa
-            days: Počet dní späť (default 30)
-        """
-        entries = self.firebase.get_entries(user_id, 'stress', days)
-        return [
-            {
-                "date": e.get('timestamp'),
-                "level": e.get('level', 0),
-                "source": e.get('source', '')
-            }
-            for e in sorted(entries, key=lambda x: x.get('timestamp', 0))
-        ]
-    
-    def get_sleep_summary(self, user_id: str, days: int = 7) -> Dict:
-        """
-        Vypočíta súhrn spánku za obdobie
-        
-        Args:
-            user_id: ID používateľa
-            days: Počet dní späť (default 7)
-        """
-        entries = self.firebase.get_entries(user_id, 'sleep', days)
-        if not entries:
-            return {"average_hours": 0, "total_hours": 0, "by_quality": {}, "count": 0}
-        
-        # Vypočítaj celkový počet hodín
-        total_hours = 0
-        by_quality = {}
-        for entry in entries:
-            try:
-                h = float(entry.get('hours', 0))
-            except:
-                h = 0
-            total_hours += h
+        # Dict format (v niektorých prípadoch)
+        if isinstance(ts, dict):
+            return ts.get('seconds', ts.get('_seconds', 0))
             
-            quality = entry.get('quality', 'unknown')
-            by_quality[quality] = by_quality.get(quality, 0) + 1
-        
-        return {
-            "average_hours": total_hours / len(entries) if entries else 0,
-            "total_hours": total_hours,
-            "by_quality": by_quality,
-            "count": len(entries)
-        }
-    
-    def get_weight_trend(self, user_id: str, days: int = 90) -> List[Dict]:
-        """
-        Získa trend váhy (záznamy zoradené podľa času)
-        
-        Args:
-            user_id: ID používateľa
-            days: Počet dní späť (default 90)
-        """
-        entries = self.firebase.get_entries(user_id, 'weight', days)
-        results = []
-        for e in sorted(entries, key=lambda x: x.get('timestamp', 0)):
+        # ISO reťazec
+        if isinstance(ts, str):
             try:
-                val = float(e.get('weight', 0))
+                from datetime import datetime
+                return datetime.fromisoformat(ts.replace('Z', '+00:00')).timestamp()
             except:
-                val = 0
+                return 0
                 
-            results.append({
-                "date": e.get('timestamp'),
-                "weight": val
-            })
-        return results
-    
+        # Už je to číslo
+        if isinstance(ts, (int, float)):
+            return ts
+            
+        return 0
+
     def get_chart_data(self, user_id: str, chart_type: str, days: int = 30) -> Dict:
         """
         Získa dáta pre konkrétny typ grafu
@@ -209,5 +146,56 @@ class StatsService:
         }
         
         # Zavolaj príslušnú funkciu alebo vráť prázdny slovník
-        func = chart_map.get(chart_type)
-        return func() if func else {}
+        try:
+            func = chart_map.get(chart_type)
+            return func() if func else {}
+        except Exception as e:
+            print(f"[STATS ERROR] Failed to get {chart_type} data: {e}")
+            import traceback
+            traceback.print_exc()
+            return {}
+
+    def get_mood_trend(self, user_id: str, days: int = 30) -> List[Dict]:
+        """Získa trend nálady (záznamy zoradené podľa času)"""
+        entries = self.firebase.get_entries(user_id, 'mood', days)
+        # Zoraď záznamy bezpečne podľa timestampu
+        sorted_entries = sorted(entries, key=lambda x: self._safe_timestamp(x))
+        return [
+            {
+                "date": e.get('timestamp'),
+                "score": e.get('score', 0),
+                "note": e.get('note', '')
+            }
+            for e in sorted_entries
+        ]
+    
+    def get_stress_trend(self, user_id: str, days: int = 30) -> List[Dict]:
+        """Získa trend stresu (záznamy zoradené podľa času)"""
+        entries = self.firebase.get_entries(user_id, 'stress', days)
+        sorted_entries = sorted(entries, key=lambda x: self._safe_timestamp(x))
+        return [
+            {
+                "date": e.get('timestamp'),
+                "level": e.get('level', 0),
+                "source": e.get('source', '')
+            }
+            for e in sorted_entries
+        ]
+
+    def get_weight_trend(self, user_id: str, days: int = 90) -> List[Dict]:
+        """Získa trend váhy (záznamy zoradené podľa času)"""
+        entries = self.firebase.get_entries(user_id, 'weight', days)
+        results = []
+        # Zoraď záznamy bezpečne podľa timestampu
+        sorted_entries = sorted(entries, key=lambda x: self._safe_timestamp(x))
+        for e in sorted_entries:
+            try:
+                val = float(e.get('weight', 0))
+            except:
+                val = 0
+                
+            results.append({
+                "date": e.get('timestamp'),
+                "weight": val
+            })
+        return results

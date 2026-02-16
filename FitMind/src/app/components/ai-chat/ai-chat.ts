@@ -65,6 +65,30 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     } catch (err) { }
   }
 
+  formatMessage(content: string): string {
+    if (!content) return '';
+
+    let formatted = content
+      // Preserve line breaks
+      .replace(/\n/g, '<br>')
+      // Bold text **text**
+      .replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>')
+      // Highlight calories with color
+      .replace(/(\d+)\s*kcal/gi, '<span class="highlight-calories">$1 kcal</span>')
+      // Highlight numbers with units (g, kg, cm, min, etc.)
+      .replace(/(\d+)\s*(g|kg|cm|min|hodín|rokov)/gi, '<span class="highlight-number">$1$2</span>')
+      // Highlight percentages and standalone numbers
+      .replace(/(\d+)%/g, '<span class="highlight-number">$1%</span>')
+      .replace(/(\d+)\/(\d+)/g, '<span class="highlight-number">$1/$2</span>')
+      // Make bullet points prettier
+      .replace(/•/g, '<span class="bullet">•</span>')
+      .replace(/\*\s/g, '<span class="bullet">•</span> ')
+      // Emoji spacing
+      .replace(/([\u{1F300}-\u{1F9FF}])/gu, '<span class="emoji">$1</span>');
+
+    return formatted;
+  }
+
   ngAfterViewChecked(): void {
     this.scrollToBottom();
   }

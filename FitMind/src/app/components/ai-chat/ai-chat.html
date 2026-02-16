@@ -146,13 +146,25 @@
       @for (msg of aiService.messages$ | async; track $index) {
       <div [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
         <div class="message-bubble">
-          <strong>{{ msg.role === 'user' ? '👤 Ty:' : '🤖 AI:' }}</strong>
-          <div class="message-content">{{ msg.content }}</div>
-          <small class="timestamp">{{ msg.timestamp | date:'HH:mm' }}</small>
+          <div class="message-header">
+            <span class="role-badge" [class.user-badge]="msg.role === 'user'"
+              [class.ai-badge]="msg.role === 'assistant'">
+              {{ msg.role === 'user' ? '👤 Ty' : '🤖 AI Coach' }}
+            </span>
+            <small class="timestamp">{{ msg.timestamp | date:'HH:mm' }}</small>
+          </div>
+          <div class="message-content" [innerHTML]="formatMessage(msg.content)"></div>
         </div>
       </div>
       }
-      @if (isLoading) { <div class="loading-typing">AI Coach píše...</div> }
+      @if (isLoading) {
+      <div class="loading-typing">
+        <span class="typing-indicator">
+          <span></span><span></span><span></span>
+        </span>
+        AI Coach píše...
+      </div>
+      }
     </div>
 
     <div class="input-container" [class.disabled]="!canSendMessage">
