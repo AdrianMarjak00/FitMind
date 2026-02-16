@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fit-mind.sk/sitemap.xml

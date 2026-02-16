@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector, runInInjectionContext } from '@angular/core';
 import { Firestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, collectionData, query, where, orderBy, limit, Timestamp, addDoc } from '@angular/fire/firestore';
-import { Observable, from, map } from 'rxjs';
+import { Observable, from, map, forkJoin } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { FoodEntry, WorkoutEntry, StressEntry, MoodEntry, SleepEntry, WeightEntry } from '../models/user-fitness-data.interface';
 import { UserProfile } from '../models/user-profile.interface';
 
@@ -11,7 +12,7 @@ export class UserFitnessService {
   // Jediná hlavná kolekcia pre všetky údaje používateľov
   private readonly USERS_COLLECTION = 'users';
 
-  constructor(private firestore: Firestore) {}
+  constructor(private firestore: Firestore, private injector: Injector) { }
 
   // ===== PROFIL POUŽÍVATEĽA =====
 
@@ -35,15 +36,17 @@ export class UserFitnessService {
    * Získa používateľský profil
    */
   getUserProfile(userId: string): Observable<UserProfile | null> {
-    const userDoc = doc(this.firestore, this.USERS_COLLECTION, userId);
-    return from(getDoc(userDoc)).pipe(
-      map(docSnap => {
-        if (docSnap.exists()) {
-          return { ...docSnap.data(), userId } as UserProfile;
-        }
-        return null;
-      })
-    );
+    return runInInjectionContext(this.injector, () => {
+      const userDoc = doc(this.firestore, this.USERS_COLLECTION, userId);
+      return from(getDoc(userDoc)).pipe(
+        map(docSnap => {
+          if (docSnap.exists()) {
+            return { ...docSnap.data(), userId } as UserProfile;
+          }
+          return null;
+        })
+      );
+    });
   }
 
   /**
@@ -69,17 +72,19 @@ export class UserFitnessService {
   }
 
   getFoodEntries(userId: string, days: number = 7): Observable<FoodEntry[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
+    return runInInjectionContext(this.injector, () => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
-    const entriesRef = query(
-      collection(this.firestore, this.USERS_COLLECTION, userId, 'foodEntries'),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-    return collectionData(entriesRef, { idField: 'id' }) as Observable<FoodEntry[]>;
+      const entriesRef = query(
+        collection(this.firestore, this.USERS_COLLECTION, userId, 'foodEntries'),
+        where('timestamp', '>=', cutoffTimestamp),
+        orderBy('timestamp', 'desc'),
+        limit(50)
+      );
+      return collectionData(entriesRef, { idField: 'id' }) as Observable<FoodEntry[]>;
+    });
   }
 
   deleteFoodEntry(userId: string, entryId: string): Observable<void> {
@@ -99,17 +104,19 @@ export class UserFitnessService {
   }
 
   getWorkoutEntries(userId: string, days: number = 7): Observable<WorkoutEntry[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
+    return runInInjectionContext(this.injector, () => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
-    const entriesRef = query(
-      collection(this.firestore, this.USERS_COLLECTION, userId, 'workoutEntries'),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-    return collectionData(entriesRef, { idField: 'id' }) as Observable<WorkoutEntry[]>;
+      const entriesRef = query(
+        collection(this.firestore, this.USERS_COLLECTION, userId, 'workoutEntries'),
+        where('timestamp', '>=', cutoffTimestamp),
+        orderBy('timestamp', 'desc'),
+        limit(50)
+      );
+      return collectionData(entriesRef, { idField: 'id' }) as Observable<WorkoutEntry[]>;
+    });
   }
 
   deleteWorkoutEntry(userId: string, entryId: string): Observable<void> {
@@ -184,7 +191,7 @@ export class UserFitnessService {
   // ===== AGREGOVANÉ DÁTA PRE AI =====
 
   /**
-   * Získa posledné záznamy pre AI kontext
+   * Získa posledné záznamy pre AI kontext pomocou forkJoin
    */
   getRecentEntries(userId: string, days: number = 7): Observable<{
     food: FoodEntry[];
@@ -194,66 +201,25 @@ export class UserFitnessService {
     sleep: SleepEntry[];
     weight: WeightEntry[];
   }> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
+    return runInInjectionContext(this.injector, () => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
-    const createQuery = (subcollection: string, maxItems: number = 50) => query(
-      collection(this.firestore, this.USERS_COLLECTION, userId, subcollection),
-      where('timestamp', '>=', cutoffTimestamp),
-      orderBy('timestamp', 'desc'),
-      limit(maxItems)
-    );
+      const createQuery = (subcollection: string, maxItems: number = 50) => query(
+        collection(this.firestore, this.USERS_COLLECTION, userId, subcollection),
+        where('timestamp', '>=', cutoffTimestamp),
+        orderBy('timestamp', 'desc'),
+        limit(maxItems)
+      );
 
-    return new Observable(observer => {
-      const result = {
-        food: [] as FoodEntry[],
-        workout: [] as WorkoutEntry[],
-        stress: [] as StressEntry[],
-        mood: [] as MoodEntry[],
-        sleep: [] as SleepEntry[],
-        weight: [] as WeightEntry[]
-      };
-
-      let completed = 0;
-      const total = 6;
-
-      const checkComplete = () => {
-        completed++;
-        if (completed === total) {
-          observer.next(result);
-          observer.complete();
-        }
-      };
-
-      collectionData(createQuery('foodEntries'), { idField: 'id' }).subscribe({
-        next: (data) => { result.food = data as FoodEntry[]; checkComplete(); },
-        error: () => checkComplete()
-      });
-
-      collectionData(createQuery('workoutEntries'), { idField: 'id' }).subscribe({
-        next: (data) => { result.workout = data as WorkoutEntry[]; checkComplete(); },
-        error: () => checkComplete()
-      });
-
-      collectionData(createQuery('stressEntries'), { idField: 'id' }).subscribe({
-        next: (data) => { result.stress = data as StressEntry[]; checkComplete(); },
-        error: () => checkComplete()
-      });
-
-      collectionData(createQuery('moodEntries'), { idField: 'id' }).subscribe({
-        next: (data) => { result.mood = data as MoodEntry[]; checkComplete(); },
-        error: () => checkComplete()
-      });
-
-      collectionData(createQuery('sleepEntries'), { idField: 'id' }).subscribe({
-        next: (data) => { result.sleep = data as SleepEntry[]; checkComplete(); },
-        error: () => checkComplete()
-      });
-
-      collectionData(createQuery('weightEntries', 10), { idField: 'id' }).subscribe({
-        next: (data) => { result.weight = data as WeightEntry[]; checkComplete(); },
-        error: () => checkComplete()
+      return forkJoin({
+        food: (collectionData(createQuery('foodEntries'), { idField: 'id' }) as Observable<FoodEntry[]>).pipe(take(1)),
+        workout: (collectionData(createQuery('workoutEntries'), { idField: 'id' }) as Observable<WorkoutEntry[]>).pipe(take(1)),
+        stress: (collectionData(createQuery('stressEntries'), { idField: 'id' }) as Observable<StressEntry[]>).pipe(take(1)),
+        mood: (collectionData(createQuery('moodEntries'), { idField: 'id' }) as Observable<MoodEntry[]>).pipe(take(1)),
+        sleep: (collectionData(createQuery('sleepEntries'), { idField: 'id' }) as Observable<SleepEntry[]>).pipe(take(1)),
+        weight: (collectionData(createQuery('weightEntries', 10), { idField: 'id' }) as Observable<WeightEntry[]>).pipe(take(1))
       });
     });
   }

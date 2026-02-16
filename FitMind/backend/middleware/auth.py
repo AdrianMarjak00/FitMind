@@ -34,6 +34,7 @@ async def verify_firebase_token(request: Request):
     """
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
+        print(f"[AUTH] Missing or invalid header for {request.url.path}")
         raise HTTPException(
             status_code=401, 
             detail="Missing or invalid authorization header"

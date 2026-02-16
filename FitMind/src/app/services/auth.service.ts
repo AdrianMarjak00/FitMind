@@ -1,4 +1,7 @@
-import { Injectable, inject, NgZone } from '@angular/core';
+import { Injectable, inject, NgZone, Injector, runInInjectionContext } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
+
 import {
   Auth,
   createUserWithEmailAndPassword,
@@ -20,6 +23,8 @@ export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
   private ngZone = inject(NgZone);
+  private http = inject(HttpClient);
+  private injector = inject(Injector);
   private currentUser$ = authState(this.auth);
 
   // Providers vytvorené pri inicializácii (v injection context)
@@ -59,20 +64,22 @@ export class AuthService {
           return of(false);
         }
 
-        // Kontrola v Firestore kolekcii 'admins'
-        const adminRef = doc(this.firestore, 'admins', user.uid);
-        return from(getDoc(adminRef)).pipe(
-          map(adminDoc => {
-            if (adminDoc.exists()) {
-              const adminData = adminDoc.data();
-              return adminData['isAdmin'] === true;
-            }
-            return false;
-          }),
-          catchError(() => {
-            return of(false);
-          })
-        );
+        return runInInjectionContext(this.injector, () => {
+          // Kontrola v Firestore kolekcii 'admins'
+          const adminRef = doc(this.firestore, 'admins', user.uid);
+          return from(getDoc(adminRef)).pipe(
+            map(adminDoc => {
+              if (adminDoc.exists()) {
+                const adminData = adminDoc.data();
+                return adminData['isAdmin'] === true;
+              }
+              return false;
+            }),
+            catchError(() => {
+              return of(false);
+            })
+          );
+        });
       })
     );
   }
@@ -107,18 +114,27 @@ export class AuthService {
 
   // Kontrola existencie emailu v Firestore (pre duplicity)
   checkEmailExists(email: string): Observable<boolean> {
-    const usersRef = collection(this.firestore, 'users');
-    const q = query(usersRef, where('email', '==', email.toLowerCase()));
-    return from(getDocs(q)).pipe(
-      map(snapshot => !snapshot.empty)
-    );
+    return runInInjectionContext(this.injector, () => {
+      const usersRef = collection(this.firestore, 'users');
+      const q = query(usersRef, where('email', '==', email.toLowerCase()));
+      return from(getDocs(q)).pipe(
+        map(snapshot => !snapshot.empty)
+      );
+    });
+  }
+
+  // Odoslanie uvítacieho emailu
+  sendWelcomeEmail(email: string, firstName: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/email/welcome`, { email, first_name: firstName });
   }
 
   // Kontrola či používateľ má profil v Firestore
   checkUserHasProfile(uid: string): Observable<boolean> {
-    const userRef = doc(this.firestore, 'users', uid);
-    return from(getDoc(userRef)).pipe(
-      map(docSnap => docSnap.exists())
-    );
+    return runInInjectionContext(this.injector, () => {
+      const userRef = doc(this.firestore, 'users', uid);
+      return from(getDoc(userRef)).pipe(
+        map(docSnap => docSnap.exists())
+      );
+    });
   }
 }
