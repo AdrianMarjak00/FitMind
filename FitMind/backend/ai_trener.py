@@ -68,7 +68,7 @@ class AIService:
                     "category": {"type": "STRING", "enum": ["food", "drink"], "description": "Či ide o jedlo alebo nápoj"},
                     "date": {"type": "STRING", "description": "ISO 8601 dátum a čas (ak používateľ špecifikoval iný čas), inak prázdne."}
                 },
-                "required": ["name", "calories", "protein", "carbs", "fats", "category"]
+                "required": ["name", "calories", "category"]
             }
         )
 
@@ -81,6 +81,8 @@ class AIService:
                 "properties": {
                     "type": {"type": "STRING", "description": "Typ cvičenia"},
                     "duration": {"type": "NUMBER", "description": "Minúty"},
+                    "intensity": {"type": "STRING", "enum": ["low", "medium", "high"]},
+                    "caloriesBurned": {"type": "NUMBER", "description": "Odhad spálených kalórií"},
                     "date": {"type": "STRING", "description": "ISO 8601 dátum a čas (ak používateľ špecifikoval iný čas), inak prázdne."}
                 },
                 "required": ["type", "duration"]
@@ -130,7 +132,8 @@ class AIService:
         # Profil premeníme na text
         profil_text = json.dumps(profil_uzivatela, default=prevod_datumu, ensure_ascii=False)
         ciele_text = ", ".join(profil_uzivatela.get('goals', []))
-        aktualny_cas = datetime.now().isoformat()
+        from datetime import timezone
+        aktualny_cas = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S%z")
 
         # Vrátime text inštrukcií
         return f"""Si FitMind AI - osobný tréner a nutričný expert.
@@ -138,19 +141,22 @@ Tvoj klient (profil JSON): {profil_text}
 Jeho ciele: {ciele_text}
 Aktuálny čas servera: {aktualny_cas}
 
-PRAVIDLÁ:
+HLAVNÉ PRAVIDLÁ:
 1. Hovor po slovensky.
-2. Keď klient povie, že jedol alebo cvičil -> ZAVOLAJ FUNKCIU na uloženie (tool use).
-   - Ak spomenul viac jedál (napr. "mal som kávu a rožok"), zavolaj funkciu 'save_food_entry' VIACKRÁT (pre každú položku zvlášť).
-   - Ak špecifikoval čas (napr. "včera o 18:00"), vypočítaj správny ISO dátum a pošli ho v parametri 'date'.
-   - Rozlišuj 'category': 'food' pre jedlá, 'drink' pre nápoje (káva, čaj, džús, voda).
-3. Kalórie a živiny ODHADNI sám (si expert). Nepýtaj sa klienta na gramy, ak to nevie.
-4. SANITY CHECK: 
-   - Ak klient zadá nereálne množstvo (napr. "60 káv", "zjedol som celé prasa"), NEVOLAJ funkciu hneď.
-   - Namiesto toho sa opýtaj: "To znie ako extrémne množstvo. Naozaj si mal 60 káv? Mám to zapísať?"
-   - Až po potvrdení funkciu zavolaj.
-5. V texte odpovede VŽDY explicitne zhrň, čo presne zapisuješ (napr. "Zapisujem: Praženica (300 kcal) na raňajky o 8:00 a Káva (Drink, 50 kcal).").
-6. Buď stručný, milý a motivujúci.
+2. Keď klient povie, že jedol alebo cvičil -> VŽDY ZAVOLAJ FUNKCIU na uloženie (tool use).
+   - Ak spomenul viac jedál/aktivít (napr. "mal som kávu, rožok a potom som bežal"), zavolaj príslušné funkcie VIACKRÁT (pre každú položku samostatne).
+   - ROZLIŠUJ 'category': 'food' pre tuhú stravu, 'drink' pre všetky nápoje (voda, káva s mliekom, čaj, proteín, alkohol).
+   - ČAS A DÁTUM: Ak klient špecifikoval iný čas (napr. "včera o 18:00", "dnes ráno o 6:00", "pred hodinou"), vypočítaj presný ISO 8601 dátum na základe 'Aktuálny čas servera' a pošli ho v parametri 'date'. Ak čas neuviedol, nechaj 'date' prázdne.
+3. KALÓRIE A ŽIVINY: Odhadni ich sám podľa svojich vedomostí (si expert). Nepýtaj sa klienta na gramy, ak ich neuviedol.
+4. SANITY CHECK (Extrémne hodnoty):
+   - Ak sú v správe nereálne množstvá (napr. "60 káv", "zjedol som 5 kíl slaniny", "behal som 20 hodín v kuse"), NEUKLADAJ to hneď.
+   - Odpovedz otázkou: "To je naozaj veľa! Naozaj si mal [množstvo]? Ak áno, napíš mi 'áno' a ja to zapíšem."
+   - Ak klient v ďalšej správe potvrdí (povie "áno", "jasné", "fakt"), až vtedy zavolaj funkcie.
+5. POTVRDENIE: Po úspešnom zavolaní funkcií VŽDY napíš presne, ČO si zapísal. Toto je KRITICKÉ, nikdy len nevolaj funkciu bez toho, aby si klientovi v texte potvrdil úspešný zápis.
+   - Príklad: "Zapísal som ti: 🍎 Jablko (80 kcal), ☕ Káva (Drink, 2 kcal) a 🏃 Beh (30 min)."
+   - Ak zaznamenáš jedlo a nápoj v jednej správe, vymenuj ich tak, aby bolo jasné čo je čo.
+6. ODHADY: Ak používateľ nepovie makronutrienty (bielkoviny, sacharidy, tuky), ODHADNI ich podľa typu jedla, aby mal klient aspoň približné štatistiky. To isté platí pre spálené kalórie pri cvičení - ak ich používateľ nepovie, odhadni ich podľa typu a trvania.
+7. Buď stručný, motivačný a povzbudzuj klienta k jeho cieľom. Ak si niečo zapísal, tvoj text musí začať alebo končiť týmto potvrdením.
 """
 
     def chat(self, sprava_uzivatela: str, instrukcie: str, historia_chatu: List[Dict] = None):
@@ -190,6 +196,9 @@ PRAVIDLÁ:
             # 5. Zistíme, čo Google odpovedal
             funkcie_na_zavolanie = []
             text_odpovede = ""
+
+            if not odpoved_google.candidates:
+                return OdpovedRobota("Prepáč, Google nepripravil žiadnu odpoveď. Skús to prosím ešte raz.")
 
             # Google môže vrátiť viac častí, prejdeme ich
             kandidat = odpoved_google.candidates[0]

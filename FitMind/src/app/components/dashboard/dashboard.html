@@ -137,6 +137,14 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
+              <mat-label>Kategória</mat-label>
+              <mat-select [(ngModel)]="calorieForm.category" name="category" required>
+                <mat-option value="food">🥫 Jedlo</mat-option>
+                <mat-option value="drink">🥤 Nápoj</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>Čo si jedol?</mat-label>
               <textarea matInput [(ngModel)]="calorieForm.foods" name="foods" rows="2" required
                 placeholder="napr. Perkelt s ryžou"></textarea>
@@ -360,7 +368,8 @@
       <div class="stats-header">
         <div class="stats-title-row">
           <h2>📊 Tvoje štatistiky</h2>
-          <button class="export-btn" (click)="exportToCSV()" [class.premium-only]="!isPremium" [title]="isPremium ? 'Exportovať dáta do CSV' : 'Dostupné len pre Premium'">
+          <button class="export-btn" (click)="exportToCSV()" [class.premium-only]="!isPremium"
+            [title]="isPremium ? 'Exportovať dáta do CSV' : 'Dostupné len pre Premium'">
             📥 Export
             @if (!isPremium) { <span class="premium-badge">PRO</span> }
           </button>
@@ -423,6 +432,17 @@
           <div echarts [options]="caloriesChart" class="chart"></div>
         </div>
 
+        <!-- Graf: Jedlo vs Napoje -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>🍼 Jedlo vs Nápoje (kcal)</h3>
+            <div class="header-actions">
+              <span class="badge">{{ getPeriodLabel() }}</span>
+            </div>
+          </div>
+          <div echarts [options]="calorieCategoryChart" class="chart"></div>
+        </div>
+
         <!-- Graf 2: Cvičenie -->
         <div class="chart-card">
           <div class="chart-header">
@@ -435,6 +455,20 @@
             </div>
           </div>
           <div echarts [options]="exerciseChart" class="chart"></div>
+        </div>
+
+        <!-- Graf 6: Spánok -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>😴 Kvalita spánku</h3>
+            <div class="header-actions">
+              <span class="badge">{{ getPeriodLabel() }}</span>
+              <button class="details-btn" (click)="openDetailsPanel('sleep')">
+                📋 Detaily ({{ recentSleepEntries.length }})
+              </button>
+            </div>
+          </div>
+          <div echarts [options]="sleepChart" class="chart"></div>
         </div>
 
         <!-- Graf 3: Váha -->
@@ -477,20 +511,6 @@
             </div>
           </div>
           <div echarts [options]="stressChart" class="chart"></div>
-        </div>
-
-        <!-- Graf 6: Spánok -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>😴 Kvalita spánku</h3>
-            <div class="header-actions">
-              <span class="badge">{{ getPeriodLabel() }}</span>
-              <button class="details-btn" (click)="openDetailsPanel('sleep')">
-                📋 Detaily ({{ recentSleepEntries.length }})
-              </button>
-            </div>
-          </div>
-          <div echarts [options]="sleepChart" class="chart"></div>
         </div>
       </div>
       }

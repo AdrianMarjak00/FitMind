@@ -63,7 +63,7 @@ export class RegisterComponent {
     private auth: AuthService,
     private userFitnessService: UserFitnessService,
     private router: Router
-  ) {}
+  ) { }
 
   nextStep(): void {
     this.errorMsg = '';
@@ -178,11 +178,14 @@ export class RegisterComponent {
             sendEmailVerification(user, actionCodeSettings)
               .then(() => {
                 console.log('[REGISTER] Verification email sent successfully!');
+                // Odošli aj uvítací email cez náš backend
+                this.auth.sendWelcomeEmail(this.email, this.profile.firstName || '').subscribe({
+                  next: () => console.log('[REGISTER] Welcome email sent via backend'),
+                  error: (err) => console.error('[REGISTER] Failed to send welcome email:', err)
+                });
               })
               .catch((err) => {
                 console.error('[REGISTER] Verification email FAILED:', err);
-                console.error('[REGISTER] Error code:', err.code);
-                console.error('[REGISTER] Error message:', err.message);
               });
 
             this.isLoading = false;

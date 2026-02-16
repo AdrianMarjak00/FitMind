@@ -1,9 +1,9 @@
 <div class="page-wrapper" [class.gallery-active]="currentIndex !== null">
-  
+
   <div *ngIf="!areCookiesAccepted" class="cookie-overlay">
     <div class="cookie-card">
       <div class="cookie-container">
-        
+
         <div class="cookie-content">
           <div class="cookie-icon-wrapper">
             <mat-icon>security</mat-icon>
@@ -35,7 +35,7 @@
           <button class="btn-manage" (click)="toggleCookieDetails()">
             {{ showCookieDetails ? 'SKRYŤ NASTAVENIA' : 'SPRAVOVAŤ' }}
           </button>
-          
+
           <div class="main-btns">
             <button class="btn-reject" (click)="rejectCookies()">ODMIETNUŤ</button>
             <button mat-flat-button class="btn-custom-green btn-accept" (click)="acceptCookies()">
@@ -60,12 +60,12 @@
           Nehľadaj výhovorky, hľadaj výsledky. FitMind ti prináša inteligentné tréningové
           systémy a výživu novej generácie.
         </p>
-        <div class="hero-actions">
+        <div class="hero-actions" *ngIf="!isLoggedIn">
           <button mat-flat-button routerLink="/register" class="btn-main btn-custom-green">
             VYTVORIŤ ÚČET ZDARMA
           </button>
         </div>
-        
+
         <div class="hero-stats-container">
           <div class="stat-item">
             <span class="stat-value">10K+</span>
@@ -83,7 +83,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="hero-image-box fade-in-right">
         <img src="/assets/logoTrans.png" alt="Fitness Progres" class="hero-img">
       </div>
@@ -131,9 +131,7 @@
         <h2 class="title-lg">Fotky od <span>Vás</span></h2>
       </div>
       <div class="image-grid">
-        <div *ngFor="let img of images; let i = index" 
-             class="grid-item" 
-             (click)="openGallery(i)">
+        <div *ngFor="let img of images; let i = index" class="grid-item" (click)="openGallery(i)">
           <img [src]="img.url" [alt]="img.alt">
         </div>
       </div>

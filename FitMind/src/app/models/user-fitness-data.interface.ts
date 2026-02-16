@@ -8,6 +8,7 @@ export interface FoodEntry {
   fats?: number;
   timestamp: Date | any; // Firestore timestamp
   mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  category?: 'food' | 'drink';
 }
 
 // Záznamy o tréningoch (workoutEntries)

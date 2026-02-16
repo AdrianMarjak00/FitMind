@@ -23,24 +23,39 @@ class StatsService:
             user_id: ID používateľa
             days: Počet dní späť (default 7)
         """
-        # Získaj všetky záznamy o jedle
         entries = self.firebase.get_entries(user_id, 'food', days)
+        print(f"[DEBUG] Found {len(entries)} food entries for {user_id} in last {days} days")
+        
         if not entries:
-            return {"total": 0, "average": 0, "by_meal": {}, "count": 0}
+            return {"total": 0, "average": 0, "by_meal": {}, "by_category": {"food": 0, "drink": 0}, "count": 0}
         
-        # Vypočítaj celkové kalórie
-        total = sum(e.get('calories', 0) for e in entries)
-        
-        # Zoskup kalórie podľa typu jedla (raňajky, obed, večera, snack)
+        # Vypočítaj celkové kalórie (všetko pretypujeme na float pre istotu)
+        total = 0
         by_meal = {}
+        by_category = {"food": 0, "drink": 0}
+        
         for entry in entries:
+            try:
+                calories = float(entry.get('calories', 0))
+            except:
+                calories = 0
+                
+            total += calories
+            
+            # Zoskup kalórie podľa typu jedla
             meal = entry.get('mealType', 'other')
-            by_meal[meal] = by_meal.get(meal, 0) + entry.get('calories', 0)
+            by_meal[meal] = by_meal.get(meal, 0) + calories
+            
+            # Kategória (food/drink)
+            cat = entry.get('category', 'food')
+            if cat not in by_category: by_category[cat] = 0
+            by_category[cat] = by_category.get(cat, 0) + calories
         
         return {
             "total": total,
             "average": total / days if days > 0 else 0,
             "by_meal": by_meal,
+            "by_category": by_category,
             "count": len(entries)
         }
     
@@ -53,18 +68,28 @@ class StatsService:
             days: Počet dní späť (default 7)
         """
         entries = self.firebase.get_entries(user_id, 'exercise', days)
+        print(f"[DEBUG] Found {len(entries)} exercise entries for {user_id} in last {days} days")
         if not entries:
             return {"total_minutes": 0, "total_calories": 0, "by_type": {}, "count": 0}
         
         # Vypočítaj celkový čas a spálené kalórie
-        total_minutes = sum(e.get('duration', 0) for e in entries)
-        total_calories = sum(e.get('caloriesBurned', 0) for e in entries)
-        
-        # Zoskup cvičenie podľa typu (beh, posilňovanie, atď.)
+        total_minutes = 0
+        total_calories = 0
         by_type = {}
+        
         for entry in entries:
+            try:
+                duration = float(entry.get('duration', 0))
+                kcal = float(entry.get('caloriesBurned', 0))
+            except:
+                duration = 0
+                kcal = 0
+                
+            total_minutes += duration
+            total_calories += kcal
+            
             ex_type = entry.get('type', 'other')
-            by_type[ex_type] = by_type.get(ex_type, 0) + entry.get('duration', 0)
+            by_type[ex_type] = by_type.get(ex_type, 0) + duration
         
         return {
             "total_minutes": total_minutes,
@@ -123,11 +148,15 @@ class StatsService:
             return {"average_hours": 0, "total_hours": 0, "by_quality": {}, "count": 0}
         
         # Vypočítaj celkový počet hodín
-        total_hours = sum(e.get('hours', 0) for e in entries)
-        
-        # Zoskup spánok podľa kvality
+        total_hours = 0
         by_quality = {}
         for entry in entries:
+            try:
+                h = float(entry.get('hours', 0))
+            except:
+                h = 0
+            total_hours += h
+            
             quality = entry.get('quality', 'unknown')
             by_quality[quality] = by_quality.get(quality, 0) + 1
         
@@ -147,13 +176,18 @@ class StatsService:
             days: Počet dní späť (default 90)
         """
         entries = self.firebase.get_entries(user_id, 'weight', days)
-        return [
-            {
+        results = []
+        for e in sorted(entries, key=lambda x: x.get('timestamp', 0)):
+            try:
+                val = float(e.get('weight', 0))
+            except:
+                val = 0
+                
+            results.append({
                 "date": e.get('timestamp'),
-                "weight": e.get('weight', 0)
-            }
-            for e in sorted(entries, key=lambda x: x.get('timestamp', 0))
-        ]
+                "weight": val
+            })
+        return results
     
     def get_chart_data(self, user_id: str, chart_type: str, days: int = 30) -> Dict:
         """

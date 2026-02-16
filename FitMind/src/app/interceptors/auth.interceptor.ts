@@ -31,8 +31,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                             const authReq = req.clone({
                                 setHeaders: { Authorization: `Bearer ${token}` }
                             });
-                            // Dôležité: Tu nepoužívame catchError vo vnútri switchMap pre ID token,
-                            // aby sme nezachytili chyby zo samotného requestu (napr. 401 z backendu).
                             return next(authReq);
                         }),
                         catchError(err => {

@@ -3,6 +3,7 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -16,6 +17,7 @@ export class HomeComponent implements OnInit, AfterViewInit {
   areCookiesAccepted: boolean = false;
   showCookieDetails: boolean = false;
   currentIndex: number | null = null;
+  isLoggedIn: boolean = false;
 
   images = [
     { url: '/assets/cvicenie.jpg', alt: 'Tréning v plnom prúde' },
@@ -26,10 +28,15 @@ export class HomeComponent implements OnInit, AfterViewInit {
 
   constructor(
     private el: ElementRef,
+    private authService: AuthService,
     @Inject(PLATFORM_ID) private platformId: Object
-  ) {}
+  ) { }
 
   ngOnInit() {
+    this.authService.getCurrentUser().subscribe(user => {
+      this.isLoggedIn = !!user;
+    });
+
     if (isPlatformBrowser(this.platformId)) {
 
       document.body.style.overflow = 'auto';

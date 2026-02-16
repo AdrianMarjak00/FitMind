@@ -295,8 +295,8 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
     # Limity podľa plánu (ak je subscription aktívna)
     plan_limits = {
         "free": 20,
-        "basic": 100,  # 100 správ denne pre basic
-        "pro": 500     # 500 správ denne pre pro (prakticky neobmedzené)
+        "basic": 100,    # 100 správ denne pre basic
+        "pro": 9999      # Prakticky neobmedzené (vypne rate-limit)
     }
 
     # Ak subscription nie je aktívna, použij free limit
@@ -348,19 +348,31 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
             for fc in response.function_calls:
                 fc_name = fc.name
                 try:
-                    fc_args = json.loads(fc.arguments)
+                    fc_args = json.loads(fc.arguments) if isinstance(fc.arguments, str) else fc.arguments
+                    print(f"[AI ACTION] Calling {fc_name} with: {fc_args}")
                     
                     if fc_name in mapping:
+                        # Poistka pre číselné hodnoty (niektoré modely pošlú string)
+                        for key in ['calories', 'protein', 'carbs', 'fats', 'duration', 'score', 'weight']:
+                            if key in fc_args and isinstance(fc_args[key], str):
+                                try: fc_args[key] = float(fc_args[key])
+                                except: pass
+
                         if firebase.save_entry(user_id, mapping[fc_name], fc_args):
-                            # Vytvor krajší popis pre používateľa
-                            item_name = fc_args.get('name', mapping[fc_name])
-                            saved_entries.append(f"Zaznamenané: {item_name}")
+                            item_name = fc_args.get('name') or fc_args.get('type') or mapping[fc_name]
+                            saved_entries.append(f"{item_name}")
                 except Exception as e:
-                    print(f"[ERROR] Failed to execute function {fc_name}: {e}")
+                    print(f"[CRITICAL ERROR] Failed to execute function {fc_name}: {e}")
+                    traceback.print_exc()
+            
+            if not saved_entries:
+                print(f"[AI WARNING] Action mapping failed or no entry saved. Function calls: {[f.name for f in response.function_calls]}")
 
             # Ak AI nevygenerovalo odpoveď, ale vykonalo akcie, dajme default
             if not ai_odpoved and saved_entries:
-                ai_odpoved = f"Hotovo! Uložil som {len(saved_entries)} záznamov."
+                ai_odpoved = "Ok! Zapísal som ti to do denníka. Ak chceš vedieť detaily alebo zmeniť množstvá, daj mi vedieť."
+            elif not ai_odpoved:
+                ai_odpoved = "Rozumiem. Máš ešte nejakú požiadavku, alebo chceš v niečom poradiť?"
 
         # 5. Uloženie a aktualizácia limitov
         firebase.save_conversation_message(user_id, conv_id, 'user', message)
@@ -388,6 +400,11 @@ def get_chart_data_api(user_id: str, chart_type: str, days: int = 30, decoded_to
         raise HTTPException(status_code=400, detail="Invalid chart type")
     
     return {"chart_type": chart_type, "data": stats_service.get_chart_data(user_id, chart_type, days), "days": days}
+
+@app.get("/api/entries/{user_id}/{entry_type}", tags=["Statistics"])
+def get_entries_api(user_id: str, entry_type: str, days: int = 30, limit: int = 100, decoded_token: dict = Depends(verify_firebase_token)):
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    return firebase.get_entries(user_id, entry_type, days, limit)
 
 @app.get("/api/stats/{user_id}", tags=["Statistics"])
 def get_stats_api(user_id: str, days: int = 30, decoded_token: dict = Depends(verify_firebase_token)):

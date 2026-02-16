@@ -80,11 +80,53 @@ class EmailService:
         return self._send_email(to_email, subject, html)
 
     def send_payment_success_email(self, to_email: str, first_name: str, plan_type: str, amount: float) -> bool:
-        """Logovanie úspešnej platby (Stripe posiela potvrdenie automaticky)"""
-        print(f"[EMAIL] Payment success -> {to_email} (plan: {plan_type}, amount: {amount}€)")
-        return True
+        """Odošle email po úspešnej platbe."""
+        subject = f"Platba prijatá - Vitaj v {plan_type.upper()} pláne! 💎"
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #1a1a1a; border-radius: 10px; background-color: #0b0b0b; color: #fff;">
+            <h2 style="color: #3ddc84; text-align: center;">Platba úspešná!</h2>
+            <p>Ahoj {first_name},</p>
+            <p>Tvoja platba vo výške <strong>{amount:.2f}€</strong> bola úspešne spracovaná. Tvoj účet bol aktualizovaný na plán <strong>{plan_type.upper()}</strong>.</p>
+            <div style="background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Detaily predplatného:</strong></p>
+                <p style="margin: 5px 0;">Plán: {plan_type.capitalize()}</p>
+                <p style="margin: 5px 0;">Stav: Aktívny</p>
+            </div>
+            <p>Teraz máš odomknuté všetky prémiové funkcie vrátane neobmedzeného AI trénera a exportu dát.</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://fit-mind.sk/dashboard" style="background-color: #3ddc84; color: #000; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">VSTÚPIŤ DO DASHBOARDU</a>
+            </div>
+            <p style="font-size: 0.8rem; color: #888;">Tento email potvrdzuje aktiváciu tvojho predplatného vo FitMind AI.</p>
+        </div>
+        """
+        return self._send_email(to_email, subject, html)
+
+    def send_subscription_renewed_email(self, to_email: str, first_name: str, plan_type: str, amount: float, next_date: str) -> bool:
+        """Odošle email o úspešnom obnovení predplatného."""
+        subject = f"Tvoje predplatné FitMind bolo obnovené 🔄"
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #3ddc84;">Ahoj {first_name},</h2>
+            <p>Tvoje predplatné v pláne <strong>{plan_type.upper()}</strong> bolo úspešne obnovené na ďalšie obdobie.</p>
+            <p>Suma <strong>{amount:.2f}€</strong> bola zaplatená. Nasledujúce obnovenie prebehne: <strong>{next_date}</strong>.</p>
+            <p>Ďakujeme, že s nami pokračuješ v budovaní svojej lepšej verzie!</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 0.8rem; color: #888;">Tím FitMind AI</p>
+        </div>
+        """
+        return self._send_email(to_email, subject, html)
 
     def send_subscription_canceled_email(self, to_email: str, first_name: str, plan_type: str, end_date: str) -> bool:
-        """Logovanie zrušenia (Stripe posiela info automaticky)"""
-        print(f"[EMAIL] Subscription canceled -> {to_email} (plan: {plan_type}, ends: {end_date})")
-        return True
+        """Odošle email pri zrušení predplatného."""
+        subject = "Tvoje predplatné FitMind bolo zrušené ☹️"
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #666;">Ahoj {first_name},</h2>
+            <p>Tvoje predplatné <strong>{plan_type.upper()}</strong> bolo zrušené a nebude ďalej obnovované.</p>
+            <p>Tvoje prémiové funkcie zostanú aktívne do konca tvojho predplateného obdobia, čo je: <strong>{end_date}</strong>.</p>
+            <p>Mrzí nás, že odchádzaš. Ak by si si to rozmyslel, kedykoľvek sa môžeš vrátiť.</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 0.8rem; color: #888;">Tím FitMind AI</p>
+        </div>
+        """
+        return self._send_email(to_email, subject, html)

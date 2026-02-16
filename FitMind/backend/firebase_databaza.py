@@ -156,20 +156,25 @@ class FirebaseService:
             # Zoraď podľa timestampu zostupne a obmedz počet (berieme viac aby sme mohli filtrovať)
             query = coll_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit * 2)
             docs = list(query.stream())
+            print(f"[FIREBASE] {entry_type}: Found {len(docs)} raw docs in {coll_name}")
             
             # Použijeme offset-aware UTC čas pre porovnanie s Firestore
             from datetime import timezone
             now = datetime.now(timezone.utc)
-            cutoff_date = now - timedelta(days=days)
+            
+            # Ak je days=1, chceme aspoň od začiatku dneška.
+            # Ak je days=2, chceme od začiatku včerajška atď.
+            cutoff_date = (now - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            print(f"[FIREBASE] Filter {entry_type}: days={days}, cutoff={cutoff_date} (now: {now})")
             
             results = []
-            for doc in docs:
+            for i, doc in enumerate(docs):
                 data = doc.to_dict()
                 data['id'] = doc.id
                 
                 if 'timestamp' in data:
                     ts = data['timestamp']
-                    # Firestore Timestamp -> Python Datetime
                     try:
                         if hasattr(ts, 'to_datetime'):
                             doc_date = ts.to_datetime()
@@ -178,19 +183,18 @@ class FirebaseService:
                         elif isinstance(ts, datetime):
                             doc_date = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
                         else:
-                            # Ak je to niečo iné, skúsime to pridať bez filtra
                             results.append(data)
                             continue
-                            
-                        # Pridaj len záznamy z posledných 'days' dní
+
                         if doc_date >= cutoff_date:
                             results.append(data)
                     except Exception as e:
-                        print(f"[DEBUG] Timestamp parse error: {e}")
+                        print(f"[DEBUG] Timestamp parse error for {entry_type} {doc.id}: {e}")
                         results.append(data) # Lepšie vrátiť niečo ako nič
                 else:
                     results.append(data)
-                    
+            
+            print(f"[FIREBASE] Returning {len(results)} filtered results out of {len(docs)}")
             return results[:limit]
         except Exception as e:
             print(f"[WARNING] Chyba pri nacitani {entry_type}: {e}")
@@ -199,15 +203,9 @@ class FirebaseService:
             return []
     
     def save_entry(self, user_id: str, entry_type: str, data: Dict) -> bool:
-        """
-        Uloží záznam do databázy
-        
-        Args:
-            user_id: ID používateľa
-            entry_type: Typ záznamu ('food', 'exercise', atď.)
-            data: Dáta záznamu (slovník)
-        """
+        print(f"[FIREBASE] Saving {entry_type} for user {user_id}")
         if not self.is_connected():
+            print("[FIREBASE] NOT CONNECTED!")
             return False
         
         coll_name = self.COLLECTION_MAP.get(entry_type)
@@ -241,10 +239,13 @@ class FirebaseService:
                 data['timestamp'] = firestore.SERVER_TIMESTAMP
             
             # Pridaj záznam do kolekcie
-            user_ref.collection(coll_name).add(data)
+            _, doc_ref = user_ref.collection(coll_name).add(data)
+            print(f"[FIREBASE SUCCESS] {entry_type} saved as {doc_ref.id}")
             return True
         except Exception as e:
-            print(f"[ERROR] Chyba pri ukladani {entry_type}: {e}")
+            print(f"[FIREBASE ERROR] Chyba pri ukladani {entry_type}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def update_profile(self, user_id: str, updates: Dict) -> bool:

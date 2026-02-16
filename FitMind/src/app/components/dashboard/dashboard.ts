@@ -52,6 +52,7 @@ export class DashboardComponent implements OnInit {
 
   // Grafy
   caloriesChart: any = {};
+  calorieCategoryChart: any = {};
   exerciseChart: any = {};
   moodChart: any = {};
   stressChart: any = {};
@@ -118,6 +119,7 @@ export class DashboardComponent implements OnInit {
     protein: 0,
     carbs: 0,
     fats: 0,
+    category: 'food' as 'food' | 'drink',
     autoCalculate: true  // Auto-kalkulácia kalórií z makronutrientov
   };
   exerciseForm = { type: 'cardio', duration: 0, intensity: 'medium', caloriesBurned: 0 };
@@ -153,13 +155,9 @@ export class DashboardComponent implements OnInit {
 
       if (this.userId) {
         this.loadUserProfile();
-        this.loadTodayStats();
-        this.loadWeeklyStats();
-        this.loadCharts();
-        this.loadRecentEntries();
-        this.loadSubscriptionStatus();
+        this.refreshAllData();
         // Načítaj AI návrhy po načítaní dát
-        setTimeout(() => this.loadAISuggestions(), 1000);
+        setTimeout(() => this.loadAISuggestions(), 2000);
       } else {
         this.loading = false;
       }
@@ -363,16 +361,22 @@ export class DashboardComponent implements OnInit {
     return '--';
   }
 
-  // Získaj počet dní pre aktuálny filter
+  // Získaj počet dní pre aktuálny filter (od dnes dozadu)
   getFilterDays(): number {
-    const option = this.periodOptions.find(o => o.id === this.selectedPeriod);
-    if (option) return option.days;
-
-    // Pre custom rozsah vypočítaj dni
-    if (this.customDateFrom && this.customDateTo) {
-      const diff = this.customDateTo.getTime() - this.customDateFrom.getTime();
-      return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
+    if (this.selectedPeriod !== 'custom') {
+      const option = this.periodOptions.find(o => o.id === this.selectedPeriod);
+      return option ? option.days : 7;
     }
+
+    // Pre vlastný rozsah počítame dni od DNES po ZAČIATOK rozsahu
+    if (this.customDateFrom) {
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      const diffTime = today.getTime() - this.customDateFrom.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(1, diffDays);
+    }
+
     return 7; // Default
   }
 
@@ -405,72 +409,6 @@ export class DashboardComponent implements OnInit {
     return `${days} dní`;
   }
 
-  loadCharts(): void {
-    this.loading = true;
-    const days = this.getFilterDays();
-
-    // Kalórie Pie Chart
-    this.chartsService.getChartData(this.userId, 'calories', days).subscribe({
-      next: data => {
-        this.caloriesChart = this.createPieChart(data.data.by_meal || {}, 'Kalórie podľa jedla');
-      },
-      error: () => {
-        this.caloriesChart = this.createPieChart({}, 'Kalórie podľa jedla');
-      }
-    });
-
-    // Cvičenie Pie Chart
-    this.chartsService.getChartData(this.userId, 'exercise', days).subscribe({
-      next: data => {
-        this.exerciseChart = this.createPieChart(data.data.by_type || {}, 'Cvičenie podľa typu');
-      },
-      error: () => {
-        this.exerciseChart = this.createPieChart({}, 'Cvičenie podľa typu');
-      }
-    });
-
-    // Nálada Line Chart - vždy dlhšie obdobie
-    this.chartsService.getChartData(this.userId, 'mood', Math.max(days, 30)).subscribe({
-      next: data => {
-        this.moodChart = this.createLineChart(data.data.trend || [], 'Nálada', 'score');
-      },
-      error: () => {
-        this.moodChart = this.createLineChart([], 'Nálada', 'score');
-      }
-    });
-
-    // Stres Line Chart
-    this.chartsService.getChartData(this.userId, 'stress', Math.max(days, 30)).subscribe({
-      next: data => {
-        this.stressChart = this.createLineChart(data.data.trend || [], 'Stres', 'level');
-      },
-      error: () => {
-        this.stressChart = this.createLineChart([], 'Stres', 'level');
-      }
-    });
-
-    // Spánok Bar Chart
-    this.chartsService.getChartData(this.userId, 'sleep', days).subscribe({
-      next: data => {
-        this.sleepChart = this.createBarChart(data.data.by_quality || {}, 'Kvalita spánku');
-      },
-      error: () => {
-        this.sleepChart = this.createBarChart({}, 'Kvalita spánku');
-      }
-    });
-
-    // Váha Line Chart - vždy dlhšie obdobie
-    this.chartsService.getChartData(this.userId, 'weight', Math.max(days, 90)).subscribe({
-      next: data => {
-        this.weightChart = this.createLineChart(data.data.trend || [], 'Váha', 'weight');
-      },
-      error: () => {
-        this.weightChart = this.createLineChart([], 'Váha', 'weight');
-      }
-    });
-
-    this.loading = false;
-  }
 
   // ===== PRIDÁVANIE ZÁZNAMOV =====
 
@@ -487,11 +425,12 @@ export class DashboardComponent implements OnInit {
       carbs: this.calorieForm.carbs || 0,
       fats: this.calorieForm.fats || 0,
       mealType: this.calorieForm.meal as any,
+      category: this.calorieForm.category,
       timestamp: new Date()
     }).subscribe({
       next: () => {
         alert('✅ Záznam o jedle pridaný!');
-        this.calorieForm = { meal: 'breakfast', foods: '', calories: 0, protein: 0, carbs: 0, fats: 0, autoCalculate: true };
+        this.calorieForm = { meal: 'breakfast', foods: '', calories: 0, protein: 0, carbs: 0, fats: 0, category: 'food', autoCalculate: true };
         this.refreshAllData();
       },
       error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
@@ -538,12 +477,108 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  // Refresh všetkých dát
+  // Refresh všetkých dát s koordinovaným loadingom
   refreshAllData(): void {
-    this.loadTodayStats();
-    this.loadWeeklyStats();
-    this.loadCharts();
-    this.loadRecentEntries();
+    if (!this.userId) return;
+    this.loading = true;
+    let completed = 0;
+    const total = 6; // todayStats, weeklyStats, charts_food, charts_exercise, entries_food, entries_exercise
+
+    const checkDone = () => {
+      completed++;
+      if (completed >= total) {
+        this.loading = false;
+      }
+    };
+
+    // 1. Dnešné štatistiky
+    this.chartsService.getChartData(this.userId, 'calories', 1).subscribe({
+      next: data => {
+        this.todayStats.calories.consumed = data.data.total || 0;
+        this.todayStats.calories.remaining = Math.max(0, this.todayStats.calories.target - this.todayStats.calories.consumed);
+        checkDone();
+      },
+      error: () => checkDone()
+    });
+
+    // 2. Týždenné štatistiky
+    this.chartsService.getChartData(this.userId, 'calories', 7).subscribe({
+      next: data => {
+        this.weeklyStats.calories.total = data.data.total || 0;
+        this.weeklyStats.calories.avg = data.data.average || 0;
+        checkDone();
+      },
+      error: () => checkDone()
+    });
+
+    // 3. Grafy - Jedlo
+    this.chartsService.getChartData(this.userId, 'calories', this.getFilterDays()).subscribe({
+      next: data => {
+        this.caloriesChart = this.createPieChart(data.data.by_meal || {}, 'Kalórie podľa jedla');
+        this.calorieCategoryChart = this.createPieChart(data.data.by_category || {}, 'Stravovací pomer');
+        checkDone();
+      },
+      error: () => checkDone()
+    });
+
+    // 4. Grafy - Cvičenie
+    this.chartsService.getChartData(this.userId, 'exercise', this.getFilterDays()).subscribe({
+      next: data => {
+        this.exerciseChart = this.createPieChart(data.data.by_type || {}, 'Cvičenie podľa typu');
+        checkDone();
+      },
+      error: () => checkDone()
+    });
+
+    // 5. Posledné záznamy - Jedlo
+    this.chartsService.getEntries(this.userId, 'food', this.getFilterDays()).subscribe({
+      next: (entries: any) => { this.recentFoodEntries = entries; checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 6. Posledné záznamy - Cvičenie
+    this.chartsService.getEntries(this.userId, 'exercise', this.getFilterDays()).subscribe({
+      next: (entries: any) => { this.recentWorkoutEntries = entries; checkDone(); },
+      error: () => checkDone()
+    });
+
+    // Ostatné záznamy (Váha, Nálada, Spánok, Stres) - na pozadí
+    this.loadRemainingEntries();
+
+    // Na pozadí (neblokuje loading)
+    this.loadExtraCharts();
+    this.loadAISuggestions();
+    this.loadSubscriptionStatus();
+
+    // Poistka proti zaseknutiu
+    setTimeout(() => { if (this.loading) this.loading = false; }, 5000);
+  }
+
+  // Načítaj zvyšné záznamy na pozadí
+  loadRemainingEntries(): void {
+    const days = this.getFilterDays();
+    this.chartsService.getEntries(this.userId, 'weight', days).subscribe((res: any) => this.recentWeightEntries = res);
+    this.chartsService.getEntries(this.userId, 'mood', days).subscribe((res: any) => this.recentMoodEntries = res);
+    this.chartsService.getEntries(this.userId, 'sleep', days).subscribe((res: any) => this.recentSleepEntries = res);
+    this.chartsService.getEntries(this.userId, 'stress', days).subscribe((res: any) => this.recentStressEntries = res);
+  }
+
+  // Načítaj zvyšné grafy (Váha, Nálada, Stres, Spánok) na pozadí
+  loadExtraCharts(): void {
+    const days = this.getFilterDays();
+
+    this.chartsService.getChartData(this.userId, 'mood', Math.max(days, 30)).subscribe({
+      next: data => this.moodChart = this.createLineChart(data.data.trend || [], 'Nálada', 'score')
+    });
+    this.chartsService.getChartData(this.userId, 'stress', Math.max(days, 30)).subscribe({
+      next: data => this.stressChart = this.createLineChart(data.data.trend || [], 'Stres', 'level')
+    });
+    this.chartsService.getChartData(this.userId, 'sleep', days).subscribe({
+      next: data => this.sleepChart = this.createBarChart(data.data.by_quality || {}, 'Kvalita spánku')
+    });
+    this.chartsService.getChartData(this.userId, 'weight', Math.max(days, 90)).subscribe({
+      next: data => this.weightChart = this.createLineChart(data.data.trend || [], 'Váha', 'weight')
+    });
   }
 
   // Formátuj timestamp na čitateľný dátum
@@ -796,30 +831,57 @@ export class DashboardComponent implements OnInit {
   // ===== TVORBA GRAFOV =====
 
   createPieChart(data: any, title: string): any {
+    console.log(`[CHART] Data for ${title}:`, data);
     if (!data || Object.keys(data).length === 0) {
-      return { title: { text: title, left: 'center' }, series: [{ type: 'pie', data: [] }] };
+      return {
+        title: { text: title, left: 'center', textStyle: { color: '#666' } },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [{ value: 1, name: 'Zatiaľ žiadne dáta', itemStyle: { color: '#1a1a1a' } }],
+          label: { show: true, position: 'center', formatter: '{b}', color: '#555' },
+          silent: true
+        }]
+      };
     }
 
-    const chartData = Object.entries(data).map(([name, value]) => ({
-      name,
-      value: value || 0
-    }));
+    const chartData = Object.entries(data)
+      .filter(([_, val]) => (val as number) > 0)
+      .map(([name, value]) => ({
+        name: this.translateKey(name),
+        value: value || 0
+      }));
+
+    if (chartData.length === 0) {
+      return {
+        title: { text: title, left: 'center', textStyle: { color: '#666' } },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [{ value: 1, name: 'Zatiaľ žiadne dáta', itemStyle: { color: '#1a1a1a' } }],
+          label: { show: true, position: 'center', formatter: '{b}', color: '#555' },
+          silent: true
+        }]
+      };
+    }
 
     return {
       title: { text: title, left: 'center', textStyle: { color: '#3ddc84' } },
-      tooltip: { trigger: 'item' },
-      legend: { bottom: 0, textStyle: { color: '#cfcfcf' } },
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { bottom: 0, textStyle: { color: '#cfcfcf' }, itemGap: 10 },
+      color: ['#3ddc84', '#26a69a', '#66bb6a', '#9ccc65', '#d4e157', '#ffee58'],
       series: [{
         type: 'pie',
         radius: ['40%', '70%'],
         data: chartData,
         itemStyle: {
-          borderRadius: 10,
-          borderColor: '#0b0b0b',
+          borderRadius: 8,
+          borderColor: '#121212',
           borderWidth: 2
         },
         label: {
-          color: '#cfcfcf'
+          color: '#cfcfcf',
+          formatter: '{b}: {c}'
         },
         emphasis: {
           itemStyle: {
@@ -830,6 +892,24 @@ export class DashboardComponent implements OnInit {
         }
       }]
     };
+  }
+
+  // Pomocná funkcia na preklad kľúčov v grafoch
+  translateKey(key: string): string {
+    const translations: any = {
+      'breakfast': '🍳 Raňajky',
+      'lunch': '🍱 Obed',
+      'dinner': '🍽️ Večera',
+      'snack': '🍎 Desiata',
+      'other': '❓ Iné',
+      'food': '🥫 Jedlo',
+      'drink': '🥤 Nápoj',
+      'cardio': '🏃 Kardio',
+      'strength': '🏋️ Sila',
+      'flexibility': '🧘 Flexibilita',
+      'sports': '⚽ Šport'
+    };
+    return translations[key] || key;
   }
 
   createLineChart(data: any[], title: string, valueKey: string): any {
