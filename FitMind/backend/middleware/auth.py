@@ -34,33 +34,34 @@ async def verify_firebase_token(request: Request):
     """
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
-        print(f"[AUTH] Missing or invalid header for {request.url.path}")
+        # Log len cestu, nie celú hlavičku kvôli bezpečnosti
+        print(f"[AUTH] No header or invalid format for: {request.url.path}")
         raise HTTPException(
             status_code=401, 
-            detail="Missing or invalid authorization header"
+            detail="auth/missing-or-invalid-header"
         )
 
     id_token = auth_header.split("Bearer ")[1]
+    
+    # Pre debugging (len prvých pár znakov)
+    token_preview = f"{id_token[:10]}..." if id_token else "EMPTY"
+    
     try:
         # Over ID token pomocou Firebase Admin SDK
+        # POZOR: Musí byť inicializovaný firebase-admin!
         decoded_token = auth.verify_id_token(id_token)
         request.state.user = decoded_token
         return decoded_token
     except auth.ExpiredIdTokenError:
-        print(f"[AUTH ERROR] Token expired for request to {request.url.path}")
-        raise HTTPException(status_code=401, detail="Token expired")
+        print(f"[AUTH ERROR] Token expired ({token_preview})")
+        raise HTTPException(status_code=401, detail="auth/id-token-expired")
     except auth.InvalidIdTokenError:
-        print(f"[AUTH ERROR] Token invalid (check Firebase Project ID) for request to {request.url.path}")
-        raise HTTPException(status_code=401, detail="Token invalid")
-    except auth.RevokedIdTokenError:
-        print(f"[AUTH ERROR] Token revoked for request to {request.url.path}")
-        raise HTTPException(status_code=401, detail="Token revoked")
-    except ValueError as e:
-        print(f"[AUTH ERROR] Invalid token format: {str(e)}")
-        raise HTTPException(status_code=401, detail="Invalid token format")
+        print(f"[AUTH ERROR] Token invalid ({token_preview}) - check Firebase Project ID")
+        raise HTTPException(status_code=401, detail="auth/invalid-id-token")
     except Exception as e:
-        print(f"[AUTH ERROR] Unexpected: {str(e)} for request to {request.url.path}")
-        raise HTTPException(status_code=401, detail="Authentication failed")
+        print(f"[AUTH ERROR] Verification failed: {str(e)}")
+        # Ak auth nie je inicializovaný, vyhodí to chybu tu
+        raise HTTPException(status_code=401, detail=f"auth/error: {str(e)[:50]}")
 
 async def check_admin_auth(request: Request):
     """

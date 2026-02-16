@@ -90,12 +90,12 @@ class FirebaseService:
 
                 if cred:
                     try:
-                        firebase_admin.get_app()
+                        app = firebase_admin.get_app()
                     except ValueError:
-                        firebase_admin.initialize_app(cred)
+                        app = firebase_admin.initialize_app(cred)
                     
                     cls._db = firestore.client()
-                    print("[OK] Firebase úspešne pripojené!")
+                    print(f"[OK] Firebase úspešne pripojené! Project ID: {app.project_id}")
                 else:
                     print("[CRITICAL] Firebase credentials nenájdené!")
                     cls._db = None
