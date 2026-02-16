@@ -324,7 +324,11 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         profile = firebase.get_user_profile(user_id) or {}
         entries = {
             'food': firebase.get_entries(user_id, 'food', days=3),
-            'exercise': firebase.get_entries(user_id, 'exercise', days=3)
+            'exercise': firebase.get_entries(user_id, 'exercise', days=3),
+            'weight': firebase.get_entries(user_id, 'weight', days=7),
+            'mood': firebase.get_entries(user_id, 'mood', days=3),
+            'sleep': firebase.get_entries(user_id, 'sleep', days=3),
+            'stress': firebase.get_entries(user_id, 'stress', days=3)
         }
         history = firebase.get_conversation_messages(user_id, conv_id, limit=8)
         
