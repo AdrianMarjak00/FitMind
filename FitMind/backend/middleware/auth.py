@@ -1,5 +1,6 @@
-from fastapi import Request, HTTPException
+import firebase_admin
 from firebase_admin import auth
+from fastapi import Request, HTTPException
 import os
 
 # Development secret pre testovacie endpointy
@@ -47,35 +48,30 @@ async def verify_firebase_token(request: Request):
     token_preview = f"{id_token[:10]}..." if id_token else "EMPTY"
     
     try:
-        # Over či je Firebase inicializovaný (poistka pre Render)
+        # 1. Poistka pre Render: Over či je Firebase inicializovaný
         try:
-            from firebase_admin import _apps
-            if not _apps:
-                print("[AUTH] Firebase app not found, attempting emergency initialization...")
-                from firebase_databaza import FirebaseService
-                FirebaseService()
-            
-            # Zisti projekt ID pre kontrolu
-            current_app = firebase_admin.get_app()
-            print(f"[AUTH DEBUG] Verifying token for project: {current_app.project_id}")
-        except Exception as init_err:
-            print(f"[AUTH ERROR] Firebase initialization check failed: {init_err}")
-            
-        # Over ID token pomocou Firebase Admin SDK
-        # we can use check_revoked=True for more security in production
+            firebase_admin.get_app()
+        except ValueError:
+            print("[AUTH] Firebase app not found, attempting emergency initialization...")
+            from firebase_databaza import FirebaseService
+            FirebaseService() # Toto spustí Singleton inicializáciu
+
+        # 2. Over ID token pomocou Firebase Admin SDK
         decoded_token = auth.verify_id_token(id_token)
         request.state.user = decoded_token
         return decoded_token
+        
     except auth.ExpiredIdTokenError:
         print(f"[AUTH ERROR] Token expired ({token_preview})")
         raise HTTPException(status_code=401, detail="auth/id-token-expired")
     except auth.InvalidIdTokenError:
-        # Skúsme zistiť prečo je neplatný bez overenia podpisu (len pre log)
+        # Diagnostika pre neplatný token (len pre log)
         try:
             from jose import jwt
             unverified_claims = jwt.get_unverified_claims(id_token)
             token_project = unverified_claims.get("aud")
-            print(f"[AUTH ERROR] Token invalid. Project in token: {token_project} vs Local project: {firebase_admin.get_app().project_id}")
+            current_app = firebase_admin.get_app()
+            print(f"[AUTH ERROR] Token invalid. Token project: {token_project} vs App project: {current_app.project_id}")
         except:
             pass
         print(f"[AUTH ERROR] Token invalid ({token_preview}) - check Firebase Project ID")
@@ -94,8 +90,6 @@ async def check_admin_auth(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
     
-    # Tu môžeš pridať vlastnú logiku kontroly admina (napr. cez custom claims alebo Firestore)
-    # V tomto projekte kontrolujeme admina v firebase_service
     from firebase_databaza import FirebaseService
     firebase = FirebaseService()
     if not firebase.is_admin(user["uid"]):
