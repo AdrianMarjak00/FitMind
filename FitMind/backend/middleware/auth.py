@@ -54,10 +54,15 @@ async def verify_firebase_token(request: Request):
                 print("[AUTH] Firebase app not found, attempting emergency initialization...")
                 from firebase_databaza import FirebaseService
                 FirebaseService()
-        except:
-            pass
+            
+            # Zisti projekt ID pre kontrolu
+            current_app = firebase_admin.get_app()
+            print(f"[AUTH DEBUG] Verifying token for project: {current_app.project_id}")
+        except Exception as init_err:
+            print(f"[AUTH ERROR] Firebase initialization check failed: {init_err}")
             
         # Over ID token pomocou Firebase Admin SDK
+        # we can use check_revoked=True for more security in production
         decoded_token = auth.verify_id_token(id_token)
         request.state.user = decoded_token
         return decoded_token
@@ -65,12 +70,20 @@ async def verify_firebase_token(request: Request):
         print(f"[AUTH ERROR] Token expired ({token_preview})")
         raise HTTPException(status_code=401, detail="auth/id-token-expired")
     except auth.InvalidIdTokenError:
+        # Skúsme zistiť prečo je neplatný bez overenia podpisu (len pre log)
+        try:
+            from jose import jwt
+            unverified_claims = jwt.get_unverified_claims(id_token)
+            token_project = unverified_claims.get("aud")
+            print(f"[AUTH ERROR] Token invalid. Project in token: {token_project} vs Local project: {firebase_admin.get_app().project_id}")
+        except:
+            pass
         print(f"[AUTH ERROR] Token invalid ({token_preview}) - check Firebase Project ID")
         raise HTTPException(status_code=401, detail="auth/invalid-id-token")
     except Exception as e:
         print(f"[AUTH ERROR] Verification failed: {str(e)}")
         # Ak auth nie je inicializovaný, vyhodí to chybu tu
-        raise HTTPException(status_code=401, detail=f"auth/error: {str(e)[:50]}")
+        raise HTTPException(status_code=401, detail=f"auth/error: {str(e)[:100]}")
 
 async def check_admin_auth(request: Request):
     """

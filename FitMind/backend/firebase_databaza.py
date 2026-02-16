@@ -90,17 +90,20 @@ class FirebaseService:
                             except Exception:
                                 continue
 
-                if cred:
-                    try:
-                        app = firebase_admin.get_app()
-                    except ValueError:
-                        app = firebase_admin.initialize_app(cred)
-                    
-                    cls._db = firestore.client()
-                    print(f"[OK] Firebase úspešne pripojené! Project ID: {app.project_id}")
-                else:
-                    print("[CRITICAL] Firebase credentials nenájdené!")
-                    cls._db = None
+            # 3. Inicializácia (na rovnakej úrovni ako hľadanie kľúčov)
+            if cred:
+                try:
+                    # Skús či už nie je inicializovaný
+                    app = firebase_admin.get_app()
+                except ValueError:
+                    # Ak nie, inicializuj
+                    app = firebase_admin.initialize_app(cred)
+                
+                cls._db = firestore.client()
+                print(f"[OK] Firebase úspešne pripojené! Project ID: {app.project_id}")
+            else:
+                print("[CRITICAL] Firebase credentials nenájdené!")
+                cls._db = None
 
         except Exception as e:
             print(f"[CRITICAL] Firebase initialization failed: {str(e)}")
