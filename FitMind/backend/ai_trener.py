@@ -115,20 +115,119 @@ class AIService:
                 return objekt.isoformat()
             return str(objekt)
 
-        profil_text = json.dumps(profil_uzivatela, default=prevod_datumu, ensure_ascii=False)
-        ciele_text = ", ".join(profil_uzivatela.get('goals', []))
         from datetime import timezone
         now = datetime.now(timezone.utc)
         aktualny_cas = now.strftime("%Y-%m-%dT%H:%M:%S%z")
-        
         dnes = now.strftime("%Y-%m-%d")
         vcera = (now - timedelta(days=1)).strftime("%Y-%m-%d")
         predvcerom = (now - timedelta(days=2)).strftime("%Y-%m-%d")
         zajtra = (now + timedelta(days=1)).strftime("%Y-%m-%d")
 
-        return f"""Si FitMind AI - osobný tréner, nutričný expert a fitness poradca.
-Tvoj klient (profil JSON): {profil_text}
-Jeho ciele: {ciele_text}
+        # === PROFIL KLIENTA ===
+        meno = profil_uzivatela.get('firstName', 'Klient')
+        vek = profil_uzivatela.get('age', 0)
+        pohlavie = profil_uzivatela.get('gender', 'male')
+        vyska = profil_uzivatela.get('height', 0)
+        vaha = profil_uzivatela.get('currentWeight', 0)
+        cielova_vaha = profil_uzivatela.get('targetWeight', 0)
+        ciel = profil_uzivatela.get('fitnessGoal', 'maintain')
+        aktivita = profil_uzivatela.get('activityLevel', 'moderate')
+        target_cal = profil_uzivatela.get('targetCalories', 0)
+        med_conditions = profil_uzivatela.get('medicalConditions', [])
+        diet_restrictions = profil_uzivatela.get('dietaryRestrictions', [])
+
+        # Výpočet BMI
+        bmi = round(vaha / ((vyska/100)**2), 1) if vyska > 0 and vaha > 0 else 0
+
+        # Výpočet TDEE (odhad denného príjmu kalórií) ak nie je nastavený
+        if not target_cal and vaha > 0 and vyska > 0 and vek > 0:
+            if pohlavie == 'female':
+                bmr = 10 * vaha + 6.25 * vyska - 5 * vek - 161
+            else:
+                bmr = 10 * vaha + 6.25 * vyska - 5 * vek + 5
+            activity_mult = {'sedentary': 1.2, 'light': 1.375, 'moderate': 1.55, 'active': 1.725, 'very_active': 1.9}
+            tdee = bmr * activity_mult.get(aktivita, 1.55)
+            goal_adj = {'lose_weight': -500, 'gain_muscle': 300, 'maintain': 0, 'improve_health': 0}
+            target_cal = int(tdee + goal_adj.get(ciel, 0))
+
+        ciel_sk = {'lose_weight': 'schudnúť', 'gain_muscle': 'nabrať svaly', 'maintain': 'udržať váhu', 'improve_health': 'zlepšiť zdravie'}.get(ciel, ciel)
+        aktivita_sk = {'sedentary': 'sedavý', 'light': 'mierne aktívny', 'moderate': 'stredne aktívny', 'active': 'aktívny', 'very_active': 'veľmi aktívny'}.get(aktivita, aktivita)
+
+        # === ZÁZNAMY ZA POSLEDNÉ DNI ===
+        entries_section = "\nZÁZNAMY ZA POSLEDNÉ 3 DNI:\n"
+        today_calories = 0
+        today_protein = 0
+        today_carbs = 0
+        today_fats = 0
+
+        if historia_zaznamov:
+            food_entries = historia_zaznamov.get('food', [])
+            if food_entries:
+                entries_section += "JEDLO:\n"
+                for entry in food_entries[-15:]:
+                    name = entry.get('name', '?')
+                    cal = entry.get('calories', 0) or 0
+                    ts = entry.get('timestamp', entry.get('date', ''))
+                    meal = entry.get('mealType', '')
+                    date_str = str(ts)[:10] if ts else ''
+                    entries_section += f"  - {name}: {cal} kcal ({meal}) [{date_str}]\n"
+                    if date_str == dnes:
+                        today_calories += cal
+                        today_protein += entry.get('protein', 0) or 0
+                        today_carbs += entry.get('carbs', 0) or 0
+                        today_fats += entry.get('fats', 0) or 0
+
+            exercise_entries = historia_zaznamov.get('exercise', [])
+            if exercise_entries:
+                entries_section += "CVIČENIE:\n"
+                for entry in exercise_entries[-10:]:
+                    etype = entry.get('type', '?')
+                    dur = entry.get('duration', 0)
+                    burned = entry.get('caloriesBurned', 0) or 0
+                    ts = entry.get('timestamp', entry.get('date', ''))
+                    date_str = str(ts)[:10] if ts else ''
+                    entries_section += f"  - {etype}: {dur} min, {burned} kcal spálených [{date_str}]\n"
+
+            weight_entries = historia_zaznamov.get('weight', [])
+            if weight_entries:
+                entries_section += "VÁHA (posledné záznamy):\n"
+                for entry in weight_entries[-5:]:
+                    w = entry.get('weight', '?')
+                    ts = entry.get('timestamp', entry.get('date', ''))
+                    date_str = str(ts)[:10] if ts else ''
+                    entries_section += f"  - {w} kg [{date_str}]\n"
+
+            for cat, label in [('mood', 'NÁLADA'), ('sleep', 'SPÁNOK'), ('stress', 'STRES')]:
+                cat_entries = historia_zaznamov.get(cat, [])
+                if cat_entries:
+                    entries_section += f"{label}:\n"
+                    for entry in cat_entries[-3:]:
+                        if cat == 'mood':
+                            entries_section += f"  - skóre: {entry.get('score', '?')}/10\n"
+                        elif cat == 'sleep':
+                            entries_section += f"  - {entry.get('hours', '?')} hodín\n"
+                        elif cat == 'stress':
+                            entries_section += f"  - úroveň: {entry.get('level', '?')}/10\n"
+
+        remaining_cal = max(0, target_cal - today_calories) if target_cal else 0
+
+        return f"""Si FitMind AI - osobný tréner, nutričný expert a fitness poradca pre klienta {meno}. Poznáš ho/ju veľmi dobre.
+
+PROFIL KLIENTA:
+- Meno: {meno}
+- Vek: {vek} rokov | Pohlavie: {'žena' if pohlavie == 'female' else 'muž'}
+- Výška: {vyska} cm | Aktuálna váha: {vaha} kg | Cieľová váha: {cielova_vaha} kg | BMI: {bmi}
+- Fitness cieľ: {ciel_sk}
+- Úroveň aktivity: {aktivita_sk}
+- Denný kalorický cieľ: {target_cal} kcal
+- Zdravotné obmedzenia: {', '.join(med_conditions) if med_conditions else 'žiadne'}
+- Diétne obmedzenia: {', '.join(diet_restrictions) if diet_restrictions else 'žiadne'}
+
+DNEŠNÝ SÚHRN ({dnes}):
+- Doteraz zjedených: {int(today_calories)} kcal
+- Zostáva do cieľa: {int(remaining_cal)} kcal
+- Bielkoviny: {int(today_protein)}g | Sacharidy: {int(today_carbs)}g | Tuky: {int(today_fats)}g
+{entries_section}
 Aktuálny čas servera (UTC): {aktualny_cas}
 
 REFERENČNÉ DÁTUMY:
@@ -138,7 +237,7 @@ REFERENČNÉ DÁTUMY:
 - Zajtra: {zajtra}
 
 HLAVNÉ PRAVIDLÁ:
-1. Hovor po slovensky.
+1. Hovor po slovensky. Oslovuj klienta menom ({meno}).
 2. Keď klient povie, že jedol alebo cvičil -> VŽDY ZAVOLAJ FUNKCIU na uloženie.
    - Ak spomenul viac jedál/aktivít, zavolaj funkcie VIACKRÁT (pre každú položku samostatne).
    - ROZLIŠUJ 'category': 'food' pre tuhú stravu, 'drink' pre nápoje.
@@ -150,13 +249,21 @@ HLAVNÉ PRAVIDLÁ:
    - Pre "okolo obeda" použi čas 12:00, "ráno/raňajky" 08:00, "večera" 18:00, "svačina" 10:00 alebo 15:00.
    - VŽDY pošli parameter 'date' vo formáte "{predvcerom}T12:00:00" keď klient hovorí o inom čase.
    - NIKDY sa nepýtaj na presný dátum ak klient použil jasný relatívny výraz!
-4. KALÓRIE A ŽIVINY: Odhadni ich sám. NIKDY sa nepýtaj klienta na kalórie, gramy bielkovín atď. Odhadni to automaticky.
+4. KALÓRIE A ŽIVINY: Odhadni ich sám. NIKDY sa nepýtaj klienta na kalórie ani makronutrienty. Odhadni to automaticky ako expert.
    - Príklady: lazaňe ~550 kcal, praženica 2 vajcia ~200 kcal, jablko ~80 kcal.
 5. SANITY CHECK: Ak sú nereálne množstvá, opýtaj sa.
-6. POTVRDENIE: Po zavolaní funkcií VŽDY napíš, ČO si zapísal vrátane emoji a kalórií.
-7. ODHADY: Vždy odhadni makronutrienty a spálené kalórie, aj keď ich používateľ neuviedol.
-8. FITNESS PORADENSTVO: Odpovedaj detailne na otázky o tréningu, výžive, suplementoch, regenerácii.
-9. Buď stručný, motivačný a povzbudzuj klienta.
+6. POTVRDENIE: Po zavolaní funkcií VŽDY napíš, ČO si zapísal - vrátane emoji a odhadnutých kalórií.
+7. ODHADY: Vždy odhadni makronutrienty aj spálené kalórie, aj keď ich klient neuviedol.
+8. POZNÁŠ KLIENTA: Máš kompletný profil klienta aj jeho záznamy. VŽDY použi tieto údaje.
+   - Ak sa pýta čo má jesť alebo koľko kalórií mu zostáva, vypočítaj to z DNEŠNÉHO SÚHRNU.
+   - NIKDY NEHOVOR "nemám prístup k tvojim údajom" alebo "neviem aký máš cieľ" - MÁŠ ICH VYŠŠIE!
+   - Nežiadaj klienta o informácie, ktoré už máš v profile.
+9. ODPORÚČANIA JEDLA: Pri odporúčaní jedla:
+   - Pozri sa na zostávajúce kalórie ({int(remaining_cal)} kcal) a chýbajúce makronutrienty.
+   - Navrhni konkrétne jedlá s odhadnutými kalóriami.
+   - Prispôsob odporúčania cieľu klienta ({ciel_sk}).
+10. FITNESS PORADENSTVO: Odpovedaj detailne na otázky o tréningu, výžive, suplementoch, regenerácii.
+11. Buď stručný, motivačný a povzbudzuj klienta menom.
 """
 
     def _generate_confirmation_text(self, funkcie):
