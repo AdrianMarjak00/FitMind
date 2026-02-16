@@ -7,6 +7,7 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 import json
+import traceback
 
 class FirebaseService:
     """
@@ -16,10 +17,9 @@ class FirebaseService:
     _instance = None
     _db = None
     
-    # Mapovanie typov záznamov na názvy kolekcií v databáze (centralizované)
     COLLECTION_MAP = {
         'food': 'foodEntries',
-        'exercise': 'exerciseEntries',
+        'exercise': 'workoutEntries',
         'stress': 'stressEntries',
         'mood': 'moodEntries',
         'sleep': 'sleepEntries',
@@ -60,42 +60,49 @@ class FirebaseService:
             if not cred:
                 # Cesty ktoré skúsime
                 possible_paths = [
-                    "/etc/secrets/FIREBASE_CREDENTIALS", # Render Secret File
-                    "/etc/secrets/serviceAccountKey.json", # Alternatívny názov na Renderi
-                    os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"),
-                    os.path.join(os.path.dirname(__file__), "firebase-service-account.json"),
                     "serviceAccountKey.json",
                     "backend/serviceAccountKey.json",
+                    os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"),
+                    "SecurityAngular.json",
+                    "backend/SecurityAngular.json",
+                    os.path.join(os.path.dirname(__file__), "SecurityAngular.json"),
                     "local/serviceAccountKey.json",
-                    "backend/local/serviceAccountKey.json",
                     os.path.join(os.path.dirname(__file__), "local", "serviceAccountKey.json")
                 ]
                 
-                for path in possible_paths:
-                    if os.path.exists(path):
-                        try:
-                            cred = credentials.Certificate(path)
-                            print(f"[INFO] Firebase: Používam credentials z lokálneho súboru: {path}")
-                            break
-                        except Exception:
-                            continue
-            
-            if cred:
-                # Inicializuj app len ak už nie je inicializovaná
-                try:
-                    firebase_admin.get_app()
-                    print("[INFO] Firebase: Aplikácia už bola inicializovaná.")
-                except ValueError:
-                    firebase_admin.initialize_app(cred)
-                
-                cls._db = firestore.client()
-                print("[OK] Firebase úspešne pripojené!")
-            else:
-                print("[CRITICAL] Firebase credentials nenájdené! Nastav FIREBASE_CREDENTIALS alebo nahraj serviceAccountKey.json.")
-                cls._db = None
+                # Kľúčová cesta k lokálnemu certifikátu
+                local_key = os.path.join(os.path.dirname(os.path.abspath(__file__)), "SecurityAngular.json")
+                if os.path.exists(local_key):
+                    try:
+                        cred = credentials.Certificate(local_key)
+                    except Exception as e:
+                        print(f"[ERROR] Firebase: Failed to load SecurityAngular.json: {e}")
+
+                if not cred:
+                    for path in possible_paths:
+                        abs_path = os.path.abspath(path) if not os.path.isabs(path) else path
+                        if os.path.exists(abs_path):
+                            try:
+                                cred = credentials.Certificate(abs_path)
+                                break
+                            except Exception:
+                                continue
+
+                if cred:
+                    try:
+                        firebase_admin.get_app()
+                    except ValueError:
+                        firebase_admin.initialize_app(cred)
+                    
+                    cls._db = firestore.client()
+                    print("[OK] Firebase úspešne pripojené!")
+                else:
+                    print("[CRITICAL] Firebase credentials nenájdené!")
+                    cls._db = None
 
         except Exception as e:
             print(f"[WARNING] Firebase kritická chyba pri inicializácii: {e}")
+            cls._db = None
             cls._db = None
     
     @property
@@ -112,8 +119,8 @@ class FirebaseService:
         if not self.is_connected():
             return None
         try:
-            # Získaj dokument používateľa z kolekcie 'userFitnessProfiles'
-            doc = self._db.collection('userFitnessProfiles').document(user_id).get()
+            # Získaj dokument používateľa z kolekcie 'users'
+            doc = self._db.collection('users').document(user_id).get()
             # Ak dokument existuje, vráť jeho dáta, inak None
             return doc.to_dict() if doc.exists else None
         except Exception as e:
@@ -139,7 +146,7 @@ class FirebaseService:
         
         try:
             # Získaj kolekciu záznamov pre používateľa
-            coll_ref = self._db.collection('userFitnessProfiles').document(user_id).collection(coll_name)
+            coll_ref = self._db.collection('users').document(user_id).collection(coll_name)
             # Zoraď podľa timestampu zostupne a obmedz počet (berieme viac aby sme mohli filtrovať)
             query = coll_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit * 2)
             docs = list(query.stream())
@@ -203,7 +210,7 @@ class FirebaseService:
         
         try:
             # Zabezpeč, že profil používateľa existuje
-            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            user_ref = self._db.collection('users').document(user_id)
             if not user_ref.get().exists:
                 # Ak profil neexistuje, vytvor ho
                 user_ref.set({
@@ -211,6 +218,17 @@ class FirebaseService:
                     'createdAt': firestore.SERVER_TIMESTAMP,
                     'updatedAt': firestore.SERVER_TIMESTAMP
                 })
+            
+            # Spracovanie dátumu (ak AI poslalo 'date')
+            if 'date' in data and data['date']:
+                try:
+                    # Skús parsovať ISO formát
+                    dt = datetime.fromisoformat(data['date'].replace('Z', '+00:00'))
+                    # Skonvertuj na Firestore Timestamp alebo nechaj datetime (Firestore klient to zväčša zvládne)
+                    data['timestamp'] = dt
+                except Exception as e:
+                    print(f"[WARNING] Invalid date format: {data['date']}, using NOW. Error: {e}")
+                    data['timestamp'] = firestore.SERVER_TIMESTAMP
             
             # Pridaj timestamp ak chýba
             if 'timestamp' not in data:
@@ -237,7 +255,7 @@ class FirebaseService:
             # Pridaj timestamp aktualizácie
             updates['updatedAt'] = firestore.SERVER_TIMESTAMP
             # Aktualizuj dokument v databáze
-            self._db.collection('userFitnessProfiles').document(user_id).update(updates)
+            self._db.collection('users').document(user_id).update(updates)
             return True
         except Exception as e:
             print(f"[ERROR] Chyba pri aktualizacii profilu: {e}")
@@ -343,7 +361,7 @@ class FirebaseService:
                 message_data['metadata'] = metadata
             
             # Ulož do subkolekcie chatHistory
-            self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory').add(message_data)
+            self._db.collection('users').document(user_id).collection('chatHistory').add(message_data)
             return True
         except Exception as e:
             print(f"[ERROR] Chyba pri ukladani chat spravy: {e}")
@@ -363,7 +381,7 @@ class FirebaseService:
         if not self.is_connected():
             return []
         try:
-            chat_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory')
+            chat_ref = self._db.collection('users').document(user_id).collection('chatHistory')
             # Zoraď podľa timestampu zostupne a obmedz počet
             query = chat_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
             docs = list(query.stream())
@@ -409,7 +427,7 @@ class FirebaseService:
         if not self.is_connected():
             return False
         try:
-            chat_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory')
+            chat_ref = self._db.collection('users').document(user_id).collection('chatHistory')
             docs = chat_ref.stream()
 
             for doc in docs:
@@ -438,7 +456,7 @@ class FirebaseService:
 
         try:
             today = datetime.now().strftime('%Y-%m-%d')
-            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            user_ref = self._db.collection('users').document(user_id)
             doc = user_ref.get()
 
             if not doc.exists:
@@ -497,7 +515,7 @@ class FirebaseService:
 
         try:
             today = datetime.now().strftime('%Y-%m-%d')
-            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            user_ref = self._db.collection('users').document(user_id)
             doc = user_ref.get()
 
             if not doc.exists:
@@ -547,7 +565,7 @@ class FirebaseService:
         if not self.is_connected():
             return None
         try:
-            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations')
+            conv_ref = self._db.collection('users').document(user_id).collection('conversations')
             doc_ref = conv_ref.add({
                 'title': title,
                 'createdAt': firestore.SERVER_TIMESTAMP,
@@ -566,7 +584,7 @@ class FirebaseService:
         if not self.is_connected():
             return []
         try:
-            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations')
+            conv_ref = self._db.collection('users').document(user_id).collection('conversations')
             query = conv_ref.order_by('updatedAt', direction=firestore.Query.DESCENDING).limit(limit)
             docs = list(query.stream())
 
@@ -617,7 +635,7 @@ class FirebaseService:
         if not self.is_connected():
             return False
         try:
-            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conversation_id)
+            conv_ref = self._db.collection('users').document(user_id).collection('conversations').document(conversation_id)
 
             # Najprv vymaž všetky správy v konverzácii
             messages_ref = conv_ref.collection('messages')
@@ -638,7 +656,7 @@ class FirebaseService:
         if not self.is_connected():
             return []
         try:
-            messages_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conversation_id).collection('messages')
+            messages_ref = self._db.collection('users').document(user_id).collection('conversations').document(conversation_id).collection('messages')
             query = messages_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
             docs = list(query.stream())
 
@@ -675,7 +693,7 @@ class FirebaseService:
         if not self.is_connected():
             return False
         try:
-            conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conversation_id)
+            conv_ref = self._db.collection('users').document(user_id).collection('conversations').document(conversation_id)
 
             # Ulož správu
             conv_ref.collection('messages').add({
@@ -715,11 +733,11 @@ class FirebaseService:
                 return None
 
             # Migruj existujúcu chatHistory ak existuje
-            old_history = self._db.collection('userFitnessProfiles').document(user_id).collection('chatHistory')
+            old_history = self._db.collection('users').document(user_id).collection('chatHistory')
             old_docs = list(old_history.order_by('timestamp', direction=firestore.Query.ASCENDING).stream())
 
             if old_docs:
-                conv_ref = self._db.collection('userFitnessProfiles').document(user_id).collection('conversations').document(conv_id)
+                conv_ref = self._db.collection('users').document(user_id).collection('conversations').document(conv_id)
                 for doc in old_docs:
                     data = doc.to_dict()
                     conv_ref.collection('messages').add({
@@ -770,7 +788,7 @@ class FirebaseService:
             return False
 
         try:
-            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            user_ref = self._db.collection('users').document(user_id)
 
             update_data = {
                 'stripe_customer_id': stripe_customer_id,
@@ -810,7 +828,7 @@ class FirebaseService:
             return None
 
         try:
-            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            user_ref = self._db.collection('users').document(user_id)
             doc = user_ref.get()
 
             if not doc.exists:
@@ -847,7 +865,7 @@ class FirebaseService:
             return None
 
         try:
-            users_ref = self._db.collection('userFitnessProfiles')
+            users_ref = self._db.collection('users')
             query = users_ref.where('stripe_customer_id', '==', stripe_customer_id).limit(1)
             results = list(query.stream())
 
@@ -874,7 +892,7 @@ class FirebaseService:
             return False
 
         try:
-            user_ref = self._db.collection('userFitnessProfiles').document(user_id)
+            user_ref = self._db.collection('users').document(user_id)
             doc = user_ref.get()
             
             if not doc.exists:
@@ -918,4 +936,38 @@ class FirebaseService:
 
         except Exception as e:
             print(f"[ERROR] Chyba pri aktualizácii subscription status: {e}")
+            return False
+
+    def get_user_by_email(self, email: str) -> Optional[Dict]:
+        """Získa ID a dáta používateľa podľa emailu (admin funkcia)."""
+        if not self.is_connected():
+            return None
+        try:
+            users = self._db.collection('users').where('email', '==', email.lower()).limit(1).stream()
+            for u in users:
+                data = u.to_dict()
+                data['uid'] = u.id
+                return data
+            return None
+        except Exception as e:
+            print(f"[FIREBASE] Search failed: {e}")
+            return None
+
+    def delete_user_subscription(self, user_id: str) -> bool:
+        """Natvrdo nastaví subscription na 'free' a zruší status v databáze."""
+        if not self.is_connected():
+            return False
+        try:
+            user_ref = self._db.collection('users').document(user_id)
+            user_ref.update({
+                'subscription': {
+                    'plan_type': 'free',
+                    'status': 'canceled',
+                    'updated_at': firestore.SERVER_TIMESTAMP
+                },
+                'active_plans': {} # Vymaže zoznam aktívnych plánov
+            })
+            return True
+        except Exception as e:
+            print(f"[FIREBASE] Cleanup failed: {e}")
             return False

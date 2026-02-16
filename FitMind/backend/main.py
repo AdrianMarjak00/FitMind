@@ -37,24 +37,20 @@ def load_render_secrets():
                     print(f"[System] Chyba pri načítaní {filename}: {e}")
 
 load_render_secrets()
+# Načítaj premenné (v produkcii ich nastavuje Render/Docker)
 load_dotenv()
-# V produkcii (Docker) sa premenné načítajú automaticky z prostredia (Render)
-# load_dotenv(os.path.join(os.path.dirname(__file__), "local", ".env"))
-IS_PRODUCTION = os.getenv("ENV", "production").lower() == "production"
+IS_PRODUCTION = os.getenv("ENV", "development").lower() == "production"
 
-# --- DIAGNOSTIKA PROSTREDIA (Dočasné pre debugging) ---
-print(f"[DEBUG] Spúšťam backend. IS_PRODUCTION={IS_PRODUCTION}")
-print(f"[DEBUG] Dostupné premenné prostredia (kľúče): {', '.join(os.environ.keys())}")
-if os.getenv("STRIPE_SECRET_KEY"):
-    print("[DEBUG] STRIPE_SECRET_KEY je nastavený (dĺžka: " + str(len(os.getenv("STRIPE_SECRET_KEY"))) + ")")
-else:
-    print("[DEBUG] POZOR! STRIPE_SECRET_KEY chýba!")
+# --- ŠTART BACKENDU (Ošetrenie double-printu pri uvicorne) ---
+if os.environ.get("UVICORN_STARTED") != "1":
+    print(f"[FitMind] Spúšťam backend (IS_PRODUCTION={IS_PRODUCTION})")
+    os.environ["UVICORN_STARTED"] = "1"
 
 # Import služieb
 from firebase_databaza import FirebaseService
 from ai_trener import AIService
 from statistiky import StatsService
-from recenzie import CoachService
+from coach_service import CoachService
 from stripe_plat_brana import StripeService
 from email_service import EmailService
 from middleware import (
@@ -111,7 +107,10 @@ allowed_origins = [
     "https://fitmind-dba6a.firebaseapp.com",
     "https://fitmind-backend-fvq7.onrender.com",
     "http://localhost:4200",
-    "http://localhost:8080"
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:65403" # Pridaný port z logu
 ]
 
 app.add_middleware(
@@ -161,6 +160,58 @@ def health():
     """Základný healthcheck pre deployment platformy (napr. Render)."""
     return {"status": "healthy", "timestamp": time.time()}
 
+# --- API ENDPOINTY: ADMIN PANEL ---
+
+@app.get("/api/admin/user-debug/{email}", tags=["Admin"])
+def admin_get_user_debug(email: str, admin_auth: dict = Depends(check_admin_auth)):
+    """Vyhľadá používateľa a vráti jeho kompletné dáta (len pre adminov)."""
+    user_data = firebase.get_user_by_email(email)
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Pridaj informácie o subscription zo Stripe (ak má customer_id)
+    stripe_info = None
+    if user_data.get('stripe_customer_id'):
+        try:
+             import stripe
+             stripe_info = stripe.Customer.retrieve(user_data['stripe_customer_id'])
+        except:
+             pass
+
+    return {
+        "firebase": user_data,
+        "stripe": stripe_info
+    }
+
+class CancelSubscriptionRequest(BaseModel):
+    email: str
+
+@app.post("/api/admin/subscription/cancel", tags=["Admin"])
+def admin_cancel_subscription(request: CancelSubscriptionRequest, admin_auth: dict = Depends(check_admin_auth)):
+    """Natvrdo zruší predplatné používateľovi v Stripe aj Firebase."""
+    user_data = firebase.get_user_by_email(request.email)
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User with this email not found")
+    
+    user_id = user_data['uid']
+    subscription = user_data.get('subscription', {})
+    sub_id = subscription.get('subscription_id')
+
+    # 1. Zruš v Stripe (ak existuje ID)
+    stripe_success = False
+    if sub_id:
+        stripe_success = stripe_service.cancel_subscription(sub_id)
+    
+    # 2. Zruš v databáze (vždy, aj keď Stripe zlyhá alebo ID nie je)
+    db_success = firebase.delete_user_subscription(user_id)
+
+    return {
+        "success": db_success,
+        "stripe_canceled": stripe_success,
+        "message": f"Subscription for {request.email} processed."
+    }
+
+
 # --- API ENDPOINTY: TESTOVANIE (Development only) ---
 
 @app.post("/api/test/chat", tags=["Test"])
@@ -180,12 +231,14 @@ def test_chat(request: ChatRequest, dev_auth: dict = Depends(verify_dev_secret))
         ai_odpoved = message_response.content
         saved_entries = []
 
-        if message_response.function_call:
-            fc_name = message_response.function_call.name
-            fc_args = json.loads(message_response.function_call.arguments)
-            saved_entries.append(f"[TEST] Function called: {fc_name} with args: {fc_args}")
+        if message_response.function_calls:
+            for fc in message_response.function_calls:
+                fc_name = fc.name
+                fc_args = json.loads(fc.arguments)
+                saved_entries.append(f"[TEST] Function called: {fc_name} with args: {fc_args}")
+            
             if not ai_odpoved:
-                ai_odpoved = ai_service.get_final_response([])
+                ai_odpoved = "Functions executed (test mode)."
 
         return {
             "odpoved": ai_odpoved,
@@ -265,10 +318,8 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         saved_entries = []
 
         # 4. Spracovanie zápisov (Function Calling)
-        if response.function_call:
-            fc_name = response.function_call.name
-            fc_args = json.loads(response.function_call.arguments)
-            
+        # response.function_calls je teraz zoznam objektov UdajeOFunkcii
+        if response.function_calls:
             mapping = {
                 'save_food_entry': 'food',
                 'save_exercise_entry': 'exercise',
@@ -276,11 +327,22 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
                 'save_weight_entry': 'weight'
             }
             
-            if fc_name in mapping:
-                if firebase.save_entry(user_id, mapping[fc_name], fc_args):
-                    saved_entries.append(f"Zaznamenané: {mapping[fc_name]}")
-                    if not ai_odpoved:
-                        ai_odpoved = ai_service.get_final_response([])
+            for fc in response.function_calls:
+                fc_name = fc.name
+                try:
+                    fc_args = json.loads(fc.arguments)
+                    
+                    if fc_name in mapping:
+                        if firebase.save_entry(user_id, mapping[fc_name], fc_args):
+                            # Vytvor krajší popis pre používateľa
+                            item_name = fc_args.get('name', mapping[fc_name])
+                            saved_entries.append(f"Zaznamenané: {item_name}")
+                except Exception as e:
+                    print(f"[ERROR] Failed to execute function {fc_name}: {e}")
+
+            # Ak AI nevygenerovalo odpoveď, ale vykonalo akcie, dajme default
+            if not ai_odpoved and saved_entries:
+                ai_odpoved = f"Hotovo! Uložil som {len(saved_entries)} záznamov."
 
         # 5. Uloženie a aktualizácia limitov
         firebase.save_conversation_message(user_id, conv_id, 'user', message)
@@ -392,15 +454,20 @@ def verify_session(request: dict, decoded_token: dict = Depends(verify_firebase_
             customer_id = session.customer
             subscription_id = session.subscription
             
-            # Save to Firebase
-            firebase.save_payment_info(user_id, customer_id, plan, "active", subscription_id)
+            # Uloženie do Firebase
+            success = firebase.save_payment_info(user_id, customer_id, plan, "active", subscription_id)
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to update subscription in database")
+            
             return {"status": "verified", "plan": plan}
         else:
             return {"status": "unpaid"}
             
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[VERIFY ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Verification failed")
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
 
 @app.post("/api/payment/webhook", tags=["Payment"])
 async def stripe_webhook(request: Request):

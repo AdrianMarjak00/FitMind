@@ -385,4 +385,3 @@ class CoachService:
                 })
         
         return progress
-

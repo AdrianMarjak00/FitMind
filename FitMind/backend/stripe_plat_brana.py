@@ -29,7 +29,6 @@ class StripeService:
 
         if self._api_key:
             stripe.api_key = self._api_key
-            print("[STRIPE] Service initialized")
         else:
             print("[STRIPE] WARNING: STRIPE_SECRET_KEY not set!")
 
@@ -58,7 +57,6 @@ class StripeService:
 
         # Dynamické načítanie ID z env (aby sme nemuseli reštartovať server)
         price_id = os.getenv(f"STRIPE_PRICE_{plan_type.upper()}", "")
-        print(f"[STRIPE] Creating session for {plan_type} using price {price_id}")
 
         try:
             if not price_id or "_placeholder" in price_id:
@@ -68,8 +66,6 @@ class StripeService:
             # Získaj detaily o cene zo Stripe, aby sme vedeli či je to subscription
             price_details = stripe.Price.retrieve(price_id)
             is_recurring = price_details.get("type") == "recurring"
-            
-            print(f"[STRIPE] Price {price_id} is {'RECURRING' if is_recurring else 'ONE-TIME'}")
 
             session_params = {
                 "payment_method_types": ["card"],
@@ -143,13 +139,6 @@ class StripeService:
                 "interval": "month",
                 "description": "Pravidelný coaching za nízku cenu"
             },
-            "pro": {
-                "name": "Progresívny Split",
-                "price": 4.99,
-                "currency": "EUR",
-                "interval": "month",
-                "description": "Pokročilý systém s maximálnymi výsledkami"
-            }
         }
         return plans.get(plan_type)
 
@@ -179,3 +168,21 @@ class StripeService:
         except Exception as e:
             print(f"[STRIPE] Unexpected portal error: {str(e)}")
             return None
+    def cancel_subscription(self, subscription_id: str) -> bool:
+        """
+        Zruší aktívne predplatné v Stripe.
+        """
+        if not self.is_configured() or not subscription_id:
+            return False
+
+        try:
+            # Okamžité zrušenie
+            stripe.Subscription.delete(subscription_id)
+            print(f"[STRIPE] Subscription {subscription_id} canceled.")
+            return True
+        except stripe.error.StripeError as e:
+            print(f"[STRIPE] Error canceling subscription: {str(e)}")
+            return False
+        except Exception as e:
+            print(f"[STRIPE] Unexpected error: {str(e)}")
+            return False

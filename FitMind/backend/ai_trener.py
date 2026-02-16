@@ -1,177 +1,227 @@
 import json
-from typing import Dict, List, Any, Optional
+import os
+from datetime import datetime
+from typing import Dict, List, Any
+
+# Google AI knižnice
 from google import genai
 from google.genai import types
-from datetime import datetime
-import os
 
-class AIEncoder(json.JSONEncoder):
-    """Pomocník pre serializáciu špeciálnych objektov z Firebase do JSON"""
-    def default(self, obj):
-        if hasattr(obj, 'to_datetime'):
-            return obj.to_datetime().isoformat()
-        if hasattr(obj, 'timestamp'):
-            try:
-                return datetime.fromtimestamp(obj.timestamp()).isoformat()
-            except Exception:
-                # Ak timestamp nie je validný, skúsime ďalšie metódy serializácie
-                pass
-        if isinstance(obj, datetime):
-            return obj.isoformat()
-        return str(obj)
+# === POMOCNÉ TRIEDY (Aby main.py rozumel odpovedi) ===
+
+class UdajeOFunkcii:
+    """Túto triedu použijeme, ak chce AI zavolať nejakú funkciu (napr. uložiť jedlo)"""
+    def __init__(self, nazov_funkcie, parametre):
+        self.name = nazov_funkcie
+        # Parametre musime premeniť na text (JSON), lebo tak to main.py očakáva
+        self.arguments = json.dumps(parametre)
+
+class OdpovedRobota:
+    """Toto je balíček, ktorý vrátime naspäť do main.py"""
+    def __init__(self, text, funkcie=None):
+        self.content = text           # Textová odpoveď (napr. "Ahoj")
+        self.function_calls = funkcie or []  # Zoznam volaní funkcií
+
+# === HLAVNÁ TRIEDA ===
 
 class AIService:
     def __init__(self):
-        # 1. Skús environment variable (Lokálny .env alebo Render Env Var)
-        self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        # 1. Hľadáme kľúč v súboroch alebo nastaveniach
+        kluc = os.getenv("GOOGLE_API_KEY")
         
-        # 2. Ak nie je v env, skús Render Secret File (pre extra bezpečnosť)
-        if not self.api_key:
-            secret_path = "/etc/secrets/GOOGLE_API_KEY"
-            if os.path.exists(secret_path):
-                try:
-                    with open(secret_path, "r") as f:
-                        self.api_key = f.read().strip()
-                    print("[INFO] AI Service: API Key načítaný zo Secret File.")
-                except Exception as e:
-                    print(f"[ERROR] Chyba pri čítaní Secret File: {e}")
-
-        self.client = None
-        if self.api_key:
-            # Maskujeme kľúč pre logy (ukážeme len posledné 4 znaky)
-            masked_key = f"...{self.api_key[-4:]}" if len(self.api_key) > 4 else "***"
-            print(f"[DEBUG] AI Service: API Key detected ({masked_key})")
+        # Ak nie je v nastaveniach, skúsime tajný súbor (pre Render server)
+        if not kluc and os.path.exists("/etc/secrets/GOOGLE_API_KEY"):
             try:
-                self.client = genai.Client(api_key=self.api_key)
-            except Exception as e:
-                print(f"[ERROR] Failed to initialize Google GenAI Client: {e}")
+                kluc = open("/etc/secrets/GOOGLE_API_KEY", "r").read().strip()
+                print("Kľúč načítaný zo súboru.")
+            except:
+                pass
+
+        # 2. Pripojenie ku Google
+        self.klient = None
+        if kluc:
+            try:
+                self.klient = genai.Client(api_key=kluc)
+            except Exception as chyba:
+                print(f"❌ Chyba pripojenia: {chyba}")
         else:
-            print("[WARNING] AI API key missing. AI will not work.")
+            print("⚠️ POZOR: Nemám API kľúč. AI nebude odpovedať.")
 
-    def _get_tools(self):
-        """Definície nástrojov pre AI"""
-        return [
-            types.FunctionDeclaration(
-                name="save_food_entry",
-                description="Uloží záznam o jedle s nutričnými hodnotami",
-                parameters={
-                    "type": "OBJECT", 
-                    "properties": {
-                        "name": {"type": "STRING", "description": "Názov jedla"}, 
-                        "calories": {"type": "NUMBER", "description": "Celkové kalórie (kcal)"},
-                        "protein": {"type": "NUMBER", "description": "Bielkoviny v gramoch"},
-                        "carbs": {"type": "NUMBER", "description": "Sacharidy v gramoch"},
-                        "fats": {"type": "NUMBER", "description": "Tuky v gramoch"},
-                        "mealType": {"type": "STRING", "enum": ["breakfast", "lunch", "dinner", "snack"]}
-                    }, 
-                    "required": ["name", "calories", "protein", "carbs", "fats"]
-                }
-            ),
-            types.FunctionDeclaration(
-                name="save_exercise_entry",
-                description="Uloží záznam o cvičení",
-                parameters={"type": "OBJECT", "properties": {"type": {"type": "STRING"}, "duration": {"type": "NUMBER"}}, "required": ["type", "duration"]}
-            ),
-            types.FunctionDeclaration(
-                name="save_mood_entry",
-                description="Uloží záznam o nálade (1-10)",
-                parameters={"type": "OBJECT", "properties": {"score": {"type": "NUMBER"}}, "required": ["score"]}
-            ),
-            types.FunctionDeclaration(
-                name="save_weight_entry",
-                description="Uloží váhu v kg",
-                parameters={"type": "OBJECT", "properties": {"weight": {"type": "NUMBER"}}, "required": ["weight"]}
-            )
-        ]
+    def _daj_zoznam_nastrojov(self):
+        """
+        Tu definujeme 'Menu' funkcií, ktoré môže AI použiť.
+        Je to vlastne zoznam toho, čo vie naša aplikácia urobiť.
+        """
+        # Nástroj 1: Uloženie jedla
+        nastroj_jedlo = types.FunctionDeclaration(
+            name="save_food_entry",
+            description="Uloží jedlo a jeho nutričné hodnoty / kalórie. Podporuje uloženie viacerých jedál naraz (zavolaj viackrát).",
+            parameters={
+                "type": "OBJECT",
+                "properties": {
+                    "name": {"type": "STRING", "description": "Názov jedla"},
+                    "calories": {"type": "NUMBER", "description": "Kalórie v kcal"},
+                    "protein": {"type": "NUMBER", "description": "Bielkoviny (g)"},
+                    "carbs": {"type": "NUMBER", "description": "Sacharidy (g)"},
+                    "fats": {"type": "NUMBER", "description": "Tuky (g)"},
+                    "mealType": {"type": "STRING", "enum": ["breakfast", "lunch", "dinner", "snack"]},
+                    "category": {"type": "STRING", "enum": ["food", "drink"], "description": "Či ide o jedlo alebo nápoj"},
+                    "date": {"type": "STRING", "description": "ISO 8601 dátum a čas (ak používateľ špecifikoval iný čas), inak prázdne."}
+                },
+                "required": ["name", "calories", "protein", "carbs", "fats", "category"]
+            }
+        )
 
-    def create_system_prompt(self, profile: Dict, entries: Dict) -> str:
-        # Serializácia profilu s ošetrením typov
-        profile_json = json.dumps(profile, cls=AIEncoder, ensure_ascii=False)
-        goals = ", ".join(profile.get('goals', []))
-        
-        return f"""Si FitMind AI - expert na výživu a fitness tréner. 
-Profil používateľa v JSON: {profile_json}. 
-Ciele: {goals}.
+        # Nástroj 2: Uloženie cvičenia
+        nastroj_cvicenie = types.FunctionDeclaration(
+            name="save_exercise_entry",
+            description="Uloží cvičenie a trvanie.",
+            parameters={
+                "type": "OBJECT",
+                "properties": {
+                    "type": {"type": "STRING", "description": "Typ cvičenia"},
+                    "duration": {"type": "NUMBER", "description": "Minúty"},
+                    "date": {"type": "STRING", "description": "ISO 8601 dátum a čas (ak používateľ špecifikoval iný čas), inak prázdne."}
+                },
+                "required": ["type", "duration"]
+            }
+        )
 
-TVOJE PRAVIDLÁ:
-1. Odpovedaj VŽDY v slovenčine.
-2. Ak používateľ povie, že niečo jedol, tvojou úlohou je to ZAPÍSAŤ.
-3. NIKDY sa nepýtaj na kalórie alebo makroživiny (bielkoviny, sacharidy, tuky). Ty si expert, musíš ich ODHADNUŤ sám na základe vedeckých tabuliek.
-4. Ak používateľ povie detaily (napr. "2 vajíčka"), použi presný odhad pre 2 vajíčka. Ak povie len "praženica", použi štandardnú porciu (cca 3 vajíčka).
-5. Vždy zavolaj funkciu `save_food_entry` s tvojím odhadom.
-6. Po zavolaní funkcie oznám používateľovi, čo si zapísal a aké hodnoty si odhadol (napr. "Zapísal som ti praženicu z 2 vajec (140 kcal, 12g bielkovín...)").
-7. To isté platí pre cvičenie (odhadni spálené kalórie podľa dĺžky a typu) a váhu.
-8. Buď stručný, motivačný a neospravedlňuj sa, že niečo nemáš v databáze. Ty si tá databáza.
+        # Nástroj 3: Nálada
+        nastroj_nalada = types.FunctionDeclaration(
+            name="save_mood_entry",
+            description="Uloží náladu (číslo 1-10).",
+            parameters={
+                "type": "OBJECT",
+                "properties": {
+                    "score": {"type": "NUMBER"},
+                    "date": {"type": "STRING", "description": "ISO 8601 dátum a čas"}
+                },
+                "required": ["score"]
+            }
+        )
+
+        # Nástroj 4: Váha
+        nastroj_vaha = types.FunctionDeclaration(
+            name="save_weight_entry",
+            description="Uloží váhu (kg).",
+            parameters={
+                "type": "OBJECT",
+                "properties": {
+                    "weight": {"type": "NUMBER"},
+                    "date": {"type": "STRING", "description": "ISO 8601 dátum a čas"}
+                },
+                "required": ["weight"]
+            }
+        )
+
+        return [nastroj_jedlo, nastroj_cvicenie, nastroj_nalada, nastroj_vaha]
+
+    def create_system_prompt(self, profil_uzivatela, historia_zaznamov):
+        """
+        Pripraví inštrukcie pre AI (kto je a čo má robiť).
+        """
+        # Pomocná funkcia na prevod dátumu na text (aby to nespadlo)
+        def prevod_datumu(objekt):
+            if isinstance(objekt, datetime):
+                return objekt.isoformat()
+            return str(objekt)
+
+        # Profil premeníme na text
+        profil_text = json.dumps(profil_uzivatela, default=prevod_datumu, ensure_ascii=False)
+        ciele_text = ", ".join(profil_uzivatela.get('goals', []))
+        aktualny_cas = datetime.now().isoformat()
+
+        # Vrátime text inštrukcií
+        return f"""Si FitMind AI - osobný tréner a nutričný expert.
+Tvoj klient (profil JSON): {profil_text}
+Jeho ciele: {ciele_text}
+Aktuálny čas servera: {aktualny_cas}
+
+PRAVIDLÁ:
+1. Hovor po slovensky.
+2. Keď klient povie, že jedol alebo cvičil -> ZAVOLAJ FUNKCIU na uloženie (tool use).
+   - Ak spomenul viac jedál (napr. "mal som kávu a rožok"), zavolaj funkciu 'save_food_entry' VIACKRÁT (pre každú položku zvlášť).
+   - Ak špecifikoval čas (napr. "včera o 18:00"), vypočítaj správny ISO dátum a pošli ho v parametri 'date'.
+   - Rozlišuj 'category': 'food' pre jedlá, 'drink' pre nápoje (káva, čaj, džús, voda).
+3. Kalórie a živiny ODHADNI sám (si expert). Nepýtaj sa klienta na gramy, ak to nevie.
+4. SANITY CHECK: 
+   - Ak klient zadá nereálne množstvo (napr. "60 káv", "zjedol som celé prasa"), NEVOLAJ funkciu hneď.
+   - Namiesto toho sa opýtaj: "To znie ako extrémne množstvo. Naozaj si mal 60 káv? Mám to zapísať?"
+   - Až po potvrdení funkciu zavolaj.
+5. V texte odpovede VŽDY explicitne zhrň, čo presne zapisuješ (napr. "Zapisujem: Praženica (300 kcal) na raňajky o 8:00 a Káva (Drink, 50 kcal).").
+6. Buď stručný, milý a motivujúci.
 """
 
-    def chat(self, message: str, system_prompt: str, history: List[Dict] = None) -> Any:
-        if not self.client:
-            raise Exception("AI API kľúč nie je nastavený.")
+    def chat(self, sprava_uzivatela: str, instrukcie: str, historia_chatu: List[Dict] = None):
+        """
+        Toto je hlavná funkcia, ktorú volá main.py ked príde správa.
+        """
+        if not self.klient:
+            return OdpovedRobota("Prepáč, mám poruchu spojenia (chýba API kľúč).")
 
         try:
-            # Konverzia histórie pre nový SDK
-            gemini_history = []
-            if history:
-                for msg in history:
-                    role = "user" if msg['role'] == "user" else "model"
-                    content = msg.get('content') or "Záznam bol úspešne uložený."
-                    gemini_history.append(types.Content(role=role, parts=[types.Part(text=content)]))
+            # 1. Pripravíme históriu, aby jej Google rozumel
+            historia_pre_google = []
+            if historia_chatu:
+                for zaznam in historia_chatu:
+                    rola = "user" if zaznam['role'] == "user" else "model"
+                    text = zaznam.get('content') or "..." # Poistka proti prázdnym správam
+                    historia_pre_google.append(
+                        types.Content(role=rola, parts=[types.Part(text=text)])
+                    )
 
-            # Konfigurácia - v google-genai 0.1.0
-            config = types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                tools=[types.Tool(function_declarations=self._get_tools())]
+            # 2. Nastavíme konfiguráciu (dáme mu 'Nástroje')
+            konfiguracia = types.GenerateContentConfig(
+                system_instruction=instrukcie,
+                tools=[types.Tool(function_declarations=self._daj_zoznam_nastrojov())]
             )
 
-            # Použijeme chat rozhranie (model je konfigurovateľný cez env premennú)
-            model_name = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
-            chat_session = self.client.chats.create(
-                model=model_name,
-                history=gemini_history,
-                config=config
+            # 3. Vytvoríme chat
+            chat_relacia = self.klient.chats.create(
+                model=os.getenv('GEMINI_MODEL', 'gemini-2.0-flash'),
+                history=historia_pre_google,
+                config=konfiguracia
             )
-            
-            response = chat_session.send_message(message)
-            
-            # Kontrola či AI chce zavolať funkciu
-            fc = None
-            text_parts = []
-            
-            if response.candidates and response.candidates[0].content.parts:
-                for part in response.candidates[0].content.parts:
-                    if part.function_call:
-                        fc = part.function_call
-                    elif hasattr(part, 'text') and part.text:
-                        text_parts.append(part.text)
-            
-            ai_text = " ".join(text_parts).strip()
-            
-            # Pomocné triedy pre výsledok (kompatibilita s main.py)
-            class MockResp:
-                def __init__(self, c, f=None):
-                    self.content = c
-                    self.function_call = f
-            class MockFC:
-                def __init__(self, n, a):
-                    self.name = n
-                    self.arguments = json.dumps(a)
 
-            if fc:
-                final_text = ai_text if ai_text else "Jasné, už to zapisujem do tvojho denníka."
-                # V novom SDK je fc.args už dict
-                return MockResp(final_text, MockFC(fc.name, fc.args))
-            
-            if not ai_text:
-                try:
-                    ai_text = response.text
-                except:
-                    ai_text = "Ospravedlňujem sa, ale na túto správu nemôžem odpovedať z bezpečnostných dôvodov."
+            # 4. Pošleme správu a čakáme
+            odpoved_google = chat_relacia.send_message(sprava_uzivatela)
 
-            return MockResp(ai_text)
-            
-        except Exception as e:
-            print(f"[ERROR] Gemini Chat Call failed: {e}")
-            raise e
+            # 5. Zistíme, čo Google odpovedal
+            funkcie_na_zavolanie = []
+            text_odpovede = ""
 
-    def get_final_response(self, messages: List[Dict]) -> str:
-        return "Hotovo! Váš záznam bol úspešne uložený do dashboardu. Máte ešte nejaké otázky?"
+            # Google môže vrátiť viac častí, prejdeme ich
+            kandidat = odpoved_google.candidates[0]
+            for cast in kandidat.content.parts:
+                if cast.function_call:
+                    # Aha! Chce zavolať funkciu -> pridáme do zoznamu
+                    funkcie_na_zavolanie.append(UdajeOFunkcii(cast.function_call.name, cast.function_call.args))
+                elif cast.text:
+                    # Aha! Chce niečo povedať
+                    text_odpovede += cast.text
+
+            # 6. Zabalíme výsledok pre main.py
+            if funkcie_na_zavolanie:
+                # Ak chce volať funkcie
+                if not text_odpovede:
+                    # Ak nenechal text, vygenerujeme aspoň niečo
+                    text_odpovede = "Spracovávam údaje..."
+                
+                return OdpovedRobota(
+                    text_odpovede,
+                    funkcie_na_zavolanie
+                )
+            
+            # Ak je to len obyčajný pokec
+            if not text_odpovede:
+                text_odpovede = "Nerozumel som, skús to inak."
+
+            return OdpovedRobota(text_odpovede)
+
+        except Exception as chyba:
+            print(f"Chyba v AI: {chyba}")
+            return OdpovedRobota("Ospravedlňujem sa, nastala chyba pri komunikácii s AI.")
+
+    def get_final_response(self, messages):
+        return "Hotovo! Údaje boli uložené."
