@@ -294,9 +294,9 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
 
     # Limity podľa plánu (ak je subscription aktívna)
     plan_limits = {
-        "free": 20,
-        "basic": 100,    # 100 správ denne pre basic
-        "pro": 9999      # Prakticky neobmedzené (vypne rate-limit)
+        "free": 10,
+        "basic": 10000,    # Premium plán
+        "pro": 10000       # Premium plán
     }
 
     # Ak subscription nie je aktívna, použij free limit
@@ -388,6 +388,8 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
             "rate_limit": {"remaining": remaining, "total": daily_limit, "plan": effective_plan}
         }
     except Exception as e:
+        print(f"[CHAT CRITICAL ERROR] {e}")
+        traceback.print_exc()
         return {"odpoved": sanitize_error_message(e, IS_PRODUCTION), "error_detail": str(e) if not IS_PRODUCTION else None}
 
 # --- API ENDPOINTY: ŠTATISTIKY ---
@@ -405,6 +407,32 @@ def get_chart_data_api(user_id: str, chart_type: str, days: int = 30, decoded_to
 def get_entries_api(user_id: str, entry_type: str, days: int = 30, limit: int = 100, decoded_token: dict = Depends(verify_firebase_token)):
     user_id = get_authorized_user_id(user_id, decoded_token)
     return firebase.get_entries(user_id, entry_type, days, limit)
+
+@app.post("/api/entries/{user_id}/{entry_type}", tags=["Entries"])
+def add_entry_api(user_id: str, entry_type: str, request: Request, data: dict, decoded_token: dict = Depends(verify_firebase_token)):
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    allowed_types = {'food', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
+    if entry_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Invalid entry type: {entry_type}")
+    
+    print(f"[API] Adding {entry_type} entry for {user_id}: {data}")
+    success = firebase.save_entry(user_id, entry_type, data)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save entry")
+    return {"status": "ok", "message": f"{entry_type} entry saved"}
+
+@app.delete("/api/entries/{user_id}/{entry_type}/{entry_id}", tags=["Entries"])
+def delete_entry_api(user_id: str, entry_type: str, entry_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+    user_id = get_authorized_user_id(user_id, decoded_token)
+    allowed_types = {'food', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
+    if entry_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Invalid entry type: {entry_type}")
+    
+    print(f"[API] Deleting {entry_type} entry {entry_id} for {user_id}")
+    success = firebase.delete_entry(user_id, entry_type, entry_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete entry")
+    return {"status": "ok", "message": f"{entry_type} entry deleted"}
 
 @app.get("/api/stats/{user_id}", tags=["Statistics"])
 def get_stats_api(user_id: str, days: int = 30, decoded_token: dict = Depends(verify_firebase_token)):

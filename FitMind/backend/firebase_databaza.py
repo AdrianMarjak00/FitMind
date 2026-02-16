@@ -248,6 +248,27 @@ class FirebaseService:
             traceback.print_exc()
             return False
     
+    def delete_entry(self, user_id: str, entry_type: str, entry_id: str) -> bool:
+        """Vymaže záznam podľa ID."""
+        if not self.is_connected():
+            return False
+        
+        coll_name = self.COLLECTION_MAP.get(entry_type)
+        if not coll_name:
+            print(f"[FIREBASE] Unknown entry type for delete: {entry_type}")
+            return False
+        
+        try:
+            doc_ref = self._db.collection('users').document(user_id).collection(coll_name).document(entry_id)
+            doc_ref.delete()
+            print(f"[FIREBASE SUCCESS] Deleted {entry_type} {entry_id}")
+            return True
+        except Exception as e:
+            print(f"[FIREBASE ERROR] Chyba pri mazani {entry_type} {entry_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
     def update_profile(self, user_id: str, updates: Dict) -> bool:
         """
         Aktualizuje profil používateľa

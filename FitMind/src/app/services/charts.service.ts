@@ -24,7 +24,7 @@ export interface StatsData {
 export class ChartsService {
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // Pridaný timestamp zabraňuje cacheovaniu starých výsledkov v prehliadači
   getStats(userId: string, days: number = 30): Observable<StatsData> {
@@ -40,5 +40,13 @@ export class ChartsService {
   getEntries(userId: string, entryType: string, days: number = 30, limit: number = 100): Observable<any> {
     const t = new Date().getTime();
     return this.http.get(`${this.apiUrl}/entries/${userId}/${entryType}?days=${days}&limit=${limit}&t=${t}`);
+  }
+
+  addEntry(userId: string, entryType: string, data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/entries/${userId}/${entryType}`, data);
+  }
+
+  deleteEntry(userId: string, entryType: string, entryId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/entries/${userId}/${entryType}/${entryId}`);
   }
 }

@@ -418,22 +418,23 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.userFitnessService.addFoodEntry(this.userId, {
+    const data = {
       name: this.calorieForm.foods,
       calories: this.calorieForm.calories,
       protein: this.calorieForm.protein || 0,
       carbs: this.calorieForm.carbs || 0,
       fats: this.calorieForm.fats || 0,
-      mealType: this.calorieForm.meal as any,
-      category: this.calorieForm.category,
-      timestamp: new Date()
-    }).subscribe({
+      mealType: this.calorieForm.meal,
+      category: this.calorieForm.category
+    };
+
+    this.chartsService.addEntry(this.userId, 'food', data).subscribe({
       next: () => {
         alert('✅ Záznam o jedle pridaný!');
         this.calorieForm = { meal: 'breakfast', foods: '', calories: 0, protein: 0, carbs: 0, fats: 0, category: 'food', autoCalculate: true };
         this.refreshAllData();
       },
-      error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
+      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
     });
   }
 
@@ -443,19 +444,20 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.userFitnessService.addWorkoutEntry(this.userId, {
+    const data = {
       type: this.exerciseForm.type,
       duration: this.exerciseForm.duration,
-      intensity: this.exerciseForm.intensity as any,
-      caloriesBurned: this.exerciseForm.caloriesBurned || 0,
-      timestamp: new Date()
-    }).subscribe({
+      intensity: this.exerciseForm.intensity,
+      caloriesBurned: this.exerciseForm.caloriesBurned || 0
+    };
+
+    this.chartsService.addEntry(this.userId, 'exercise', data).subscribe({
       next: () => {
         alert('✅ Záznam o cvičení pridaný!');
         this.exerciseForm = { type: 'cardio', duration: 0, intensity: 'medium', caloriesBurned: 0 };
         this.refreshAllData();
       },
-      error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
+      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
     });
   }
 
@@ -465,15 +467,12 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.userFitnessService.addWeightEntry(this.userId, {
-      weight: this.weightForm.weight,
-      timestamp: new Date()
-    }).subscribe({
+    this.chartsService.addEntry(this.userId, 'weight', { weight: this.weightForm.weight }).subscribe({
       next: () => {
         alert('✅ Váha zaznamenaná!');
         this.refreshAllData();
       },
-      error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
+      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
     });
   }
 
@@ -710,30 +709,9 @@ export class DashboardComponent implements OnInit {
 
     if (!confirm('Naozaj chcete vymazať tento záznam?')) return;
 
-    let deleteObs: Observable<void>;
+    let deleteObs: Observable<any>;
 
-    switch (type) {
-      case 'food':
-        deleteObs = this.userFitnessService.deleteFoodEntry(this.userId, entryId);
-        break;
-      case 'exercise':
-        deleteObs = this.userFitnessService.deleteWorkoutEntry(this.userId, entryId);
-        break;
-      case 'weight':
-        deleteObs = this.userFitnessService.deleteWeightEntry(this.userId, entryId);
-        break;
-      case 'mood':
-        deleteObs = this.userFitnessService.deleteMoodEntry(this.userId, entryId);
-        break;
-      case 'sleep':
-        deleteObs = this.userFitnessService.deleteSleepEntry(this.userId, entryId);
-        break;
-      case 'stress':
-        deleteObs = this.userFitnessService.deleteStressEntry(this.userId, entryId);
-        break;
-      default:
-        return;
-    }
+    deleteObs = this.chartsService.deleteEntry(this.userId, type, entryId);
 
     deleteObs.subscribe({
       next: () => {
@@ -774,17 +752,16 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.userFitnessService.addMoodEntry(this.userId, {
+    this.chartsService.addEntry(this.userId, 'mood', {
       score: this.moodForm.score,
-      note: this.moodForm.note,
-      timestamp: new Date()
+      note: this.moodForm.note
     }).subscribe({
       next: () => {
         alert('✅ Nálada zaznamenaná!');
         this.moodForm = { score: 5, note: '' };
         this.refreshAllData();
       },
-      error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
+      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
     });
   }
 
@@ -794,17 +771,16 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.userFitnessService.addSleepEntry(this.userId, {
+    this.chartsService.addEntry(this.userId, 'sleep', {
       hours: this.sleepForm.hours,
-      quality: this.sleepForm.quality as any,
-      timestamp: new Date()
+      quality: this.sleepForm.quality
     }).subscribe({
       next: () => {
         alert('✅ Spánok zaznamenaný!');
         this.sleepForm = { hours: 0, quality: 'good' };
         this.refreshAllData();
       },
-      error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
+      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
     });
   }
 
@@ -814,17 +790,16 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    this.userFitnessService.addStressEntry(this.userId, {
+    this.chartsService.addEntry(this.userId, 'stress', {
       level: this.stressForm.level,
-      source: this.stressForm.source,
-      timestamp: new Date()
+      source: this.stressForm.source
     }).subscribe({
       next: () => {
         alert('✅ Stres zaznamenaný!');
         this.stressForm = { level: 1, source: '' };
         this.refreshAllData();
       },
-      error: err => alert('❌ Chyba: ' + (err.message || 'Neznáma chyba'))
+      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
     });
   }
 
@@ -834,12 +809,29 @@ export class DashboardComponent implements OnInit {
     console.log(`[CHART] Data for ${title}:`, data);
     if (!data || Object.keys(data).length === 0) {
       return {
-        title: { text: title, left: 'center', textStyle: { color: '#666' } },
+        title: { text: title, left: 'center', textStyle: { color: '#555', fontSize: 14 } },
+        graphic: [{
+          type: 'text',
+          left: 'center',
+          top: '55%',
+          style: {
+            text: '📊 Zatiaľ žiadne dáta',
+            fill: '#666',
+            fontSize: 13,
+            fontWeight: 'normal'
+          }
+        }],
         series: [{
           type: 'pie',
           radius: ['40%', '70%'],
-          data: [{ value: 1, name: 'Zatiaľ žiadne dáta', itemStyle: { color: '#1a1a1a' } }],
-          label: { show: true, position: 'center', formatter: '{b}', color: '#555' },
+          data: [{ value: 1, name: '', itemStyle: { color: 'rgba(61, 220, 132, 0.08)' } }],
+          label: { show: false },
+          emphasis: { disabled: true },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#1e1e1e',
+            borderWidth: 2
+          },
           silent: true
         }]
       };

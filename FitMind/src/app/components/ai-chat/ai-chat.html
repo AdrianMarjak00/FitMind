@@ -9,23 +9,24 @@
     </div>
     <div class="history-items">
       @if (conversations.length === 0) {
-        <div class="no-conversations">
-          <p>Zatiaľ žiadne konverzácie</p>
-          <button class="start-chat-btn" (click)="onNewConversation()">Začať nový chat</button>
-        </div>
+      <div class="no-conversations">
+        <p>Zatiaľ žiadne konverzácie</p>
+        <button class="start-chat-btn" (click)="onNewConversation()">Začať nový chat</button>
+      </div>
       }
       @for (conv of conversations; track conv.id) {
-        <div class="history-item" [class.active]="conv.id === activeConversationId" (click)="onConversationSelect(conv.id)">
-          <span class="status-dot" [class.gray]="conv.id !== activeConversationId"></span>
-          <div class="item-text">
-            <small>{{ conv.updatedAt | date:'dd.MM.yyyy HH:mm' }}</small>
-            <p>{{ conv.title }}</p>
-            @if (conv.lastMessage) {
-              <span class="last-message">{{ conv.lastMessage }}</span>
-            }
-          </div>
-          <button class="delete-conv-btn" (click)="onDeleteConversation($event, conv.id)" title="Vymazať">🗑️</button>
+      <div class="history-item" [class.active]="conv.id === activeConversationId"
+        (click)="onConversationSelect(conv.id)">
+        <span class="status-dot" [class.gray]="conv.id !== activeConversationId"></span>
+        <div class="item-text">
+          <small>{{ conv.updatedAt | date:'dd.MM.yyyy HH:mm' }}</small>
+          <p>{{ conv.title }}</p>
+          @if (conv.lastMessage) {
+          <span class="last-message">{{ conv.lastMessage }}</span>
+          }
         </div>
+        <button class="delete-conv-btn" (click)="onDeleteConversation($event, conv.id)" title="Vymazať">🗑️</button>
+      </div>
       }
     </div>
   </aside>
@@ -45,68 +46,74 @@
     </div>
 
     @if (showInsights && userId) {
-      <div class="insights-panel">
-        <div class="insights-tabs">
-          <button [class.active]="activeTab === 'recommendations'" (click)="activeTab = 'recommendations'; loadRecommendations()">💡 Odporúčania</button>
-          <button [class.active]="activeTab === 'weekly'" (click)="activeTab = 'weekly'; loadWeeklyReport()">📅 Tento týždeň</button>
-          <button [class.active]="activeTab === 'goals'" (click)="activeTab = 'goals'; loadGoalProgress()">🎯 Moje ciele</button>
-        </div>
-
-        <div class="insights-content">
-          @if (activeTab === 'recommendations') {
-            <div class="recommendations-view">
-              <h4>Personalizované odporúčania pre teba</h4>
-              @if (loadingInsights) { <div class="loading">Načítavam...</div> } 
-              @else if (recommendations.length > 0) {
-                <ul class="recommendations-list">
-                  @for (rec of recommendations; track rec) { <li>{{ rec }}</li> }
-                </ul>
-              } @else { <p class="no-data">Zatiaľ žiadne odporúčania.</p> }
-            </div>
-          }
-
-          @if (activeTab === 'weekly') {
-            <div class="weekly-report-view">
-              <h4>Týždenný report</h4>
-              @if (loadingInsights) { <div class="loading">Načítavam...</div> }
-              @else if (weeklyReport) {
-                <div class="report-summary">
-                  <div class="overall-message" [class]="weeklyReport.overall_rating">{{ weeklyReport.overall_message }}</div>
-                  <div class="report-details">
-                    <div class="section">
-                      <h5>🏆 Úspechy</h5>
-                      <ul>@for (a of weeklyReport.achievements; track a) { <li>{{ a }}</li> }</ul>
-                    </div>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-
-          @if (activeTab === 'goals') {
-            <div class="goals-view">
-              <h4>Pokrok k mojim cieľom</h4>
-              @if (loadingInsights) { <div class="loading">Načítavam...</div> }
-              @else if (goalProgress) {
-                <div class="goals-list">
-                  @for (item of goalProgress.progress_items; track item.goal) {
-                    <div class="goal-item" [class.on-track]="item.on_track">
-                      <div class="goal-header"><strong>{{ item.goal }}</strong><span>{{ item.on_track ? '✅' : '⚠️' }}</span></div>
-                      <div class="progress-bar"><div class="progress-fill" [style.width.%]="item.percentage"></div></div>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          }
-        </div>
+    <div class="insights-panel">
+      <div class="insights-tabs">
+        <button [class.active]="activeTab === 'recommendations'"
+          (click)="activeTab = 'recommendations'; loadRecommendations()">💡 Odporúčania</button>
+        <button [class.active]="activeTab === 'weekly'" (click)="activeTab = 'weekly'; loadWeeklyReport()">📅 Tento
+          týždeň</button>
+        <button [class.active]="activeTab === 'goals'" (click)="activeTab = 'goals'; loadGoalProgress()">🎯 Moje
+          ciele</button>
       </div>
+
+      <div class="insights-content">
+        @if (activeTab === 'recommendations') {
+        <div class="recommendations-view">
+          <h4>Personalizované odporúčania pre teba</h4>
+          @if (loadingInsights) { <div class="loading">Načítavam...</div> }
+          @else if (recommendations.length > 0) {
+          <ul class="recommendations-list">
+            @for (rec of recommendations; track rec) { <li>{{ rec }}</li> }
+          </ul>
+          } @else { <p class="no-data">Zatiaľ žiadne odporúčania.</p> }
+        </div>
+        }
+
+        @if (activeTab === 'weekly') {
+        <div class="weekly-report-view">
+          <h4>Týždenný report</h4>
+          @if (loadingInsights) { <div class="loading">Načítavam...</div> }
+          @else if (weeklyReport) {
+          <div class="report-summary">
+            <div class="overall-message" [class]="weeklyReport.overall_rating">{{ weeklyReport.overall_message }}</div>
+            <div class="report-details">
+              <div class="section">
+                <h5>🏆 Úspechy</h5>
+                <ul>@for (a of weeklyReport.achievements; track a) { <li>{{ a }}</li> }</ul>
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+        }
+
+        @if (activeTab === 'goals') {
+        <div class="goals-view">
+          <h4>Pokrok k mojim cieľom</h4>
+          @if (loadingInsights) { <div class="loading">Načítavam...</div> }
+          @else if (goalProgress) {
+          <div class="goals-list">
+            @for (item of goalProgress.progress_items; track item.goal) {
+            <div class="goal-item" [class.on-track]="item.on_track">
+              <div class="goal-header"><strong>{{ item.goal }}</strong><span>{{ item.on_track ? '✅' : '⚠️' }}</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="item.percentage"></div>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </div>
     }
 
     @if (savedEntries.length > 0) {
-      <div class="saved-entries-notification">
-        @for (entry of savedEntries; track entry) { <div class="saved-entry-badge">{{ entry }}</div> }
-      </div>
+    <div class="saved-entries-notification">
+      @for (entry of savedEntries; track entry) { <div class="saved-entry-badge">{{ entry }}</div> }
+    </div>
     }
 
     @if (!userId) { <div class="warning-message">⚠️ Pre použitie AI coacha sa musíte prihlásiť</div> }
@@ -114,36 +121,36 @@
 
     <!-- Premium limit banner -->
     @if (userId && !isPremium && !canSendMessage) {
-      <div class="upgrade-banner">
-        <div class="banner-content">
-          <span class="banner-icon">🔒</span>
-          <div class="banner-text">
-            <strong>Denný limit dosiahnutý!</strong>
-            <p>Vyčerpal si {{ FREE_DAILY_LIMIT }} správ na dnes. Prejdi na Premium pre neobmedzený prístup.</p>
-          </div>
-          <a routerLink="/training" class="upgrade-btn">Prejsť na Premium</a>
+    <div class="upgrade-banner">
+      <div class="banner-content">
+        <span class="banner-icon">🔒</span>
+        <div class="banner-text">
+          <strong>Denný limit dosiahnutý!</strong>
+          <p>Vyčerpal si {{ FREE_DAILY_LIMIT }} správ na dnes. Prejdi na Premium pre neobmedzený prístup.</p>
         </div>
+        <a routerLink="/training" class="upgrade-btn">Prejsť na Premium</a>
       </div>
+    </div>
     }
 
     <!-- Message counter for free users -->
     @if (userId && !isPremium && canSendMessage) {
-      <div class="message-counter">
-        <span class="counter-icon">💬</span>
-        <span>Zostáva ti <strong>{{ remainingMessages }}</strong> z {{ FREE_DAILY_LIMIT }} správ dnes</span>
-        <a routerLink="/training" class="upgrade-link">Neobmedzene?</a>
-      </div>
+    <div class="message-counter">
+      <span class="counter-icon">💬</span>
+      <span>Zostáva ti <strong>{{ remainingMessages }}</strong> z {{ FREE_DAILY_LIMIT }} správ dnes</span>
+      <a routerLink="/training" class="upgrade-link">Neobmedzene?</a>
+    </div>
     }
 
-    <div class="messages-container">
+    <div class="messages-container" #messagesContainer>
       @for (msg of aiService.messages$ | async; track $index) {
-        <div [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
-          <div class="message-bubble">
-            <strong>{{ msg.role === 'user' ? '👤 Ty:' : '🤖 AI:' }}</strong>
-            <div class="message-content">{{ msg.content }}</div>
-            <small class="timestamp">{{ msg.timestamp | date:'HH:mm' }}</small>
-          </div>
+      <div [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
+        <div class="message-bubble">
+          <strong>{{ msg.role === 'user' ? '👤 Ty:' : '🤖 AI:' }}</strong>
+          <div class="message-content">{{ msg.content }}</div>
+          <small class="timestamp">{{ msg.timestamp | date:'HH:mm' }}</small>
         </div>
+      </div>
       }
       @if (isLoading) { <div class="loading-typing">AI Coach píše...</div> }
     </div>
@@ -152,7 +159,8 @@
       <input [(ngModel)]="message" (keyup.enter)="sendMessage()"
         [placeholder]="canSendMessage ? 'Napíš správu (napr. \'Zjedol som 2 vajcia\')...' : 'Denný limit dosiahnutý - prejdi na Premium'"
         [disabled]="isLoading || !userId || !canSendMessage">
-      <button (click)="sendMessage()" [disabled]="isLoading || !message.trim() || !userId || !canSendMessage">{{ isLoading ? '⏳' : '📤' }}</button>
+      <button (click)="sendMessage()" [disabled]="isLoading || !message.trim() || !userId || !canSendMessage">{{
+        isLoading ? '⏳' : '📤' }}</button>
     </div>
   </div>
 </div>

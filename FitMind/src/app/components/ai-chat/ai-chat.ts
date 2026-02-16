@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { AiService, ChatMessage, WeeklyReport, GoalProgress, Conversation } from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendStatusService } from '../../services/backend-status.service';
@@ -16,7 +16,8 @@ import { Subscription } from 'rxjs';
   templateUrl: './ai-chat.html',
   styleUrls: ['./ai-chat.scss']
 })
-export class AiChatComponent implements OnInit, OnDestroy {
+export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
+  @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
   currentUser: User | null = null;
   userId = '';
   message = '';
@@ -53,7 +54,20 @@ export class AiChatComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private backendStatus: BackendStatusService,
     private paymentService: PaymentService
-  ) {}
+  ) { }
+
+  private scrollToBottom(): void {
+    try {
+      if (this.messagesContainer) {
+        const el = this.messagesContainer.nativeElement;
+        el.scrollTop = el.scrollHeight;
+      }
+    } catch (err) { }
+  }
+
+  ngAfterViewChecked(): void {
+    this.scrollToBottom();
+  }
 
   ngOnInit(): void {
     this.backendStatus.checkBackendStatus().subscribe(isRunning => {
@@ -152,6 +166,7 @@ export class AiChatComponent implements OnInit, OnDestroy {
           setTimeout(() => { if (this.showInsights) this.refreshCurrentTab(); }, 1000);
           setTimeout(() => { this.savedEntries = []; }, 5000);
         }
+        setTimeout(() => this.scrollToBottom(), 100);
       },
       error: () => { this.isLoading = false; },
       complete: () => this.isLoading = false
