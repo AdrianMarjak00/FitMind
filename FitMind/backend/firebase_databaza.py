@@ -101,8 +101,9 @@ class FirebaseService:
                     cls._db = None
 
         except Exception as e:
-            print(f"[WARNING] Firebase kritická chyba pri inicializácii: {e}")
-            cls._db = None
+            print(f"[CRITICAL] Firebase initialization failed: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
             cls._db = None
     
     @property

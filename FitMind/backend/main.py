@@ -157,8 +157,26 @@ def api_status():
 
 @app.get("/api/health", tags=["System"])
 def health():
-    """Základný healthcheck pre deployment platformy (napr. Render)."""
-    return {"status": "healthy", "timestamp": time.time()}
+    """Zdravotná kontrola aplikácie a služieb."""
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "services": {
+            "firebase": {
+                "connected": firebase.is_connected(),
+                "db_initialized": firebase._db is not None
+            },
+            "stripe": {
+                "configured": stripe_service.is_configured() if 'stripe_service' in globals() else False
+            },
+            "ai": {
+                "configured": ai_service.is_configured() if 'ai_service' in globals() else False
+            }
+        },
+        "environment": {
+            "production": IS_PRODUCTION
+        }
+    }
 
 # --- API ENDPOINTY: ADMIN PANEL ---
 
