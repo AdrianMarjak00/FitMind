@@ -43,18 +43,20 @@ class FirebaseService:
             cred = None
             
             if env_creds:
+                print(f"[INFO] Firebase: Found env credentials (length: {len(env_creds)})")
                 try:
                     # Skús či je to JSON reťazec
                     cred_dict = json.loads(env_creds)
                     cred = credentials.Certificate(cred_dict)
-                    print("[INFO] Firebase: Používam credentials z environment premennej.")
+                    print(f"[INFO] Firebase: Parsed JSON from env for project: {cred_dict.get('project_id')}")
                 except Exception as e:
+                    print(f"[ERROR] Failed to parse FIREBASE_CREDENTIALS as JSON: {e}")
                     # Ak to nie je JSON, skús či je to cesta k súboru
                     if os.path.exists(env_creds):
                         cred = credentials.Certificate(env_creds)
-                        print(f"[INFO] Firebase: Používam credentials zo súboru v env: {env_creds}")
+                        print(f"[INFO] Firebase: Using credentials file from path in env: {env_creds}")
                     else:
-                        print(f"[ERROR] Chyba pri parsovaní FIREBASE_CREDENTIALS: {e}")
+                        print(f"[ERROR] FIREBASE_CREDENTIALS in env is NOT a valid JSON nor a valid file path!")
             
             # 2. Ak stále nič, skús lokálny súbor (pre vývoj)
             if not cred:

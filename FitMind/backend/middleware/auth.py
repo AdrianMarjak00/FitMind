@@ -47,8 +47,17 @@ async def verify_firebase_token(request: Request):
     token_preview = f"{id_token[:10]}..." if id_token else "EMPTY"
     
     try:
+        # Over či je Firebase inicializovaný (poistka pre Render)
+        try:
+            from firebase_admin import _apps
+            if not _apps:
+                print("[AUTH] Firebase app not found, attempting emergency initialization...")
+                from firebase_databaza import FirebaseService
+                FirebaseService()
+        except:
+            pass
+            
         # Over ID token pomocou Firebase Admin SDK
-        # POZOR: Musí byť inicializovaný firebase-admin!
         decoded_token = auth.verify_id_token(id_token)
         request.state.user = decoded_token
         return decoded_token
