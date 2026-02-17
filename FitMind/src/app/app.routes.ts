@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 
 import { HomeComponent } from './home/home';
-import { Contact } from './components/contact/contact';
 import { RegisterComponent } from './components/register/register';
 import { LoginComponent } from './components/login/login';
 import { CompleteProfileComponent } from './components/complete-profile/complete-profile';
@@ -21,7 +20,6 @@ export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
     { path: 'complete-profile', component: CompleteProfileComponent },
-    { path: 'contact', component: Contact },
     { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
     { path: 'piechart', component: Piechart, canActivate: [AdminGuard] },
     { path: 'review', component: Reviews },
