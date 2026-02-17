@@ -1,177 +1,680 @@
 <div class="modern-dashboard">
+  <!-- Email Verification Banner -->
+  @if (showEmailVerificationBanner) {
+  <div class="email-verification-banner">
+    <div class="banner-content">
+      <mat-icon>mail_outline</mat-icon>
+      <span>Tvoj email ešte nie je overený. Skontroluj svoju schránku alebo</span>
+      <button class="resend-btn" (click)="resendVerificationEmail()">odošli znova</button>
+    </div>
+    <button class="close-banner" (click)="dismissEmailBanner()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  }
+
+  <!-- 🔥 HERO SEKCIA - Denné ciele -->
   <section class="hero-section">
-    <div class="container" *ngIf="userProfile">
-      <div class="hero-grid">
+    <div class="container">
+      @if (userProfile) {
+      <div class="hero-content">
         <div class="greeting">
           <h1>Vitaj späť, {{ userProfile.firstName }}! 👋</h1>
-          <p class="date-subtitle">{{ getCurrentDateMessage() }}</p>
+          <p>{{ getCurrentDateMessage() }}</p>
         </div>
 
+        <!-- Denné ciele karty -->
         <div class="daily-goals">
-          <div class="goal-card">
-            <div class="card-header"><span>🍽️</span> <h3>Kalórie</h3></div>
-            <div class="numbers">
-              <span class="current">{{ todayStats.calories.consumed }}</span>
-              <span class="target">/ {{ todayStats.calories.target }} kcal</span>
+          <!-- Kalórie -->
+          <div class="goal-card calories-card">
+            <div class="card-header">
+              <span class="icon">🍽️</span>
+              <h3>Kalórie</h3>
             </div>
-            <div class="progress-wrapper">
-              <div class="progress-bar"><div class="progress-fill" [style.width.%]="getPercentage(todayStats.calories.consumed, todayStats.calories.target)"></div></div>
+            <div class="progress-info">
+              <div class="numbers">
+                <span class="current">{{ todayStats.calories.consumed }}</span>
+                <span class="separator">/</span>
+                <span class="target">{{ todayStats.calories.target }} kcal</span>
+              </div>
+              <div class="remaining">
+                Zostáva: <strong>{{ todayStats.calories.remaining }} kcal</strong>
+              </div>
             </div>
+            <div class="progress-bar">
+              <div class="progress-fill"
+                [style.width.%]="getPercentage(todayStats.calories.consumed, todayStats.calories.target)"></div>
+            </div>
+            <span class="percentage">{{ getPercentage(todayStats.calories.consumed, todayStats.calories.target) |
+              number:'1.0-0' }}%</span>
           </div>
 
-          <div class="goal-card">
-            <div class="card-header"><span>💪</span> <h3>Cvičenie</h3></div>
-            <div class="numbers">
-              <span class="current">{{ todayStats.exercise.minutes }}</span>
-              <span class="target">/ {{ todayStats.exercise.target }} min</span>
+          <!-- Cvičenie -->
+          <div class="goal-card exercise-card">
+            <div class="card-header">
+              <span class="icon">💪</span>
+              <h3>Cvičenie</h3>
             </div>
-            <div class="progress-wrapper">
-              <div class="progress-bar"><div class="progress-fill" [style.width.%]="getPercentage(todayStats.exercise.minutes, todayStats.exercise.target)"></div></div>
+            <div class="progress-info">
+              <div class="numbers">
+                <span class="current">{{ todayStats.exercise.minutes }}</span>
+                <span class="separator">/</span>
+                <span class="target">{{ todayStats.exercise.target }} min</span>
+              </div>
+              <div class="remaining">
+                @if (todayStats.exercise.minutes >= todayStats.exercise.target) {
+                <strong class="success">✅ Cieľ splnený!</strong>
+                } @else {
+                Zostáva: <strong>{{ todayStats.exercise.target - todayStats.exercise.minutes }} min</strong>
+                }
+              </div>
             </div>
+            <div class="progress-bar">
+              <div class="progress-fill"
+                [style.width.%]="getPercentage(todayStats.exercise.minutes, todayStats.exercise.target)"></div>
+            </div>
+            <span class="percentage">{{ getPercentage(todayStats.exercise.minutes, todayStats.exercise.target) |
+              number:'1.0-0' }}%</span>
           </div>
 
+          <!-- Váha -->
           <div class="goal-card weight-card">
-            <div class="card-header"><span>⚖️</span> <h3>Váha</h3></div>
-            <div class="numbers">
-              <span class="current">{{ userProfile.currentWeight }} kg</span>
+            <div class="card-header">
+              <span class="icon">⚖️</span>
+              <h3>Váha</h3>
             </div>
-            <div class="bmi-badge">BMI: <strong>{{ calculateBMI() }}</strong></div>
+            <div class="progress-info">
+              <div class="numbers">
+                <span class="current">{{ userProfile.currentWeight || 0 }}</span>
+                <span class="separator">→</span>
+                <span class="target">{{ userProfile.targetWeight || 0 }} kg</span>
+              </div>
+              <div class="remaining">
+                Rozdiel: <strong>{{ (userProfile.currentWeight || 0) - (userProfile.targetWeight || 0) | number:'1.1-1'
+                  }} kg</strong>
+              </div>
+            </div>
+            <div class="weight-progress">
+              <div class="bmi">
+                <span>BMI:</span>
+                <strong>{{ calculateBMI() }}</strong>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+      }
     </div>
   </section>
 
+  <!-- 📊 DASHBOARD OBSAH -->
   <div class="dashboard-container">
+    <!-- ĽAVÁ STRANA - Rýchle akcie + Stats -->
     <aside class="sidebar">
-      <div class="quick-add-widget">
-        <div class="widget-header">
-          <h2>⚡ Rýchle pridanie</h2>
-          <span class="pulse-icon"></span>
-        </div>
+      <!-- Pridať záznam -->
+      <div class="widget quick-add">
+        <h2>⚡ Rýchle pridanie</h2>
 
-        <div class="tabs-grid">
-          <button *ngFor="let tab of tabs" 
-                  [class.active]="activeTab === tab.id" 
-                  (click)="activeTab = tab.id"
-                  class="tab-btn">
-            <span class="icon">{{ tab.icon }}</span>
-            <span class="label">{{ tab.label }}</span>
+        <div class="tabs">
+          <button *ngFor="let tab of tabs" [class.active]="activeTab === tab.id" (click)="activeTab = tab.id">
+            {{ tab.icon }} {{ tab.label }}
           </button>
         </div>
 
-        <div class="form-wrapper" [@slideIn]>
-          <div *ngIf="activeTab === 'calories'" class="quick-form">
+        <!-- Formuláre -->
+        <div class="form-container">
+          <!-- Kalórie -->
+          @if (activeTab === 'calories') {
+          <form (ngSubmit)="addCalorieEntry()" class="entry-form">
             <mat-form-field appearance="outline">
-              <mat-label>Čo ste jedli?</mat-label>
-              <input matInput [(ngModel)]="calorieForm.foods" placeholder="napr. Ovsená kaša">
+              <mat-label>Typ jedla</mat-label>
+              <mat-select [(ngModel)]="calorieForm.meal" name="meal" required>
+                <mat-option value="breakfast">🍳 Raňajky</mat-option>
+                <mat-option value="lunch">🍱 Obed</mat-option>
+                <mat-option value="dinner">🍽️ Večera</mat-option>
+                <mat-option value="snack">🍎 Desiata</mat-option>
+              </mat-select>
             </mat-form-field>
 
-            <div class="macro-inputs">
+            <mat-form-field appearance="outline">
+              <mat-label>Kategória</mat-label>
+              <mat-select [(ngModel)]="calorieForm.category" name="category" required>
+                <mat-option value="food">🥫 Jedlo</mat-option>
+                <mat-option value="drink">🥤 Nápoj</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Čo si jedol?</mat-label>
+              <textarea matInput [(ngModel)]="calorieForm.foods" name="foods" rows="2" required
+                placeholder="napr. Perkelt s ryžou"></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Kalórie (kcal)</mat-label>
+              <input matInput type="number" [(ngModel)]="calorieForm.calories" name="calories" required
+                placeholder="500" />
+            </mat-form-field>
+
+            <!-- Nutričné hodnoty -->
+            <div class="nutrition-grid">
               <mat-form-field appearance="outline">
-                <mat-label>Bielk. (g)</mat-label>
-                <input matInput type="number" [(ngModel)]="calorieForm.protein" (input)="calculateCaloriesFromMacros()">
+                <mat-label>Bielkoviny (g)</mat-label>
+                <input matInput type="number" step="0.1" [(ngModel)]="calorieForm.protein" name="protein"
+                  placeholder="30" (ngModelChange)="calculateCaloriesFromMacros()" />
               </mat-form-field>
+
               <mat-form-field appearance="outline">
-                <mat-label>Sach. (g)</mat-label>
-                <input matInput type="number" [(ngModel)]="calorieForm.carbs" (input)="calculateCaloriesFromMacros()">
+                <mat-label>Sacharidy (g)</mat-label>
+                <input matInput type="number" step="0.1" [(ngModel)]="calorieForm.carbs" name="carbs" placeholder="60"
+                  (ngModelChange)="calculateCaloriesFromMacros()" />
               </mat-form-field>
+
               <mat-form-field appearance="outline">
                 <mat-label>Tuky (g)</mat-label>
-                <input matInput type="number" [(ngModel)]="calorieForm.fats" (input)="calculateCaloriesFromMacros()">
+                <input matInput type="number" step="0.1" [(ngModel)]="calorieForm.fats" name="fats" placeholder="15"
+                  (ngModelChange)="calculateCaloriesFromMacros()" />
               </mat-form-field>
             </div>
 
-            <div class="total-cal-display">
-              Vypočítané: <strong>{{ calorieForm.calories }} kcal</strong>
+            @if (calorieForm.autoCalculate && (calorieForm.protein > 0 || calorieForm.carbs > 0 || calorieForm.fats >
+            0)) {
+            <div class="auto-calc-info">
+              ✨ Auto-kalkulácia: <strong>{{ calorieForm.calories }} kcal</strong>
+              <small>(P: {{ calorieForm.protein * 4 }} + C: {{ calorieForm.carbs * 4 }} + T: {{ calorieForm.fats * 9
+                }})</small>
             </div>
+            }
 
-            <button class="add-btn main" (click)="addCalorieEntry()">
-              <mat-icon>add</mat-icon> Zapísať jedlo
+            <button mat-flat-button color="primary" type="submit">
+              Pridať záznam
             </button>
-          </div>
+          </form>
+          }
 
-          <div *ngIf="activeTab === 'exercise'" class="quick-form">
+          <!-- Cvičenie -->
+          @if (activeTab === 'exercise') {
+          <form (ngSubmit)="addWorkoutEntry()" class="entry-form">
             <mat-form-field appearance="outline">
-              <mat-label>Typ aktivity</mat-label>
-              <mat-select [(ngModel)]="exerciseForm.type">
+              <mat-label>Typ cvičenia</mat-label>
+              <mat-select [(ngModel)]="exerciseForm.type" name="type" required>
                 <mat-option value="cardio">🏃 Kardio</mat-option>
-                <mat-option value="strength">🏋️ Silový tréning</mat-option>
-                <mat-option value="yoga">🧘 Jóga / Flexibilita</mat-option>
+                <mat-option value="strength">💪 Posilňovanie</mat-option>
+                <mat-option value="flexibility">🧘 Strečing</mat-option>
                 <mat-option value="sports">⚽ Šport</mat-option>
               </mat-select>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Trvanie (minúty)</mat-label>
-              <input matInput type="number" [(ngModel)]="exerciseForm.duration">
+              <input matInput type="number" [(ngModel)]="exerciseForm.duration" name="duration" required
+                placeholder="30" />
             </mat-form-field>
 
-            <div class="quick-presets">
-              <button (click)="exerciseForm.duration = 15">15m</button>
-              <button (click)="exerciseForm.duration = 30">30m</button>
-              <button (click)="exerciseForm.duration = 45">45m</button>
-              <button (click)="exerciseForm.duration = 60">60m</button>
-            </div>
-
-            <button class="add-btn exercise" (click)="addWorkoutEntry()">
-              <mat-icon>fitness_center</mat-icon> Pridať aktivitu
-            </button>
-          </div>
-
-          <div *ngIf="activeTab === 'weight'" class="quick-form">
-            <div class="weight-input-wrapper">
-              <input type="number" [(ngModel)]="weightForm.weight" step="0.1" class="huge-input">
-              <span class="unit">kg</span>
-            </div>
-            <p class="hint">Dnes ráno nalačno</p>
-            <button class="add-btn weight" (click)="addWeightEntry()">
-              <mat-icon>scale</mat-icon> Aktualizovať váhu
-            </button>
-          </div>
-
-          <div *ngIf="activeTab === 'sleep'" class="quick-form">
             <mat-form-field appearance="outline">
-              <mat-label>Dĺžka spánku (hodiny)</mat-label>
-              <input matInput type="number" [(ngModel)]="sleepForm.hours">
+              <mat-label>Intenzita</mat-label>
+              <mat-select [(ngModel)]="exerciseForm.intensity" name="intensity" required>
+                <mat-option value="low">Nízka</mat-option>
+                <mat-option value="medium">Stredná</mat-option>
+                <mat-option value="high">Vysoká</mat-option>
+              </mat-select>
             </mat-form-field>
-            
-            <div class="quality-selector">
-              <label>Kvalita:</label>
-              <div class="emoji-group">
-                <button [class.selected]="sleepForm.quality === 'poor'" (click)="sleepForm.quality = 'poor'">😫</button>
-                <button [class.selected]="sleepForm.quality === 'fair'" (click)="sleepForm.quality = 'fair'">🥱</button>
-                <button [class.selected]="sleepForm.quality === 'good'" (click)="sleepForm.quality = 'good'">😊</button>
-                <button [class.selected]="sleepForm.quality === 'excellent'" (click)="sleepForm.quality = 'excellent'">🤩</button>
-              </div>
-            </div>
 
-            <button class="add-btn sleep" (click)="addSleepEntry()">
-              <mat-icon>bedtime</mat-icon> Uložiť spánok
+            <mat-form-field appearance="outline">
+              <mat-label>Spálené kalórie (voliteľné)</mat-label>
+              <input matInput type="number" [(ngModel)]="exerciseForm.caloriesBurned" name="caloriesBurned"
+                placeholder="200" />
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" type="submit">
+              Pridať cvičenie
             </button>
+          </form>
+          }
+
+          <!-- Váha -->
+          @if (activeTab === 'weight') {
+          <form (ngSubmit)="addWeightEntry()" class="entry-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Váha (kg)</mat-label>
+              <input matInput type="number" step="0.1" [(ngModel)]="weightForm.weight" name="weight" required />
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" type="submit">
+              Zaznamenať váhu
+            </button>
+          </form>
+          }
+
+          <!-- Nálada -->
+          @if (activeTab === 'mood') {
+          <form (ngSubmit)="addMoodEntry()" class="entry-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Ako sa cítiš? (1-10)</mat-label>
+              <input matInput type="number" min="1" max="10" [(ngModel)]="moodForm.score" name="score" required />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Poznámka (voliteľné)</mat-label>
+              <textarea matInput [(ngModel)]="moodForm.note" name="note" rows="2"></textarea>
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" type="submit">
+              Zaznamenať náladu
+            </button>
+          </form>
+          }
+
+          <!-- Spánok -->
+          @if (activeTab === 'sleep') {
+          <form (ngSubmit)="addSleepEntry()" class="entry-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Hodiny spánku</mat-label>
+              <input matInput type="number" step="0.5" [(ngModel)]="sleepForm.hours" name="hours" required />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Kvalita spánku</mat-label>
+              <mat-select [(ngModel)]="sleepForm.quality" name="quality" required>
+                <mat-option value="poor">Slabá</mat-option>
+                <mat-option value="fair">Priemerná</mat-option>
+                <mat-option value="good">Dobrá</mat-option>
+                <mat-option value="excellent">Výborná</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" type="submit">
+              Zaznamenať spánok
+            </button>
+          </form>
+          }
+
+          <!-- Stres -->
+          @if (activeTab === 'stress') {
+          <form (ngSubmit)="addStressEntry()" class="entry-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Úroveň stresu (1-10)</mat-label>
+              <input matInput type="number" min="1" max="10" [(ngModel)]="stressForm.level" name="level" required />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Spúšťače stresu</mat-label>
+              <textarea matInput [(ngModel)]="stressForm.source" name="source" rows="2"></textarea>
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" type="submit">
+              Zaznamenať stres
+            </button>
+          </form>
+          }
+        </div>
+      </div>
+
+      <!-- Týždenný súhrn -->
+      <div class="widget weekly-summary">
+        <h2>📅 Tento týždeň</h2>
+        <div class="summary-stats">
+          <div class="stat">
+            <span class="icon">🍽️</span>
+            <div>
+              <p class="label">Priemerné kalórie</p>
+              <p class="value">{{ weeklyStats.calories.avg | number:'1.0-0' }} kcal</p>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="icon">💪</span>
+            <div>
+              <p class="label">Celkové cvičenie</p>
+              <p class="value">{{ weeklyStats.exercise.total }} min</p>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="icon">📊</span>
+            <div>
+              <p class="label">Dní zaznamenané</p>
+              <p class="value">{{ weeklyStats.calories.days }} / 7</p>
+            </div>
           </div>
         </div>
+      </div>
+
+      <!-- AI Návrhy na vyrovnanie príjmu -->
+      <div class="widget ai-suggestions">
+        <div class="widget-header" (click)="toggleAISuggestions()">
+          <h2>🤖 AI Návrhy</h2>
+          <span class="toggle-icon">{{ showAISuggestions ? '▼' : '▶' }}</span>
+        </div>
+
+        @if (showAISuggestions) {
+        <div class="suggestions-content">
+          @if (aiSuggestions.length > 0) {
+          <div class="suggestion-item" *ngFor="let suggestion of aiSuggestions">
+            {{ suggestion }}
+          </div>
+          } @else {
+          <p class="no-suggestions">Pridajte záznamy pre AI návrhy</p>
+          }
+
+          <button class="refresh-btn" (click)="loadAISuggestions()">
+            🔄 Obnoviť návrhy
+          </button>
+        </div>
+        }
       </div>
     </aside>
 
+    <!-- PRAVÁ STRANA - Grafy a vizualizácie -->
     <main class="main-content">
       <div class="stats-header">
-        <div class="header-left">
-          <h2>📊 Štatistiky</h2>
-          <div class="period-selector">
-            <button *ngFor="let option of periodOptions" [class.active]="selectedPeriod === option.id" (click)="onPeriodChange(option.id)">
+        <div class="stats-title-row">
+          <h2>📊 Tvoje štatistiky</h2>
+          <button class="export-btn" (click)="exportToCSV()" [class.premium-only]="!isPremium"
+            [title]="isPremium ? 'Exportovať dáta do CSV' : 'Dostupné len pre Premium'">
+            📥 Export
+            @if (!isPremium) { <span class="premium-badge">PRO</span> }
+          </button>
+        </div>
+
+        <!-- 🗓️ VÝBER OBDOBIA -->
+        <div class="period-selector">
+          <div class="period-buttons">
+            @for (option of periodOptions; track option.id) {
+            <button [class.active]="selectedPeriod === option.id" (click)="onPeriodChange(option.id)">
               {{ option.label }}
             </button>
+            }
           </div>
+
+          <!-- Vlastný rozsah dátumov -->
+          @if (showCustomDatePicker) {
+          <div class="custom-date-picker">
+            <mat-form-field appearance="outline">
+              <mat-label>Od</mat-label>
+              <input matInput [matDatepicker]="pickerFrom" [(ngModel)]="customDateFrom">
+              <mat-datepicker-toggle matIconSuffix [for]="pickerFrom"></mat-datepicker-toggle>
+              <mat-datepicker #pickerFrom></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Do</mat-label>
+              <input matInput [matDatepicker]="pickerTo" [(ngModel)]="customDateTo">
+              <mat-datepicker-toggle matIconSuffix [for]="pickerTo"></mat-datepicker-toggle>
+              <mat-datepicker #pickerTo></mat-datepicker>
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" (click)="applyCustomDateRange()">
+              Použiť
+            </button>
+          </div>
+          }
         </div>
       </div>
 
-      <div class="charts-grid">
-        <div class="chart-card"><h3>🍽️ Príjem kalórií</h3><div echarts [options]="caloriesChart" class="chart-canvas"></div></div>
-        <div class="chart-card"><h3>💪 Aktivita</h3><div echarts [options]="exerciseChart" class="chart-canvas"></div></div>
-        <div class="chart-card"><h3>😴 Spánok</h3><div echarts [options]="sleepChart" class="chart-canvas"></div></div>
-        <div class="chart-card full-width"><h3>⚖️ Vývoj váhy</h3><div echarts [options]="weightChart" class="chart-canvas"></div></div>
+      @if (loading) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Načítavam dáta...</p>
       </div>
+      } @else {
+      <div class="charts-grid">
+
+        <!-- Graf 1: Kalórie -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>🍽️ Kalórie podľa jedla</h3>
+            <div class="header-actions">
+              <span class="badge">{{ getPeriodLabel() }}</span>
+              <button class="details-btn" (click)="openDetailsPanel('food')">
+                📋 Detaily ({{ recentFoodEntries.length }})
+              </button>
+            </div>
+          </div>
+          <div echarts [options]="caloriesChart" class="chart"></div>
+        </div>
+
+        <!-- Graf: Jedlo vs Napoje -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>🍼 Jedlo vs Nápoje (kcal)</h3>
+            <div class="header-actions">
+              <span class="badge">{{ getPeriodLabel() }}</span>
+            </div>
+          </div>
+          <div echarts [options]="calorieCategoryChart" class="chart"></div>
+        </div>
+
+        <!-- Graf 2: Cvičenie -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>💪 Cvičenie podľa typu</h3>
+            <div class="header-actions">
+              <span class="badge">{{ getPeriodLabel() }}</span>
+              <button class="details-btn" (click)="openDetailsPanel('exercise')">
+                📋 Detaily ({{ recentWorkoutEntries.length }})
+              </button>
+            </div>
+          </div>
+          <div echarts [options]="exerciseChart" class="chart"></div>
+        </div>
+
+        <!-- Graf 6: Spánok -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>😴 Kvalita spánku</h3>
+            <div class="header-actions">
+              <span class="badge">{{ getPeriodLabel() }}</span>
+              <button class="details-btn" (click)="openDetailsPanel('sleep')">
+                📋 Detaily ({{ recentSleepEntries.length }})
+              </button>
+            </div>
+          </div>
+          <div echarts [options]="sleepChart" class="chart"></div>
+        </div>
+
+        <!-- Graf 3: Váha -->
+        <div class="chart-card full-width">
+          <div class="chart-header">
+            <h3>⚖️ Vývoj váhy</h3>
+            <div class="header-actions">
+              <span class="badge">90 dní</span>
+              <button class="details-btn" (click)="openDetailsPanel('weight')">
+                📋 Detaily ({{ recentWeightEntries.length }})
+              </button>
+            </div>
+          </div>
+          <div echarts [options]="weightChart" class="chart"></div>
+        </div>
+
+        <!-- Graf 4: Nálada -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>😊 Nálada</h3>
+            <div class="header-actions">
+              <span class="badge">30 dní</span>
+              <button class="details-btn" (click)="openDetailsPanel('mood')">
+                📋 Detaily ({{ recentMoodEntries.length }})
+              </button>
+            </div>
+          </div>
+          <div echarts [options]="moodChart" class="chart"></div>
+        </div>
+
+        <!-- Graf 5: Stres -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>😰 Úroveň stresu</h3>
+            <div class="header-actions">
+              <span class="badge">30 dní</span>
+              <button class="details-btn" (click)="openDetailsPanel('stress')">
+                📋 Detaily ({{ recentStressEntries.length }})
+              </button>
+            </div>
+          </div>
+          <div echarts [options]="stressChart" class="chart"></div>
+        </div>
+      </div>
+      }
     </main>
   </div>
+
+  <!-- 📋 DETAIL PANEL (slide-in z pravej strany) -->
+  @if (showDetailsPanel) {
+  <div class="detail-overlay" (click)="closeDetailsPanel()"></div>
+  <aside class="detail-panel" [@slideIn]>
+    <div class="panel-header">
+      <h2>{{ getDetailTitle() }}</h2>
+      <button class="close-btn" (click)="closeDetailsPanel()">✕</button>
+    </div>
+
+    <div class="panel-content">
+      @if (getSelectedEntries().length > 0) {
+      <!-- Food entries -->
+      @if (selectedDetailType === 'food') {
+      <div class="detail-item" *ngFor="let entry of getSelectedEntries()">
+        <div class="detail-header">
+          <strong>{{ entry.name }}</strong>
+          <div class="header-actions">
+            <span class="badge-small">{{ entry.mealType }}</span>
+            <button class="delete-btn" (click)="deleteEntry(entry.id, 'food')">🗑️</button>
+          </div>
+        </div>
+
+        <!-- Hlavné info - Kalórie -->
+        <div class="calories-big">
+          <span class="label">Celkové kalórie</span>
+          <span class="value-big">{{ entry.calories }} kcal</span>
+        </div>
+
+        <!-- Nutričné hodnoty v grid -->
+        @if (entry.protein || entry.carbs || entry.fats) {
+        <div class="nutrition-breakdown">
+          <div class="macro-item">
+            <span class="macro-icon">🥩</span>
+            <div>
+              <span class="macro-label">Bielkoviny</span>
+              <span class="macro-value">{{ entry.protein || 0 }}g</span>
+            </div>
+          </div>
+          <div class="macro-item">
+            <span class="macro-icon">🍞</span>
+            <div>
+              <span class="macro-label">Sacharidy</span>
+              <span class="macro-value">{{ entry.carbs || 0 }}g</span>
+            </div>
+          </div>
+          <div class="macro-item">
+            <span class="macro-icon">🧈</span>
+            <div>
+              <span class="macro-label">Tuky</span>
+              <span class="macro-value">{{ entry.fats || 0 }}g</span>
+            </div>
+          </div>
+        </div>
+        }
+
+        <div class="detail-info">
+          <span class="timestamp">{{ formatDate(entry.timestamp) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Exercise entries -->
+      @if (selectedDetailType === 'exercise') {
+      <div class="detail-item" *ngFor="let entry of getSelectedEntries()">
+        <div class="detail-header">
+          <strong>{{ entry.type }}</strong>
+          <div class="header-actions">
+            <span class="badge-small">{{ entry.intensity }}</span>
+            <button class="delete-btn" (click)="deleteEntry(entry.id, 'exercise')">🗑️</button>
+          </div>
+        </div>
+
+        <div class="exercise-stats">
+          <div class="stat-box">
+            <span class="stat-label">Trvanie</span>
+            <span class="stat-value">{{ entry.duration }} min</span>
+          </div>
+          @if (entry.caloriesBurned) {
+          <div class="stat-box">
+            <span class="stat-label">Spálené</span>
+            <span class="stat-value">{{ entry.caloriesBurned }} kcal</span>
+          </div>
+          }
+        </div>
+
+        <div class="detail-info">
+          <span class="timestamp">{{ formatDate(entry.timestamp) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Weight entries -->
+      @if (selectedDetailType === 'weight') {
+      <div class="detail-item" *ngFor="let entry of getSelectedEntries()">
+        <div class="detail-header">
+          <strong>{{ entry.weight }} kg</strong>
+          <button class="delete-btn" (click)="deleteEntry(entry.id, 'weight')">🗑️</button>
+        </div>
+        <div class="detail-info">
+          <span class="timestamp">{{ formatDate(entry.timestamp) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Mood entries -->
+      @if (selectedDetailType === 'mood') {
+      <div class="detail-item" *ngFor="let entry of getSelectedEntries()">
+        <div class="detail-header">
+          <strong>Skóre: {{ entry.score }}/10</strong>
+          <button class="delete-btn" (click)="deleteEntry(entry.id, 'mood')">🗑️</button>
+        </div>
+        @if (entry.note) {
+        <p class="note">{{ entry.note }}</p>
+        }
+        <div class="detail-info">
+          <span class="timestamp">{{ formatDate(entry.timestamp) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Stress entries -->
+      @if (selectedDetailType === 'stress') {
+      <div class="detail-item" *ngFor="let entry of getSelectedEntries()">
+        <div class="detail-header">
+          <strong>Úroveň: {{ entry.level }}/10</strong>
+          <button class="delete-btn" (click)="deleteEntry(entry.id, 'stress')">🗑️</button>
+        </div>
+        @if (entry.source) {
+        <p class="note">Spúšťače: {{ entry.source }}</p>
+        }
+        <div class="detail-info">
+          <span class="timestamp">{{ formatDate(entry.timestamp) }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Sleep entries -->
+      @if (selectedDetailType === 'sleep') {
+      <div class="detail-item" *ngFor="let entry of getSelectedEntries()">
+        <div class="detail-header">
+          <strong>{{ entry.hours }} hodín</strong>
+          <div class="header-actions">
+            <span class="badge-small">{{ entry.quality }}</span>
+            <button class="delete-btn" (click)="deleteEntry(entry.id, 'sleep')">🗑️</button>
+          </div>
+        </div>
+        <div class="detail-info">
+          <span class="timestamp">{{ formatDate(entry.timestamp) }}</span>
+        </div>
+      </div>
+      }
+      } @else {
+      <div class="no-entries">
+        <p>📭 Zatiaľ žiadne záznamy</p>
+        <span>Začnite pridávať záznamy pre zobrazenie štatistík</span>
+      </div>
+      }
+    </div>
+  </aside>
+  }
 </div>
