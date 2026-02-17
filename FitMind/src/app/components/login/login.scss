@@ -56,6 +56,24 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   width: 100%;
 }
 
+.forgot-password-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.8rem;
+  margin-bottom: 0.2rem;
+
+  .forgot-link {
+    font-size: 0.85rem;
+    color: #888;
+    cursor: pointer;
+    transition: $transition;
+    &:hover {
+      color: $primary;
+      text-decoration: underline;
+    }
+  }
+}
+
 .btn-submit {
   margin-top: 0.8rem;
   height: 54px !important; 
@@ -81,17 +99,36 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-.error-box {
+.btn-back {
+  width: 100%;
+  color: #aaa !important;
+  font-size: 0.9rem !important;
+  margin-top: -0.5rem !important;
+  &:hover {
+    color: #fff !important;
+  }
+}
+
+.error-box, .success-box {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.9rem 1.2rem;
   border-radius: 12px;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.error-box {
   background: rgba(255, 107, 107, 0.1);
   border: 1px solid rgba(255, 107, 107, 0.2);
   color: #ff6b6b;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+}
+
+.success-box {
+  background: rgba($primary, 0.1);
+  border: 1px solid rgba($primary, 0.2);
+  color: $primary;
 }
 
 .footer {
@@ -135,7 +172,6 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-/* ---------- SOCIAL BUTTONS (OPRAVENÉ) ---------- */
 .social-buttons {
   display: flex;
   flex-direction: column;
@@ -153,7 +189,6 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   background: rgba(255, 255, 255, 0.03) !important;
   color: #fff !important;
 
-  // Toto opravuje centrovanie a medzeru v Angular Material tlačidle
   ::ng-deep .mdc-button__label {
     display: flex !important;
     align-items: center !important;
@@ -163,7 +198,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 
   .google-icon {
     flex-shrink: 0;
-    margin-right: 18px !important; // FIX: Toto odtlačí logo od textu
+    margin-right: 18px !important;
   }
 
   &:hover:not(:disabled) {
@@ -182,7 +217,6 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-/* Animácia */
 .fade-in {
   animation: fadeInUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
 }

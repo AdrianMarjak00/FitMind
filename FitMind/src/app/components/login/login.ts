@@ -30,12 +30,20 @@ export class LoginComponent {
   email = '';
   password = '';
   errorMsg = '';
+  successMsg = '';
   isLoading = false;
+  isResetMode = false;
 
   constructor(
     private auth: AuthService,
     private router: Router
   ) {}
+
+  toggleResetMode(status: boolean): void {
+    this.isResetMode = status;
+    this.errorMsg = '';
+    this.successMsg = '';
+  }
 
   login(): void {
     this.errorMsg = '';
@@ -49,6 +57,28 @@ export class LoginComponent {
       error: () => {
         this.isLoading = false;
         this.errorMsg = 'Nesprávny e-mail alebo heslo.';
+      }
+    });
+  }
+
+  resetPassword(): void {
+    if (!this.email) {
+      this.errorMsg = 'Zadajte e-mailovú adresu.';
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMsg = '';
+    this.successMsg = '';
+
+    this.auth.sendPasswordResetEmail(this.email).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.successMsg = 'E-mail na resetovanie hesla bol odoslaný.';
+      },
+      error: () => {
+        this.isLoading = false;
+        this.errorMsg = 'Chyba pri odosielaní. Skontrolujte e-mailovú adresu.';
       }
     });
   }
@@ -70,38 +100,18 @@ export class LoginComponent {
     });
   }
 
-  loginWithApple(): void {
-    this.errorMsg = '';
-    this.isLoading = true;
-
-    this.auth.loginWithApple().subscribe({
-      next: (user) => this.handleSocialLogin(user),
-      error: (err) => {
-        this.isLoading = false;
-        if (err.code === 'auth/popup-closed-by-user') {
-          this.errorMsg = 'Prihlásenie bolo zrušené.';
-        } else {
-          this.errorMsg = 'Prihlásenie cez Apple zlyhalo.';
-        }
-      }
-    });
-  }
-
   private handleSocialLogin(user: User): void {
-    // Skontroluj či používateľ má profil
     this.auth.checkUserHasProfile(user.uid).subscribe({
       next: (hasProfile) => {
         this.isLoading = false;
         if (hasProfile) {
           this.router.navigate(['/dashboard']);
         } else {
-          // Nový social login používateľ - presmeruj na dokončenie profilu
           this.router.navigate(['/complete-profile']);
         }
       },
       error: () => {
         this.isLoading = false;
-        // V prípade chyby predpokladaj že nemá profil
         this.router.navigate(['/complete-profile']);
       }
     });

@@ -12,7 +12,8 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
-  sendEmailVerification
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from '@angular/fire/auth';
 import { Firestore, doc, getDoc, collection, query, where, getDocs } from '@angular/fire/firestore';
 import { from, map, Observable, switchMap, of, EMPTY, defer } from 'rxjs';
@@ -27,12 +28,10 @@ export class AuthService {
   private injector = inject(Injector);
   private currentUser$ = authState(this.auth);
 
-  // Providers vytvorené pri inicializácii (v injection context)
   private googleProvider = new GoogleAuthProvider();
   private appleProvider = new OAuthProvider('apple.com');
 
   constructor() {
-    // Konfigurácia Apple provider
     this.appleProvider.addScope('email');
     this.appleProvider.addScope('name');
   }
@@ -46,6 +45,12 @@ export class AuthService {
   login(email: string, password: string): Observable<User> {
     return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
       map(res => res.user)
+    );
+  }
+
+  sendPasswordResetEmail(email: string): Observable<void> {
+    return defer(() => 
+      this.ngZone.run(() => sendPasswordResetEmail(this.auth, email))
     );
   }
 
@@ -65,7 +70,6 @@ export class AuthService {
         }
 
         return runInInjectionContext(this.injector, () => {
-          // Kontrola v Firestore kolekcii 'admins'
           const adminRef = doc(this.firestore, 'admins', user.uid);
           return from(getDoc(adminRef)).pipe(
             map(adminDoc => {
@@ -84,21 +88,18 @@ export class AuthService {
     );
   }
 
-  // Google Sign-In
   loginWithGoogle(): Observable<User> {
     return defer(() =>
       this.ngZone.run(() => signInWithPopup(this.auth, this.googleProvider))
     ).pipe(map(res => res.user));
   }
 
-  // Apple Sign-In
   loginWithApple(): Observable<User> {
     return defer(() =>
       this.ngZone.run(() => signInWithPopup(this.auth, this.appleProvider))
     ).pipe(map(res => res.user));
   }
 
-  // Odoslanie verifikačného emailu
   sendVerificationEmail(userToVerify?: User): Observable<void> {
     const user = userToVerify || this.auth.currentUser;
     if (user) {
@@ -107,12 +108,10 @@ export class AuthService {
     return EMPTY;
   }
 
-  // Kontrola či je email overený
   isEmailVerified(): boolean {
     return this.auth.currentUser?.emailVerified ?? false;
   }
 
-  // Kontrola existencie emailu v Firestore (pre duplicity)
   checkEmailExists(email: string): Observable<boolean> {
     return runInInjectionContext(this.injector, () => {
       const usersRef = collection(this.firestore, 'users');
@@ -123,12 +122,10 @@ export class AuthService {
     });
   }
 
-  // Odoslanie uvítacieho emailu
   sendWelcomeEmail(email: string, firstName: string): Observable<any> {
     return this.http.post(`${environment.apiUrl}/email/welcome`, { email, first_name: firstName });
   }
 
-  // Kontrola či používateľ má profil v Firestore
   checkUserHasProfile(uid: string): Observable<boolean> {
     return runInInjectionContext(this.injector, () => {
       const userRef = doc(this.firestore, 'users', uid);
