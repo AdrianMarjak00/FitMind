@@ -11,17 +11,24 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 body, html {
+  /* FIX: Striktné obmedzenie šírky */
+  width: 100%;
+  max-width: 100vw;
   overflow-x: hidden; 
+  position: relative;
+  /* Koniec fixu */
+  
   overflow-y: auto; 
   background-color: $bg-black;
   color: white;
   font-family: 'Inter', sans-serif;
-  width: 100%;
   height: auto;
 }
 
 .page-wrapper {
+  /* FIX: Poistka pre animácie vyletujúce zboku */
   width: 100%;
+  overflow-x: hidden;
   position: relative;
   display: block;
 }
@@ -35,8 +42,10 @@ body, html {
 
 /* --- ANIMÁCIE --- */
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fadeInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes fadeInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+/* FIX: Zmenšený posun z 20px na 10px, aby prvky na moment nevyleteli mimo viewport */
+@keyframes fadeInLeft { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeInRight { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
 
 .fade-in-left { animation: fadeInLeft 1s forwards; }
 .fade-in-right { animation: fadeInRight 1s forwards; }
@@ -58,6 +67,9 @@ body, html {
   display: flex;
   align-items: center;
   padding: 100px 0;
+  /* FIX: Aby žiara (glow) nepresahovala okraj */
+  overflow: hidden;
+
   @media (max-width: 992px) {
     min-height: auto;
     padding: 120px 0 60px 0;
@@ -70,6 +82,8 @@ body, html {
     background: radial-gradient(circle, rgba($primary, 0.15) 0%, transparent 70%);
     filter: blur(60px);
     z-index: -1;
+    /* FIX: Glow nesmie zachytávať eventy */
+    pointer-events: none;
   }
   .hero-glow-1 { top: 10%; left: -100px; }
   .hero-glow-2 { bottom: 10%; right: -100px; }
@@ -88,6 +102,7 @@ body, html {
 
 .hero-content {
   flex: 1.2;
+  width: 100%;
   
   .badge {
     display: inline-block;
@@ -102,7 +117,8 @@ body, html {
   }
 
   .hero-title {
-    font-size: clamp(3rem, 10vw, 5.5rem);
+    /* FIX: clamp pre responzívnu veľkosť textu */
+    font-size: clamp(2.5rem, 9vw, 5.5rem);
     font-weight: 950;
     line-height: 0.9;
     margin-bottom: 20px;
@@ -110,7 +126,7 @@ body, html {
   }
 
   .hero-subtitle {
-    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    font-size: clamp(1.1rem, 3vw, 1.8rem);
     font-weight: 600;
     margin-bottom: 20px;
   }
@@ -129,6 +145,8 @@ body, html {
   flex: 0.8;
   display: flex;
   justify-content: center;
+  width: 100%;
+  
   .hero-img {
     width: 100%;
     max-width: 420px;
@@ -149,6 +167,8 @@ body, html {
   font-size: 1rem !important;
   text-transform: uppercase;
   transition: $transition !important;
+  max-width: 100%;
+  
   &:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 20px rgba($primary, 0.3);
@@ -201,13 +221,14 @@ body, html {
 /* --- NAVIGÁCIA (KARTY) --- */
 .navigation-section {
   padding: 100px 0;
+  @media (max-width: 768px) { padding: 60px 0; }
 }
 
 .section-intro {
   text-align: center;
   margin-bottom: 60px;
   .title-lg {
-    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
     font-weight: 900;
     span { color: $primary; }
   }
@@ -216,9 +237,9 @@ body, html {
 
 .nav-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 30px;
-  @media (max-width: 400px) { grid-template-columns: 1fr; }
+  width: 100%;
 }
 
 .nav-card {
@@ -231,6 +252,8 @@ body, html {
   display: flex;
   flex-direction: column;
   cursor: pointer;
+
+  @media (max-width: 600px) { padding: 25px; }
 
   &:hover {
     transform: translateY(-10px);
@@ -264,10 +287,9 @@ body, html {
   }
 }
 
-/* --- GALÉRIA (OPRAVENÁ A VYCENTROVANÁ) --- */
+/* --- GALÉRIA --- */
 .gallery-section { 
   padding: 80px 0 120px 0;
-
   .container {
     display: flex;
     flex-direction: column;
@@ -277,12 +299,11 @@ body, html {
 
 .image-grid {
   display: grid;
-  // auto-fit zabezpečí, že sa mriežka prispôsobí počtu fotiek
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 25px;
   width: 100%;
   max-width: 1100px; 
-  justify-content: center; // Vycentrovanie na stred ak je málo položiek
+  justify-content: center;
   margin: 0 auto;
 
   @media (max-width: 992px) {
@@ -291,9 +312,9 @@ body, html {
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: repeat(2, 1fr); // 2 stĺpce na mobile
+    grid-template-columns: repeat(2, 1fr); 
     gap: 10px;
-    padding: 0 10px;
+    padding: 0;
   }
   
   .grid-item {
@@ -306,6 +327,8 @@ body, html {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     transition: $transition;
 
+    @media (max-width: 600px) { border-radius: 12px; }
+
     img {
       width: 100%;
       height: 100%;
@@ -317,7 +340,6 @@ body, html {
       transform: translateY(-8px);
       border-color: rgba($primary, 0.5);
       box-shadow: 0 20px 40px rgba($primary, 0.15);
-
       img { transform: scale(1.1); }
     }
   }
@@ -329,7 +351,7 @@ body, html {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 95%;
+  width: calc(100% - 40px); /* FIX: Responzívna šírka overlay */
   max-width: 750px;
   z-index: 99999;
   animation: fadeInUp 0.5s ease-out;
@@ -425,7 +447,7 @@ body, html {
   inset: 0;
   background: rgba(0,0,0,0.95);
   backdrop-filter: blur(10px);
-  z-index: 11000;
+  z-index: 110000; /* FIX: Musí byť nad cookies */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -483,6 +505,7 @@ body, html {
     bottom: 30px;
     text-align: center;
     color: white;
+    width: 100%;
     p { font-weight: 600; margin-bottom: 5px; }
     span { color: $text-gray; font-size: 0.8rem; }
   }
