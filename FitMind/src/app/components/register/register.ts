@@ -118,15 +118,37 @@ export class RegisterComponent {
         return false;
       }
 
-      if ((this.profile.age ?? 0) <= 0) {
-        this.errorMsg = 'Zadaj platný vek.';
+      const age = Number(this.profile.age);
+
+      if (isNaN(age) || age < 10 || age > 100) {
+        this.errorMsg = 'Vek musí byť medzi 10 a 100 rokmi.';
         return false;
       }
     }
 
     if (this.currentStep === 2) {
-      if (!this.profile.height || !this.profile.currentWeight || !this.profile.targetWeight) {
-        this.errorMsg = 'Vyplň všetky fyzické parametre.';
+
+      const height = Number(this.profile.height);
+      const currentWeight = Number(this.profile.currentWeight);
+      const targetWeight = Number(this.profile.targetWeight);
+
+      if (isNaN(height) || height < 120 || height > 230) {
+        this.errorMsg = 'Výška musí byť medzi 120 a 230 cm.';
+        return false;
+      }
+
+      if (isNaN(currentWeight) || currentWeight < 30 || currentWeight > 300) {
+        this.errorMsg = 'Aktuálna váha musí byť medzi 30 a 300 kg.';
+        return false;
+      }
+
+      if (isNaN(targetWeight) || targetWeight < 30 || targetWeight > 300) {
+        this.errorMsg = 'Cieľová váha musí byť medzi 30 a 300 kg.';
+        return false;
+      }
+
+      if (Math.abs(currentWeight - targetWeight) > 100) {
+        this.errorMsg = 'Rozdiel medzi aktuálnou a cieľovou váhou je príliš veľký.';
         return false;
       }
     }
@@ -152,10 +174,14 @@ export class RegisterComponent {
   // =========================
 
   calculateBMI(): string {
-    if (this.profile.height && this.profile.currentWeight) {
-      const h = this.profile.height / 100;
-      return (this.profile.currentWeight / (h * h)).toFixed(1);
+    const height = Number(this.profile.height);
+    const weight = Number(this.profile.currentWeight);
+
+    if (!isNaN(height) && !isNaN(weight) && height > 0) {
+      const h = height / 100;
+      return (weight / (h * h)).toFixed(1);
     }
+
     return '--';
   }
 
@@ -202,12 +228,12 @@ export class RegisterComponent {
 
           firstName: this.profile.firstName || '',
           lastName: this.profile.lastName || '',
-          age: this.profile.age || 0,
+          age: Number(this.profile.age) || 0,
           gender: this.profile.gender || 'male',
 
-          height: this.profile.height || 0,
-          currentWeight: this.profile.currentWeight || 0,
-          targetWeight: this.profile.targetWeight || 0,
+          height: Number(this.profile.height) || 0,
+          currentWeight: Number(this.profile.currentWeight) || 0,
+          targetWeight: Number(this.profile.targetWeight) || 0,
 
           fitnessGoal: this.profile.fitnessGoal || 'maintain',
           activityLevel: this.profile.activityLevel || 'moderate',
@@ -236,6 +262,7 @@ export class RegisterComponent {
             this.isLoading = false;
             this.errorMsg = 'Chyba pri ukladaní profilu.';
           }
+
         });
       },
 
@@ -250,7 +277,11 @@ export class RegisterComponent {
         } else {
           this.errorMsg = 'Chyba pri registrácii.';
         }
+
       }
+
     });
+
   }
+
 }

@@ -38,77 +38,9 @@
         <h3>🤖 FitMind AI Coach - Tvoj Osobný Tréner</h3>
       </div>
       <div class="header-buttons">
-        <button (click)="toggleInsights()" class="insights-btn" title="Zobraziť moje štatistiky">
-          📊 {{ showInsights ? 'Skryť' : 'Moje pokroky' }}
-        </button>
         <button (click)="clearChat()" class="clear-btn" title="Vyčistiť konverzáciu">🗑️</button>
       </div>
     </div>
-
-    @if (showInsights && userId) {
-    <div class="insights-panel">
-      <div class="insights-tabs">
-        <button [class.active]="activeTab === 'recommendations'"
-          (click)="activeTab = 'recommendations'; loadRecommendations()">💡 Odporúčania</button>
-        <button [class.active]="activeTab === 'weekly'" (click)="activeTab = 'weekly'; loadWeeklyReport()">📅 Tento
-          týždeň</button>
-        <button [class.active]="activeTab === 'goals'" (click)="activeTab = 'goals'; loadGoalProgress()">🎯 Moje
-          ciele</button>
-      </div>
-
-      <div class="insights-content">
-        @if (activeTab === 'recommendations') {
-        <div class="recommendations-view">
-          <h4>Personalizované odporúčania pre teba</h4>
-          @if (loadingInsights) { <div class="loading">Načítavam...</div> }
-          @else if (recommendations.length > 0) {
-          <ul class="recommendations-list">
-            @for (rec of recommendations; track rec) { <li>{{ rec }}</li> }
-          </ul>
-          } @else { <p class="no-data">Zatiaľ žiadne odporúčania.</p> }
-        </div>
-        }
-
-        @if (activeTab === 'weekly') {
-        <div class="weekly-report-view">
-          <h4>Týždenný report</h4>
-          @if (loadingInsights) { <div class="loading">Načítavam...</div> }
-          @else if (weeklyReport) {
-          <div class="report-summary">
-            <div class="overall-message" [class]="weeklyReport.overall_rating">{{ weeklyReport.overall_message }}</div>
-            <div class="report-details">
-              <div class="section">
-                <h5>🏆 Úspechy</h5>
-                <ul>@for (a of weeklyReport.achievements; track a) { <li>{{ a }}</li> }</ul>
-              </div>
-            </div>
-          </div>
-          }
-        </div>
-        }
-
-        @if (activeTab === 'goals') {
-        <div class="goals-view">
-          <h4>Pokrok k mojim cieľom</h4>
-          @if (loadingInsights) { <div class="loading">Načítavam...</div> }
-          @else if (goalProgress) {
-          <div class="goals-list">
-            @for (item of goalProgress.progress_items; track item.goal) {
-            <div class="goal-item" [class.on-track]="item.on_track">
-              <div class="goal-header"><strong>{{ item.goal }}</strong><span>{{ item.on_track ? '✅' : '⚠️' }}</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="item.percentage"></div>
-              </div>
-            </div>
-            }
-          </div>
-          }
-        </div>
-        }
-      </div>
-    </div>
-    }
 
     @if (savedEntries.length > 0) {
     <div class="saved-entries-notification">
@@ -119,7 +51,6 @@
     @if (!userId) { <div class="warning-message">⚠️ Pre použitie AI coacha sa musíte prihlásiť</div> }
     @if (!backendRunning && userId) { <div class="warning-message backend-warning">⚠️ Backend server nebeží!</div> }
 
-    <!-- Premium limit banner -->
     @if (userId && !isPremium && !canSendMessage) {
     <div class="upgrade-banner">
       <div class="banner-content">
@@ -133,7 +64,6 @@
     </div>
     }
 
-    <!-- Message counter for free users -->
     @if (userId && !isPremium && canSendMessage) {
     <div class="message-counter">
       <span class="counter-icon">💬</span>

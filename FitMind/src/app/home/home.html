@@ -3,7 +3,6 @@
   <div *ngIf="!areCookiesAccepted" class="cookie-overlay">
     <div class="cookie-card">
       <div class="cookie-container">
-
         <div class="cookie-content">
           <div class="cookie-icon-wrapper">
             <mat-icon>security</mat-icon>
@@ -35,7 +34,6 @@
           <button class="btn-manage" (click)="toggleCookieDetails()">
             {{ showCookieDetails ? 'SKRYŤ NASTAVENIA' : 'SPRAVOVAŤ' }}
           </button>
-
           <div class="main-btns">
             <button class="btn-reject" (click)="rejectCookies()">ODMIETNUŤ</button>
             <button mat-flat-button class="btn-custom-green btn-accept" (click)="acceptCookies()">
@@ -43,7 +41,6 @@
             </button>
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -73,8 +70,8 @@
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-value">500+</span>
-            <span class="stat-label">Programov</span>
+            <span class="stat-value">AI</span>
+            <span class="stat-label">Podpora</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">

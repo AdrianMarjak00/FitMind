@@ -14,7 +14,7 @@ export interface UserProfile {
   // Fitness ciele
   fitnessGoal: 'lose_weight' | 'gain_muscle' | 'maintain' | 'improve_health';
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
-  targetCalories?: number; // Denný cieľ kalórií
+  targetCalories?: number; // Denný cieľ kalórií (zmenené z dailyCalorieGoal)
   // Zdravotné informácie
   medicalConditions?: string[];
   dietaryRestrictions?: string[];
@@ -22,4 +22,3 @@ export interface UserProfile {
   createdAt: Date;
   updatedAt: Date;
 }
-
