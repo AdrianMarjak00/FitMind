@@ -11,19 +11,19 @@ $transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 html {
-  scroll-behavior: smooth; // ✅ plynulé scrollovanie
+  scroll-behavior: smooth;
 }
 
 body {
   width: 100%;
-  min-height: 100vh; // Zmena z height: 100% na min-height
+  min-height: 100vh; // ✅ Oprava: povolí stránke rásť podľa obsahu
   overflow-x: hidden;
-  overflow-y: visible; // Zmena na visible alebo auto
+  overflow-y: visible; // ✅ Oprava: zabezpečí funkčnosť scrollu na mobile
   background-color: $bg-black;
   color: white;
   font-family: 'Inter', sans-serif;
   position: relative;
-  -webkit-overflow-scrolling: touch; // Pomáha plynulosti na iOS
+  -webkit-overflow-scrolling: touch;
 }
 
 .page-wrapper {
@@ -33,7 +33,7 @@ body {
 
   &.gallery-active {
     height: 100vh;
-    overflow: hidden;
+    overflow: hidden; // Zamkne scroll, keď je otvorená galéria
   }
 }
 
@@ -43,6 +43,7 @@ body {
   margin: 0 auto;
   padding: 0 24px;
 }
+
 /* --- ANIMÁCIE --- */
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
@@ -241,7 +242,7 @@ body {
   }
 }
 
-/* --- UPRAVENÁ GALÉRIA --- */
+/* --- FINÁLNA UPRAVENÁ GALÉRIA --- */
 .gallery-section { 
   padding: 100px 0; 
 }
@@ -250,10 +251,12 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
-  
+  justify-content: center; // ✅ Centruje fotky, ak je ich v riadku menej
+
   @media (max-width: 600px) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr); // 2 stĺpce na mobile
     gap: 12px;
+    justify-content: center; // ✅ Zabezpečí centrovanie na mobile
   }
 
   .grid-item {
@@ -287,13 +290,8 @@ body {
       border-color: rgba($primary, 0.4);
       box-shadow: 0 15px 30px rgba(0,0,0,0.5);
 
-      img {
-        transform: scale(1.1);
-      }
-
-      &::after {
-        opacity: 1;
-      }
+      img { transform: scale(1.1); }
+      &::after { opacity: 1; }
     }
   }
 }
@@ -305,7 +303,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 40px);
-  max-width: 600px; // Zúžené pre lepší fokus
+  max-width: 600px;
   z-index: 99999;
   animation: fadeInUp 0.6s cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -334,10 +332,7 @@ body {
     background: rgba($primary, 0.1);
     padding: 12px;
     border-radius: 15px;
-    mat-icon { 
-      color: $primary; 
-      display: block;
-    }
+    mat-icon { color: $primary; display: block; }
   }
 
   .cookie-text {
@@ -395,7 +390,6 @@ body {
   .main-btns {
     display: flex;
     gap: 12px;
-    
     @media (max-width: 600px) { width: 100%; }
 
     button {
@@ -424,7 +418,7 @@ body {
   }
 }
 
-/* --- TLAČIDLÁ (ZÁKLAD) --- */
+/* --- TLAČIDLÁ --- */
 .btn-custom-green {
   background-color: $primary !important;
   color: black !important;
@@ -439,7 +433,7 @@ body {
   }
 }
 
-/* --- LIGHTBOX (ZÁKLAD) --- */
+/* --- FINÁLNY LIGHTBOX --- */
 .lightbox {
   position: fixed;
   inset: 0;
@@ -473,8 +467,31 @@ body {
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
-    &:hover { background: $primary; color: black; }
+    transition: $transition;
+    outline: none;
+    -webkit-tap-highlight-color: transparent; // ✅ Odstráni šedý záblesk pri kliku na iOS
+
+    // ✅ Zelená farba sa aktivuje LEN na desktopoch, aby na mobile "nesvietila" po kliknutí
+    @media (hover: hover) {
+      &:hover { 
+        background: $primary; 
+        color: black; 
+      }
+    }
+
+    // Vizuálny feedback na mobile pri dotyku
+    &:active {
+      background: rgba($primary, 0.5);
+    }
+
     &.prev { left: 20px; }
     &.next { right: 20px; }
+
+    @media (max-width: 600px) {
+      width: 50px;
+      height: 50px;
+      &.prev { left: 10px; }
+      &.next { right: 10px; }
+    }
   }
 }
