@@ -251,7 +251,7 @@ $shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.5);
     gap: 10px;
   }
 
-  // Úprava tlačidla PRIDAŤ ZÁZNAM
+  // --- ÚPRAVA TLAČIDLA PRIDAŤ ZÁZNAM ---
   button[mat-flat-button] {
     height: 52px;
     border-radius: 14px;
@@ -260,17 +260,20 @@ $shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.5);
     letter-spacing: 1.2px;
     margin-top: 10px;
     background-color: $primary; // Použitie novej sýtej zelenej
-    color: #000; // Čierny text pre lepší kontrast na zelenej
-    transition: all 0.3s ease;
+    color: #000; // Čierny text pre lepší kontrast
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    cursor: pointer;
 
     &:hover {
-      background-color: lighten($primary, 5%);
-      box-shadow: 0 4px 15px rgba($primary, 0.4);
-      transform: translateY(-1px);
+      background-color: lighten($primary, 8%);
+      box-shadow: 0 4px 20px rgba($primary, 0.4);
+      transform: translateY(-2px);
     }
 
     &:active {
       transform: translateY(0);
+      background-color: $primary-dark;
     }
   }
 }

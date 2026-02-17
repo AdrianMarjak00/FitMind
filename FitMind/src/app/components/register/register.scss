@@ -2,6 +2,51 @@ $primary: #3ddc84;
 $bg-black: #050505;
 $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 
+// =========================
+// MATERIAL OVERRIDES
+// =========================
+::ng-deep {
+
+  .mat-mdc-form-field-focus-indicator {
+    color: $primary !important;
+  }
+
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    border-color: rgba(61, 220, 132, 0.2) !important;
+    transition: $transition;
+  }
+
+  .mat-mdc-form-field:hover .mdc-notched-outline__leading,
+  .mat-mdc-form-field:hover .mdc-notched-outline__notch,
+  .mat-mdc-form-field:hover .mdc-notched-outline__trailing,
+  .mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+  .mat-mdc-form-field.mat-focused .mdc-notched-outline__notch,
+  .mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+    border-color: $primary !important;
+    border-width: 2px !important;
+  }
+
+  .mat-mdc-form-field.mat-focused .mat-mdc-floating-label,
+  .mat-mdc-form-field.mat-focused .mat-icon {
+    color: $primary !important;
+  }
+
+  .mat-mdc-checkbox.mat-accent .mdc-checkbox__background {
+    border-color: $primary !important;
+  }
+
+  .mat-mdc-checkbox.mat-accent.mat-mdc-checkbox-checked
+  .mdc-checkbox__background {
+    background-color: $primary !important;
+    border-color: $primary !important;
+  }
+}
+
+// =========================
+// BACKGROUND
+// =========================
 .auth {
   min-height: 100vh;
   background: radial-gradient(circle at 50% 0%, #1a4d33 0%, #050505 70%);
@@ -9,33 +54,59 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
+  position: relative;
+  overflow: hidden;
 }
 
+// jemný glow efekt
+.auth::before {
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(61,220,132,0.15), transparent 70%);
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  filter: blur(80px);
+  z-index: 0;
+}
+
+// =========================
+// CONTAINER
+// =========================
 .register-container {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 550px;
-  background: rgba(15, 15, 15, 0.8);
-  backdrop-filter: blur(15px);
+  background: rgba(15, 15, 15, 0.85);
+  backdrop-filter: blur(25px);
   padding: 3rem;
   border-radius: 28px;
   border: 1px solid rgba(61, 220, 132, 0.2);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  transition: $transition;
+
+  &:hover {
+    border-color: rgba(61, 220, 132, 0.4);
+  }
 
   .header-section {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
 
     h1 {
       color: #fff;
-      font-size: 2.2rem;
+      font-size: 2.3rem;
       font-weight: 800;
-      margin: 0;
-      letter-spacing: -0.5px;
+      letter-spacing: -1px;
     }
 
     .subtitle {
       color: #888;
-      font-size: 1rem;
+      margin-top: 0.5rem;
+
       span {
         color: $primary;
         font-weight: 600;
@@ -44,7 +115,9 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-/* ================= PROGRESS BAR ================= */
+// =========================
+// PROGRESS BAR
+// =========================
 .progress-bar-container {
   margin-bottom: 3rem;
   position: relative;
@@ -52,30 +125,28 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   .progress-line {
     position: absolute;
     top: 50%;
-    left: 0;
-    transform: translateY(-50%);
     width: 100%;
-    height: 2px;
+    height: 3px;
     background: #222;
-    z-index: 1;
+    transform: translateY(-50%);
+    border-radius: 4px;
+    overflow: hidden;
   }
 
   .progress-fill {
     height: 100%;
-    background: $primary;
-    box-shadow: 0 0 10px rgba(61, 220, 132, 0.6);
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(90deg, $primary, lighten($primary, 10%));
+    transition: width 0.4s ease;
   }
 
   .progress-steps {
     position: relative;
-    z-index: 2;
     display: flex;
     justify-content: space-between;
 
     .step-dot {
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       background: #111;
       border: 2px solid #333;
       border-radius: 50%;
@@ -83,29 +154,31 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
       align-items: center;
       justify-content: center;
       color: #666;
-      font-weight: bold;
-      font-size: 0.8rem;
-      transition: all 0.3s ease;
+      font-weight: 700;
+      transition: $transition;
 
       &.active {
         background: $primary;
         border-color: $primary;
         color: #000;
-        box-shadow: 0 0 15px rgba(61, 220, 132, 0.4);
+        box-shadow: 0 0 20px rgba(61, 220, 132, 0.5);
       }
     }
   }
 }
 
-/* ================= FORM (Ostatné štýly ponechané) ================= */
+// =========================
+// FORM
+// =========================
 .register-form {
+
   .form-section h3 {
     color: $primary;
-    font-size: 1.2rem;
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.8rem;
+    font-weight: 700;
   }
 
   .form-row {
@@ -114,114 +187,155 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
     gap: 1rem;
   }
 
-  .full-width { width: 100%; }
+  .full-width {
+    width: 100%;
+  }
 
   .bmi-card {
-    background: linear-gradient(135deg, rgba(61, 220, 132, 0.12) 0%, rgba(0, 0, 0, 0) 100%);
+    margin-top: 1.5rem;
+    background: rgba(61, 220, 132, 0.08);
     border: 1px dashed rgba(61, 220, 132, 0.3);
     padding: 1.5rem;
-    border-radius: 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 1rem;
+    border-radius: 18px;
+    text-align: center;
+    transition: $transition;
+
+    .bmi-label {
+      color: #aaa;
+      font-size: 0.9rem;
+    }
 
     .bmi-value {
       color: $primary;
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 800;
-      text-shadow: 0 0 10px rgba(61, 220, 132, 0.3);
+      margin-top: 0.5rem;
+    }
+  }
+
+  .gdpr-box {
+    margin-top: 1.8rem;
+
+    a {
+      color: $primary;
+      text-decoration: underline;
+      transition: $transition;
+
+      &:hover {
+        opacity: 0.8;
+      }
     }
   }
 }
 
-/* ================= TLAČIDLÁ (ZRUŠENÉ MAT-FLAT-BUTTON DEFAULTY) ================= */
+// =========================
+// ERROR BOX
+// =========================
+.error-box {
+  margin-top: 1rem;
+  background: rgba(255, 0, 0, 0.08);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: #ff6b6b;
+  font-weight: 500;
+}
 
+// =========================
+// BUTTONS
+// =========================
 .button-group {
   display: flex;
   gap: 1rem;
   margin-top: 2.5rem;
 
   button {
-    height: 52px !important;
-    border-radius: 14px !important;
-    font-weight: 800 !important; // Hrubšie písmo
+    height: 54px;
+    border-radius: 16px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
     flex: 1;
-    transition: $transition !important;
-    font-family: inherit;
+    transition: $transition;
   }
 
-  // Štýl pre ĎALEJ a DOKONČIŤ (Primárne zelené)
-  [mat-flat-button], .btn-submit {
+  .primary-btn {
     background-color: $primary !important;
-    color: #000 !important; // Čierny text ako v Home
+    color: #000 !important;
 
     &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      background-color: lighten($primary, 5%) !important;
-      box-shadow: 0 10px 25px rgba($primary, 0.5) !important; // Výrazný glow
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(61, 220, 132, 0.6) !important;
+    }
+
+    &:active {
+      transform: translateY(0);
     }
 
     &:disabled {
-      background-color: #1a3d2a !important; // Tmavšia zelená pre disabled stav
-      color: rgba(0, 0, 0, 0.5) !important;
+      opacity: 0.5;
       cursor: not-allowed;
-      box-shadow: none;
-      transform: none;
-    }
-    
-    mat-icon {
-      margin-left: 8px;
-      vertical-align: middle;
     }
   }
 
-  // Štýl pre SPÄŤ
   [mat-stroked-button] {
-    background: transparent !important;
     color: #fff !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255,255,255,0.2) !important;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.05) !important;
-      border-color: rgba(255, 255, 255, 0.4) !important;
+      border-color: $primary !important;
+      color: $primary !important;
     }
   }
 }
 
-/* ================= ZVYŠOK (Responzivita atď.) ================= */
-.error-box {
-  background: rgba(255, 107, 107, 0.12);
-  border: 1px solid #ff6b6b;
-  color: #ff6b6b;
-  padding: 1rem;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 1rem;
-  animation: shake 0.3s ease;
-}
-
+// =========================
+// LINK
+// =========================
 .link {
   text-align: center;
   margin-top: 2rem;
   color: #666;
+
   a {
     color: $primary;
-    text-decoration: none;
     font-weight: 600;
-    &:hover { text-decoration: underline; }
+    transition: $transition;
+
+    &:hover {
+      opacity: 0.8;
+    }
   }
 }
 
-.fade-in { animation: fadeIn 0.4s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+// =========================
+// ANIMATION
+// =========================
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
 
-@media (max-width: 480px) {
-  .register-container { padding: 2rem 1.5rem; }
-  .form-row { grid-template-columns: 1fr; }
-  .button-group { flex-direction: column; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+// =========================
+// RESPONSIVE
+// =========================
+@media (max-width: 600px) {
+  .register-container {
+    padding: 2rem;
+    border-radius: 22px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
 }

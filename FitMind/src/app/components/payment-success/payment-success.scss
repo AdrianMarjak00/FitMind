@@ -1,3 +1,7 @@
+$primary-neon: #3ddc84;
+$bg-black: #050505;
+$transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+
 .payment-success-page {
   min-height: 100vh;
   display: flex;
@@ -13,8 +17,9 @@
   text-align: center;
   padding: 3rem 2rem;
   background: rgba(30, 30, 40, 0.9);
-  border: 1px solid rgba(61, 220, 132, 0.3);
+  border: 1px solid rgba($primary-neon, 0.3);
   border-radius: 16px;
+  backdrop-filter: blur(10px);
 }
 
 .success-icon {
@@ -24,20 +29,14 @@
     font-size: 80px;
     width: 80px;
     height: 80px;
-    color: #3ddc84;
+    color: $primary-neon;
     animation: pulse 2s ease-in-out infinite;
   }
 }
 
 @keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-  }
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
 }
 
 h1 {
@@ -55,7 +54,7 @@ h1 {
 }
 
 .success-details {
-  background: rgba(61, 220, 132, 0.1);
+  background: rgba($primary-neon, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -73,7 +72,7 @@ h1 {
     }
 
     mat-icon {
-      color: #3DDC84;
+      color: $primary-neon;
       font-size: 20px;
       width: 20px;
       height: 20px;
@@ -81,6 +80,7 @@ h1 {
   }
 }
 
+/* ---------- TLAČIDLÁ (Zladenie s fotkou) ---------- */
 .action-buttons {
   display: flex;
   flex-direction: column;
@@ -88,29 +88,56 @@ h1 {
 
   button {
     width: 100%;
-    padding: 0.75rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    &[color="primary"] {
-      background: linear-gradient(135deg, #3DDC84 0%, #2ebd71 100%);
-      color: #000;
-      font-weight: 600;
-    }
+    height: 54px !important; // Vyššie tlačidlo podľa vzoru
+    border-radius: 14px !important;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important; // Extra hrubý text ako na fotke
+    text-transform: uppercase; // "VYTVORIŤ ÚČET ZDARMA" štýl
+    letter-spacing: 0.5px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px;
+    transition: $transition !important;
 
     mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  // HLAVNÉ TLAČIDLO (Neónovo zelené)
+  button[mat-raised-button] {
+    background-color: $primary-neon !important;
+    color: #000 !important;
+    border: none !important;
+
+    &:hover {
+      transform: translateY(-2px);
+      background-color: lighten($primary-neon, 5%) !important;
+      box-shadow: 0 10px 25px rgba($primary-neon, 0.4) !important;
+    }
+  }
+
+  // SEKUNDÁRNE TLAČIDLO (Obrysové)
+  button[mat-stroked-button] {
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: $primary-neon !important;
+      color: $primary-neon !important;
     }
   }
 }
 
+/* Mobile Responzivita */
 @media (max-width: 480px) {
   .success-card {
-    padding: 2rem 1.5rem;
+    padding: 2.2rem 1.5rem;
   }
 
   h1 {
@@ -121,5 +148,10 @@ h1 {
     font-size: 60px;
     width: 60px;
     height: 60px;
+  }
+
+  .action-buttons button {
+    height: 50px !important;
+    font-size: 0.95rem !important;
   }
 }

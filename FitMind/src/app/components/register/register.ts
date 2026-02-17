@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import { sendEmailVerification, ActionCodeSettings } from '@angular/fire/auth';
 
@@ -30,16 +31,24 @@ import { UserProfile } from '../../models/user-profile.interface';
     MatSelectModule,
     MatFormFieldModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatCheckboxModule
   ]
 })
 export class RegisterComponent {
+
   email = '';
   password = '';
+  confirmPassword = '';
+
+  hidePassword = true;
+  hideConfirmPassword = true;
 
   currentStep = 1;
   isLoading = false;
   errorMsg = '';
+
+  gdprConsent = false;
 
   profile: Partial<UserProfile> = {
     firstName: '',
@@ -53,31 +62,21 @@ export class RegisterComponent {
     activityLevel: 'moderate'
   };
 
-  medicalConditionsText = '';
-
-  // GDPR consent
-  gdprConsent = false;
-  marketingConsent = false;
-
   constructor(
     private auth: AuthService,
     private userFitnessService: UserFitnessService,
     private router: Router
-  ) { }
+  ) {}
+
+  // =========================
+  // STEP NAVIGATION
+  // =========================
 
   nextStep(): void {
     this.errorMsg = '';
 
-    if (this.currentStep === 1) {
-      if (this.password.length < 8) {
-        this.errorMsg = 'Heslo musí mať aspoň 8 znakov.';
-        return;
-      }
-
-      if ((this.profile.age ?? 0) < 0) {
-        this.errorMsg = 'Vek nemôže byť záporný.';
-        return;
-      }
+    if (!this.validateCurrentStep()) {
+      return;
     }
 
     if (this.currentStep < 3) {
@@ -91,6 +90,67 @@ export class RegisterComponent {
     }
   }
 
+  // =========================
+  // VALIDATION
+  // =========================
+
+  private validateCurrentStep(): boolean {
+
+    if (this.currentStep === 1) {
+
+      if (!this.profile.firstName || !this.profile.lastName) {
+        this.errorMsg = 'Vyplň meno a priezvisko.';
+        return false;
+      }
+
+      if (!this.email) {
+        this.errorMsg = 'Zadaj e-mail.';
+        return false;
+      }
+
+      if (this.password.length < 8) {
+        this.errorMsg = 'Heslo musí mať aspoň 8 znakov.';
+        return false;
+      }
+
+      if (this.password !== this.confirmPassword) {
+        this.errorMsg = 'Heslá sa nezhodujú.';
+        return false;
+      }
+
+      if ((this.profile.age ?? 0) <= 0) {
+        this.errorMsg = 'Zadaj platný vek.';
+        return false;
+      }
+    }
+
+    if (this.currentStep === 2) {
+      if (!this.profile.height || !this.profile.currentWeight || !this.profile.targetWeight) {
+        this.errorMsg = 'Vyplň všetky fyzické parametre.';
+        return false;
+      }
+    }
+
+    if (this.currentStep === 3) {
+
+      if (!this.profile.fitnessGoal || !this.profile.activityLevel) {
+        this.errorMsg = 'Vyber cieľ a úroveň aktivity.';
+        return false;
+      }
+
+      if (!this.gdprConsent) {
+        this.errorMsg = 'Musíte súhlasiť so spracovaním osobných údajov.';
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // =========================
+  // BMI
+  // =========================
+
   calculateBMI(): string {
     if (this.profile.height && this.profile.currentWeight) {
       const h = this.profile.height / 100;
@@ -99,48 +159,43 @@ export class RegisterComponent {
     return '--';
   }
 
+  // =========================
+  // REGISTER
+  // =========================
+
   register(): void {
+
     this.errorMsg = '';
 
-    if (this.password.length < 8) {
-      this.errorMsg = 'Heslo musí mať aspoň 8 znakov.';
-      return;
-    }
-
-    if ((this.profile.age ?? 0) < 0) {
-      this.errorMsg = 'Vek nemôže byť záporný.';
-      return;
-    }
-
-    if (!this.gdprConsent) {
-      this.errorMsg = 'Musíte súhlasiť so spracovaním osobných údajov.';
+    if (!this.validateCurrentStep()) {
       return;
     }
 
     this.isLoading = true;
 
-    // Najprv skontroluj či email už existuje v Firestore
     this.auth.checkEmailExists(this.email).subscribe({
       next: (exists) => {
+
         if (exists) {
           this.isLoading = false;
           this.errorMsg = 'Tento e-mail už je registrovaný.';
           return;
         }
 
-        // Email neexistuje, pokračuj v registrácii
         this.performRegistration();
       },
       error: () => {
-        // V prípade chyby pri kontrole pokračuj v registrácii
         this.performRegistration();
       }
     });
   }
 
   private performRegistration(): void {
+
     this.auth.register(this.email, this.password).subscribe({
+
       next: user => {
+
         const userProfile: UserProfile = {
           userId: user.uid,
           email: this.email.toLowerCase(),
@@ -157,59 +212,45 @@ export class RegisterComponent {
           fitnessGoal: this.profile.fitnessGoal || 'maintain',
           activityLevel: this.profile.activityLevel || 'moderate',
 
-          medicalConditions: this.medicalConditionsText
-            ? this.medicalConditionsText.split(',').map(v => v.trim())
-            : [],
-
+          medicalConditions: [],
           createdAt: new Date(),
           updatedAt: new Date()
         };
 
         this.userFitnessService.createUserProfile(userProfile).subscribe({
+
           next: () => {
-            // Odoslať verifikačný email cez Firebase priamo
-            console.log('[REGISTER] Sending verification email to:', user.email);
 
             const actionCodeSettings: ActionCodeSettings = {
               url: 'https://fit-mind.sk/dashboard',
               handleCodeInApp: false
             };
 
-            sendEmailVerification(user, actionCodeSettings)
-              .then(() => {
-                console.log('[REGISTER] Verification email sent successfully!');
-                // Odošli aj uvítací email cez náš backend
-                this.auth.sendWelcomeEmail(this.email, this.profile.firstName || '').subscribe({
-                  next: () => console.log('[REGISTER] Welcome email sent via backend'),
-                  error: (err) => console.error('[REGISTER] Failed to send welcome email:', err)
-                });
-              })
-              .catch((err) => {
-                console.error('[REGISTER] Verification email FAILED:', err);
-              });
+            sendEmailVerification(user, actionCodeSettings);
 
             this.isLoading = false;
-            alert('Účet bol úspešne vytvorený! Vitaj vo FitMind.');
             this.router.navigate(['/dashboard']);
           },
+
           error: () => {
             this.isLoading = false;
             this.errorMsg = 'Chyba pri ukladaní profilu.';
           }
         });
       },
+
       error: err => {
+
         this.isLoading = false;
 
         if (err.code === 'auth/email-already-in-use') {
           this.errorMsg = 'Tento e-mail už je registrovaný.';
         } else if (err.code === 'auth/weak-password') {
-          this.errorMsg = 'Heslo musí mať aspoň 8 znakov.';
+          this.errorMsg = 'Heslo je príliš slabé.';
         } else {
           this.errorMsg = 'Chyba pri registrácii.';
         }
       }
     });
   }
-
 }

@@ -3,7 +3,7 @@ $bg-black: #050505;
 $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 
 .auth {
-  min-height: calc(100vh - 80px); // Upravené na výšku tvojho nového headeru
+  min-height: calc(100vh - 80px); 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -17,7 +17,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   background: rgba(15, 15, 15, 0.8);
   backdrop-filter: blur(20px);
   padding: 2.8rem 2.2rem;
-  border-radius: 24px; // Viac zaoblené pre moderný look
+  border-radius: 24px; 
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -56,10 +56,9 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   width: 100%;
 }
 
-/* ---------- HLAVNÉ TLAČIDLO (Zladené s Home) ---------- */
 .btn-submit {
   margin-top: 0.8rem;
-  height: 54px !important; // Mierne vyššie pre lepší pocit na mobile
+  height: 54px !important; 
   font-size: 1.05rem !important;
   font-weight: 800 !important;
   border-radius: 14px !important;
@@ -114,7 +113,6 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-/* ---------- DIVIDER ---------- */
 .divider {
   display: flex;
   align-items: center;
@@ -137,7 +135,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-/* ---------- SOCIAL BUTTONS ---------- */
+/* ---------- SOCIAL BUTTONS (OPRAVENÉ) ---------- */
 .social-buttons {
   display: flex;
   flex-direction: column;
@@ -150,14 +148,23 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   border-radius: 12px !important;
   font-size: 0.95rem !important;
   font-weight: 600 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 0.7rem;
   transition: $transition !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   background: rgba(255, 255, 255, 0.03) !important;
   color: #fff !important;
+
+  // Toto opravuje centrovanie a medzeru v Angular Material tlačidle
+  ::ng-deep .mdc-button__label {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100%;
+  }
+
+  .google-icon {
+    flex-shrink: 0;
+    margin-right: 18px !important; // FIX: Toto odtlačí logo od textu
+  }
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
@@ -165,19 +172,7 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
     border-color: rgba(255, 255, 255, 0.25) !important;
   }
 
-  &:disabled {
-    opacity: 0.5;
-  }
-
-  .google-icon {
-    flex-shrink: 0;
-  }
-
-  mat-icon {
-    font-size: 22px;
-    width: 22px;
-    height: 22px;
-  }
+  &:disabled { opacity: 0.5; }
 }
 
 .btn-google {
@@ -187,46 +182,19 @@ $transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 }
 
-.btn-apple {
-  &:hover:not(:disabled) {
-    border-color: rgba(255, 255, 255, 0.4) !important;
-    box-shadow: 0 5px 20px rgba(255, 255, 255, 0.1) !important;
-  }
-}
-
 /* Animácia */
 .fade-in {
   animation: fadeInUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Mobile Responzivita */
 @media (max-width: 480px) {
-  .auth {
-    padding: 1rem;
-  }
-
-  .auth-card {
-    padding: 2.2rem 1.5rem;
-    border-radius: 20px;
-  }
-
-  .header {
-    margin-bottom: 1.8rem;
-    h2 { font-size: 1.7rem; }
-  }
-
-  .btn-submit {
-    height: 50px !important;
-  }
+  .auth { padding: 1rem; }
+  .auth-card { padding: 2.2rem 1.5rem; border-radius: 20px; }
+  .header { h2 { font-size: 1.7rem; } }
+  .btn-submit { height: 50px !important; }
 }
