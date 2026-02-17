@@ -136,6 +136,9 @@ export class DashboardComponent implements OnInit {
   isPremium = false;
   subscription: SubscriptionStatus | null = null;
 
+  // Submit protection
+  isSubmitting = false;
+
   constructor(
     private authService: AuthService,
     private userFitnessService: UserFitnessService,
@@ -418,6 +421,13 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    if (this.isSubmitting) {
+      console.log('[GUARD] Already submitting, skipping duplicate request');
+      return;
+    }
+
+    this.isSubmitting = true;
+
     const data = {
       name: this.calorieForm.foods,
       calories: this.calorieForm.calories,
@@ -433,8 +443,12 @@ export class DashboardComponent implements OnInit {
         alert('✅ Záznam o jedle pridaný!');
         this.calorieForm = { meal: 'breakfast', foods: '', calories: 0, protein: 0, carbs: 0, fats: 0, category: 'food', autoCalculate: true };
         this.refreshAllData();
+        this.isSubmitting = false;
       },
-      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
+      error: (err: any) => {
+        alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'));
+        this.isSubmitting = false;
+      }
     });
   }
 
@@ -443,6 +457,9 @@ export class DashboardComponent implements OnInit {
       alert('⚠️ Zadajte trvanie cvičenia');
       return;
     }
+
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
 
     const data = {
       type: this.exerciseForm.type,
@@ -456,8 +473,12 @@ export class DashboardComponent implements OnInit {
         alert('✅ Záznam o cvičení pridaný!');
         this.exerciseForm = { type: 'cardio', duration: 0, intensity: 'medium', caloriesBurned: 0 };
         this.refreshAllData();
+        this.isSubmitting = false;
       },
-      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
+      error: (err: any) => {
+        alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'));
+        this.isSubmitting = false;
+      }
     });
   }
 
@@ -467,12 +488,19 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
     this.chartsService.addEntry(this.userId, 'weight', { weight: this.weightForm.weight }).subscribe({
       next: () => {
         alert('✅ Váha zaznamenaná!');
         this.refreshAllData();
+        this.isSubmitting = false;
       },
-      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
+      error: (err: any) => {
+        alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'));
+        this.isSubmitting = false;
+      }
     });
   }
 
@@ -752,6 +780,9 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
     this.chartsService.addEntry(this.userId, 'mood', {
       score: this.moodForm.score,
       note: this.moodForm.note
@@ -760,8 +791,12 @@ export class DashboardComponent implements OnInit {
         alert('✅ Nálada zaznamenaná!');
         this.moodForm = { score: 5, note: '' };
         this.refreshAllData();
+        this.isSubmitting = false;
       },
-      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
+      error: (err: any) => {
+        alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'));
+        this.isSubmitting = false;
+      }
     });
   }
 
@@ -771,6 +806,9 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
     this.chartsService.addEntry(this.userId, 'sleep', {
       hours: this.sleepForm.hours,
       quality: this.sleepForm.quality
@@ -779,8 +817,12 @@ export class DashboardComponent implements OnInit {
         alert('✅ Spánok zaznamenaný!');
         this.sleepForm = { hours: 0, quality: 'good' };
         this.refreshAllData();
+        this.isSubmitting = false;
       },
-      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
+      error: (err: any) => {
+        alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'));
+        this.isSubmitting = false;
+      }
     });
   }
 
@@ -790,6 +832,9 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
     this.chartsService.addEntry(this.userId, 'stress', {
       level: this.stressForm.level,
       source: this.stressForm.source
@@ -798,8 +843,12 @@ export class DashboardComponent implements OnInit {
         alert('✅ Stres zaznamenaný!');
         this.stressForm = { level: 1, source: '' };
         this.refreshAllData();
+        this.isSubmitting = false;
       },
-      error: (err: any) => alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'))
+      error: (err: any) => {
+        alert('❌ Chyba: ' + (err.error?.detail || err.message || 'Neznáma chyba'));
+        this.isSubmitting = false;
+      }
     });
   }
 
@@ -809,7 +858,7 @@ export class DashboardComponent implements OnInit {
     console.log(`[CHART] Data for ${title}:`, data);
     if (!data || Object.keys(data).length === 0) {
       return {
-        title: { text: title, left: 'center', textStyle: { color: '#555', fontSize: 14 } },
+        // title: { text: title, left: 'center', textStyle: { color: '#555', fontSize: 14 } },
         graphic: [{
           type: 'text',
           left: 'center',
@@ -846,7 +895,7 @@ export class DashboardComponent implements OnInit {
 
     if (chartData.length === 0) {
       return {
-        title: { text: title, left: 'center', textStyle: { color: '#666' } },
+        // title: { text: title, left: 'center', textStyle: { color: '#666' } },
         series: [{
           type: 'pie',
           radius: ['40%', '70%'],
@@ -858,7 +907,7 @@ export class DashboardComponent implements OnInit {
     }
 
     return {
-      title: { text: title, left: 'center', textStyle: { color: '#3ddc84' } },
+      // title: { text: title, left: 'center', textStyle: { color: '#3ddc84' } },
       tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
       legend: { bottom: 0, textStyle: { color: '#cfcfcf' }, itemGap: 10 },
       color: ['#3ddc84', '#26a69a', '#66bb6a', '#9ccc65', '#d4e157', '#ffee58'],

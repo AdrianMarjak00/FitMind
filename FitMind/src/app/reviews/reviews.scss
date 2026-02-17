@@ -26,7 +26,10 @@ $border-alpha: rgba(255, 255, 255, 0.08);
     font-weight: 900;
     color: white;
     margin: 15px 0;
-    span { color: $primary; }
+
+    span {
+      color: $primary;
+    }
   }
 
   .subtitle {
@@ -76,32 +79,58 @@ $border-alpha: rgba(255, 255, 255, 0.08);
 }
 
 .avatar {
-  width: 44px; height: 44px;
+  width: 44px;
+  height: 44px;
   background: $primary;
   color: #000;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 12px; font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-weight: 800;
 }
 
 .author-info {
   flex: 1;
-  h3 { margin: 0; font-size: 1rem; color: white; }
-  .review-date { color: #555; font-size: 0.75rem; }
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: white;
+  }
+
+  .review-date {
+    color: #555;
+    font-size: 0.75rem;
+  }
 }
 
 .rating {
-  display: flex; align-items: center; gap: 4px;
-  color: $primary; font-weight: 700;
-  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: $primary;
+  font-weight: 700;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .review-text {
-  color: #bbb; font-size: 0.95rem; line-height: 1.6; font-style: italic;
+  color: #bbb;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-style: italic;
 }
 
 /* TLAČIDLO OTVORENIA */
 .add-review-wrapper {
-  display: flex; justify-content: center; margin: 40px 0;
+  display: flex;
+  justify-content: center;
+  margin: 40px 0;
 }
 
 .add-review-toggle {
@@ -111,12 +140,21 @@ $border-alpha: rgba(255, 255, 255, 0.08);
   padding: 12px 28px;
   border-radius: 50px;
   cursor: pointer;
-  display: inline-flex; align-items: center; gap: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 600;
   transition: all 0.3s ease;
 
-  &:hover, &.active {
-    background: $primary; color: #000;
+  &:hover {
+    background: $primary;
+    color: #000;
+  }
+
+  &.active {
+    background: #ff4d4d;
+    color: #fff;
+    border-color: #ff4d4d;
   }
 }
 
@@ -128,7 +166,8 @@ $border-alpha: rgba(255, 255, 255, 0.08);
   transition: max-height 0.5s cubic-bezier(0, 1, 0, 1), opacity 0.3s ease;
 
   &.show {
-    max-height: 1000px; /* Dostatočná výška */
+    max-height: 1000px;
+    /* Dostatočná výška */
     opacity: 1;
     transition: max-height 0.5s cubic-bezier(1, 0, 1, 0), opacity 0.5s ease;
     margin-bottom: 60px;
@@ -142,7 +181,7 @@ $border-alpha: rgba(255, 255, 255, 0.08);
   padding: clamp(20px, 5vw, 40px);
   max-width: 650px;
   margin: 20px auto;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 .form-row {
@@ -157,16 +196,21 @@ $border-alpha: rgba(255, 255, 255, 0.08);
 }
 
 .input-group {
-  display: flex; flex-direction: column;
+  display: flex;
+  flex-direction: column;
   margin-bottom: 15px;
 
   label {
-    color: #666; font-size: 0.75rem; margin-bottom: 8px;
-    font-weight: 700; text-transform: uppercase;
+    color: #666;
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
   }
 
-  input, textarea {
-    background: rgba(255,255,255,0.03);
+  input,
+  textarea {
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid $border-alpha;
     border-radius: 12px;
     padding: 14px;
@@ -175,35 +219,66 @@ $border-alpha: rgba(255, 255, 255, 0.08);
     transition: 0.3s;
 
     &:focus {
-      outline: none; border-color: $primary; background: rgba(255,255,255,0.06);
+      outline: none;
+      border-color: $primary;
+      background: rgba(255, 255, 255, 0.06);
     }
   }
 }
 
 .rating-input {
-  label { color: #666; font-size: 0.75rem; margin-bottom: 8px; font-weight: 700; text-transform: uppercase; }
+  label {
+    color: #666;
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
   .stars {
-    display: flex; gap: 5px;
+    display: flex;
+    gap: 5px;
+
     mat-icon {
-      cursor: pointer; color: rgba(255,255,255,0.1);
-      font-size: 32px; width: 32px; height: 32px;
-      &.selected { color: $primary; }
-      &:hover { transform: scale(1.1); }
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.1);
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+
+      &.selected {
+        color: $primary;
+      }
+
+      &:hover {
+        transform: scale(1.1);
+      }
     }
   }
 }
 
 .submit-btn {
-  width: 100%; background: $primary; color: #000;
-  border: none; padding: 18px; border-radius: 14px;
-  font-weight: 900; cursor: pointer; transition: 0.3s;
+  width: 100%;
+  background: $primary;
+  color: #000;
+  border: none;
+  padding: 18px;
+  border-radius: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.3s;
   margin-top: 10px;
 
-  &:disabled { opacity: 0.3; cursor: not-allowed; }
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
 }
 
 .error {
-  color: #ff4d4d; font-size: 0.75rem; margin-top: 5px;
+  color: #ff4d4d;
+  font-size: 0.75rem;
+  margin-top: 5px;
 }
 
 /* ĎAKOVNÁ SPRÁVA */
@@ -212,12 +287,23 @@ $border-alpha: rgba(255, 255, 255, 0.08);
   padding: 20px 0;
 
   .success-icon {
-    font-size: 60px; width: 60px; height: 60px;
-    color: $primary; margin-bottom: 15px;
+    font-size: 60px;
+    width: 60px;
+    height: 60px;
+    color: $primary;
+    margin-bottom: 15px;
   }
 
-  h2 { color: white; margin-bottom: 10px; }
-  p { color: #888; margin-bottom: 25px; line-height: 1.6; }
+  h2 {
+    color: white;
+    margin-bottom: 10px;
+  }
+
+  p {
+    color: #888;
+    margin-bottom: 25px;
+    line-height: 1.6;
+  }
 }
 
 .fade-in {
@@ -225,6 +311,13 @@ $border-alpha: rgba(255, 255, 255, 0.08);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
