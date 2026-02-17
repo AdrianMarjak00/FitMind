@@ -141,7 +141,7 @@ class StatsService:
             'exercise': lambda: self.get_exercise_summary(user_id, days),
             'mood': lambda: {"trend": self.get_mood_trend(user_id, days)},
             'stress': lambda: {"trend": self.get_stress_trend(user_id, days)},
-            'sleep': lambda: self.get_sleep_summary(user_id, days),
+            'sleep': lambda: {"trend": self.get_sleep_trend(user_id, days)},
             'weight': lambda: {"trend": self.get_weight_trend(user_id, days)}
         }
         
@@ -198,4 +198,24 @@ class StatsService:
                 "date": e.get('timestamp'),
                 "weight": val
             })
+        return results
+
+    def get_sleep_trend(self, user_id: str, days: int = 30) -> List[Dict]:
+        """Získa trend spánku (záznamy zoradené podľa času)"""
+        entries = self.firebase.get_entries(user_id, 'sleep', days)
+        results = []
+        sorted_entries = sorted(entries, key=lambda x: self._safe_timestamp(x))
+        
+        for entry in sorted_entries:
+            try:
+                hours = float(entry.get('hours', 0))
+            except:
+                hours = 0
+                
+            results.append({
+                "date": entry.get('timestamp'),
+                "hours": hours,
+                "quality": entry.get('quality', '')
+            })
+            
         return results

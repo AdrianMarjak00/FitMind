@@ -595,16 +595,20 @@ export class DashboardComponent implements OnInit {
     const days = this.getFilterDays();
 
     this.chartsService.getChartData(this.userId, 'mood', Math.max(days, 30)).subscribe({
-      next: data => this.moodChart = this.createLineChart(data.data.trend || [], 'Nálada', 'score')
+      next: data => this.moodChart = this.createLineChart(data.data.trend || [], 'Nálada', 'score'),
+      error: () => this.moodChart = this.createLineChart([], 'Nálada', 'score')
     });
     this.chartsService.getChartData(this.userId, 'stress', Math.max(days, 30)).subscribe({
-      next: data => this.stressChart = this.createLineChart(data.data.trend || [], 'Stres', 'level')
+      next: data => this.stressChart = this.createLineChart(data.data.trend || [], 'Stres', 'level'),
+      error: () => this.stressChart = this.createLineChart([], 'Stres', 'level')
     });
     this.chartsService.getChartData(this.userId, 'sleep', days).subscribe({
-      next: data => this.sleepChart = this.createBarChart(data.data.by_quality || {}, 'Kvalita spánku')
+      next: data => this.sleepChart = this.createLineChart(data.data.trend || [], 'Spánok (h)', 'hours'),
+      error: () => this.sleepChart = this.createLineChart([], 'Spánok (h)', 'hours')
     });
     this.chartsService.getChartData(this.userId, 'weight', Math.max(days, 90)).subscribe({
-      next: data => this.weightChart = this.createLineChart(data.data.trend || [], 'Váha', 'weight')
+      next: data => this.weightChart = this.createLineChart(data.data.trend || [], 'Váha', 'weight'),
+      error: () => this.weightChart = this.createLineChart([], 'Váha', 'weight')
     });
   }
 
