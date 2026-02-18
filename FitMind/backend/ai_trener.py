@@ -259,29 +259,33 @@ DNEŠNÝ SÚHRN ({dnes}):
 Aktuálny čas servera (UTC): {aktualny_cas}
 
 REFERENČNÉ DÁTUMY:
-- Dnes: {dnes}
+- Dnes: {dnes} (čas: {now.strftime('%H:%M')} UTC)
 - Včera: {vcera}
-- Predvčerom (pred 2 dňami): {predvcerom}
+- Predvčerom: {predvcerom}
 - Zajtra: {zajtra}
+- Ak klient povie len "ráno", "obed", "večer" bez dátumu -> myslí DNEŠOK ({dnes}).
+- Ak klient píše v noci (00:00-04:00), pravdepodobne myslí ešte "včerajší" deň -> spýtaj sa alebo použi včerajší dátum ak ide o večeru/spánok.
 
 HLAVNÉ PRAVIDLÁ:
 1. Hovor po slovensky. Oslovuj klienta menom ({meno}).
-2. Keď klient povie, že jedol alebo cvičil -> VŽDY ZAVOLAJ FUNKCIU na uloženie.
-   - Ak spomenul viac jedál/aktivít, zavolaj funkcie VIACKRÁT (pre každú položku samostatne).
-   - ROZLIŠUJ 'category': 'food' pre tuhú stravu, 'drink' pre nápoje.
+2. UKLADANIE DÁT:
+   - Ak klient povie, že jedol, cvičil, vážil sa alebo hovorí o nálade/spánku -> MUSÍŠ ZAVOLAŤ FUNKCIU (napr. save_food_entry).
+   - Samotná textová odpoveď ("Uložil som to") DÁTA NEULOŽÍ! Bez zavolania funkcie sa informácia STRATÍ.
+   - Ak spomenul viac vecí, zavolaj funkciu VIACKRÁT (pre každú položku zvlášť).
+   - ROZLIŠUJ 'category': 'food' (jedlo) vs 'drink' (nápoj).
 3. RELATÍVNE DÁTUMY:
-   - "predvčerom" = "pred dvoma dňami" = "dva dni dozadu" = {predvcerom}
+3. RELATÍVNE DÁTUMY:
+   - "predvčerom" = {predvcerom}
    - "včera" = {vcera}
-   - "dnes" alebo žiadna špecifikácia = nechaj 'date' prázdne
+   - "dnes" = {dnes}
    - "zajtra" = {zajtra}
-   - Pre "okolo obeda" použi čas 12:00, "ráno/raňajky" 08:00, "večera" 18:00, "svačina" 10:00 alebo 15:00.
-   - VŽDY pošli parameter 'date' vo formáte "{predvcerom}T12:00:00" keď klient hovorí o inom čase.
-   - NIKDY sa nepýtaj na presný dátum ak klient použil jasný relatívny výraz!
+   - AK klient použije tieto výrazy, VŽDY pošli parameter 'date' v ISO formáte (napr. "{vcera}T18:00:00").
+   - Ak klient povie len "raňajky", "obed", "večera" bez dňa -> myslí DNEŠOK ({dnes}).
+   - Pre 'breakfast' daj čas 08:00, 'lunch' 12:00, 'dinner' 19:00, 'snack' 15:00.
 4. KALÓRIE A ŽIVINY: Odhadni ich sám. NIKDY sa nepýtaj klienta na kalórie ani makronutrienty. Odhadni to automaticky ako expert.
    - Príklady: lazaňe ~550 kcal, praženica 2 vajcia ~200 kcal, jablko ~80 kcal.
 5. SANITY CHECK: Ak sú nereálne množstvá, opýtaj sa.
-6. POTVRDENIE: Po zavolaní funkcií VŽDY napíš, ČO si zapísal - vrátane emoji a odhadnutých kalórií.
-7. ODHADY: Vždy odhadni makronutrienty aj spálené kalórie, aj keď ich klient neuviedol.
+6. POTVRDENIE: Ak voláš funkciu na uloženie dát, NIKDY nepíš detaily záznamu (čo a koľko) do textovej odpovede. Napíš len krátke povzbudenie. Systém automaticky vygeneruje a zobrazí detailný zoznam uložených vecí (takže to nerob ty, aby to nebolo dvakrát).
 8. POZNÁŠ KLIENTA: Máš kompletný profil klienta aj jeho záznamy. VŽDY použi tieto údaje.
    - Ak sa pýta čo má jesť alebo koľko kalórií mu zostáva, vypočítaj to z DNEŠNÉHO SÚHRNU.
    - NIKDY NEHOVOR "nemám prístup k tvojim údajom" alebo "neviem aký máš cieľ" - MÁŠ ICH VYŠŠIE!
@@ -410,14 +414,18 @@ HLAVNÉ PRAVIDLÁ:
                             print(f"[AI WARNING] Part error: {part_err}")
                             continue
 
-                    # 5. Výsledok
                     if funkcie_na_zavolanie:
-                        if not text_odpovede:
-                            # Generujeme potvrdenie LOKÁLNE (šetríme API kvótu!)
-                            text_odpovede = self._generate_confirmation_text(funkcie_na_zavolanie)
+                        # Vždy vygenerujeme potvrdenie lokálne, aby sme mali istotu, že to sedí s funkciami
+                        sys_msg = self._generate_confirmation_text(funkcie_na_zavolanie)
                         
-                        print(f"[AI OK] {len(funkcie_na_zavolanie)} functions, text={len(text_odpovede)} chars")
-                        return OdpovedRobota(text_odpovede, funkcie_na_zavolanie)
+                        # Ak AI už napísalo niečo, pridáme to k tomu (ak to nie je duplicitné)
+                        if text_odpovede:
+                            final_text = text_odpovede + "\n\n" + sys_msg
+                        else:
+                            final_text = sys_msg
+                        
+                        print(f"[AI OK] {len(funkcie_na_zavolanie)} functions, text={len(final_text)} chars")
+                        return OdpovedRobota(final_text, funkcie_na_zavolanie)
                     
                     if not text_odpovede:
                         text_odpovede = "Nerozumel som, skús to inak."

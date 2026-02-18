@@ -240,7 +240,7 @@ class FirebaseService:
             
             # Pridaj záznam do kolekcie
             _, doc_ref = user_ref.collection(coll_name).add(data)
-            print(f"[FIREBASE SUCCESS] {entry_type} saved as {doc_ref.id}")
+            print(f"[FIREBASE SUCCESS] {entry_type} saved as {doc_ref.id} with timestamp {data.get('timestamp')}")
             return True
         except Exception as e:
             print(f"[FIREBASE ERROR] Chyba pri ukladani {entry_type}: {e}")
