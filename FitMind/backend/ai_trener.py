@@ -282,10 +282,9 @@ HLAVNÉ PRAVIDLÁ:
    - AK klient použije tieto výrazy, VŽDY pošli parameter 'date' v ISO formáte (napr. "{vcera}T18:00:00").
    - Ak klient povie len "raňajky", "obed", "večera" bez dňa -> myslí DNEŠOK ({dnes}).
    - Pre 'breakfast' daj čas 08:00, 'lunch' 12:00, 'dinner' 19:00, 'snack' 15:00.
-4. KALÓRIE A ŽIVINY: Odhadni ich sám. NIKDY sa nepýtaj klienta na kalórie ani makronutrienty. Odhadni to automaticky ako expert.
-   - Príklady: lazaňe ~550 kcal, praženica 2 vajcia ~200 kcal, jablko ~80 kcal.
-5. SANITY CHECK: Ak sú nereálne množstvá, opýtaj sa.
-6. POTVRDENIE: Ak voláš funkciu na uloženie dát, NIKDY nepíš detaily záznamu (čo a koľko) do textovej odpovede. Napíš len krátke povzbudenie. Systém automaticky vygeneruje a zobrazí detailný zoznam uložených vecí (takže to nerob ty, aby to nebolo dvakrát).
+4. KALÓRIE A ŽIVINY: Odhadni ich sám ako expert. NIKDY sa nepýtaj klienta priamo na to, koľko kalórií jedlo malo. Ak klient zadá jedlo veľmi všeobecne (napr. 'nejaká polievka', 'koláč') alebo je množstvo podozrivé/nereálne, kľudne sa ho v odpovedi pýtaj doplňujúce otázky na upresnenie (napr. 'O akú presne polievku išlo?'). Prípadne môžeš hneď funkciu zavolať s priemerným odhadom (napr. polievka ~150 kcal) a v texte pridať nepriamu otázku na detaily. Je to na tebe, buď zvedavý a reaguj prirodzene!
+5. SANITY CHECK: Ak sú nereálne množstvá (napr. 100 pízz), spýtaj sa na upresnenie a s uložením počkaj na potvrdenie od užívateľa.
+6. POTVRDENIE: Ak voláš funkciu na uloženie dát, NIKDY nepíš detaily záznamu (čo a koľko) do textovej odpovede. Napíš len krátke povzbudenie typu 'Rozumiem'. Systém automaticky vygeneruje a zobrazí detailný zoznam uložených vecí v grafickom rozhraní klienta.
 8. POZNÁŠ KLIENTA: Máš kompletný profil klienta aj jeho záznamy. VŽDY použi tieto údaje.
    - Ak sa pýta čo má jesť alebo koľko kalórií mu zostáva, vypočítaj to z DNEŠNÉHO SÚHRNU.
    - NIKDY NEHOVOR "nemám prístup k tvojim údajom" alebo "neviem aký máš cieľ" - MÁŠ ICH VYŠŠIE!
@@ -361,9 +360,10 @@ HLAVNÉ PRAVIDLÁ:
                         for zaznam in historia_chatu:
                             rola = "user" if zaznam['role'] == "user" else "model"
                             text = zaznam.get('content') or "..."
-                            historia_pre_google.append(
-                                types.Content(role=rola, parts=[types.Part(text=text)])
-                            )
+                            historia_pre_google.append({
+                                "role": rola,
+                                "parts": [{"text": text}]
+                            })
 
                     # 2. Konfigurácia
                     konfiguracia = types.GenerateContentConfig(

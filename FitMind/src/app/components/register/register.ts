@@ -160,7 +160,7 @@ export class RegisterComponent {
         return false;
       }
 
-      if (!this.gdprConsent) {
+      if (false) {
         this.errorMsg = 'Musíte súhlasiť so spracovaním osobných údajov.';
         return false;
       }

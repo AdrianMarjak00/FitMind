@@ -4,12 +4,11 @@ import os
 import sys
 import time
 import traceback
-from typing import Optional, List, Dict, Any
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Depends, Request, Body, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 # Pridaj aktuálny priečinok do sys.path pre lokálne importy
@@ -107,6 +106,7 @@ allowed_origins = [
     "https://fitmind-dba6a.firebaseapp.com",
     "https://fitmind-backend-fvq7.onrender.com",
     "http://localhost:4200",
+    "http://localhost:4500",
     "http://localhost:8080",
     "http://localhost:3000",
     "http://localhost:5173",
@@ -129,31 +129,6 @@ stats_service = StatsService(firebase)
 coach_service = CoachService(firebase)
 stripe_service = StripeService()
 email_service = EmailService()
-
-# --- MODELY DÁT ---
-class ChatRequest(BaseModel):
-    message: str = Field(..., max_length=2000)
-    conversation_id: Optional[str] = None
-
-class CreateConversationRequest(BaseModel):
-    title: Optional[str] = "Nová konverzácia"
-
-class CreateCheckoutRequest(BaseModel):
-    plan_type: str  # "basic", "pro"
-    success_url: str
-    cancel_url: str
-
-# --- API ENDPOINTY: SYSTÉM ---
-
-@app.get("/api/status", tags=["System"])
-def api_status():
-    """Vráti stav pripojenia k externým službám."""
-    return {
-        "status": "online", 
-        "firebase": "connected" if firebase.is_connected() else "disconnected",
-        "ai": "operational",
-        "env": "production" if IS_PRODUCTION else "development"
-    }
 
 @app.get("/api/health", tags=["System"])
 def health():
@@ -201,8 +176,6 @@ def admin_get_user_debug(email: str, admin_auth: dict = Depends(check_admin_auth
         "stripe": stripe_info
     }
 
-class CancelSubscriptionRequest(BaseModel):
-    email: str
 
 @app.post("/api/admin/subscription/cancel", tags=["Admin"])
 def admin_cancel_subscription(request: CancelSubscriptionRequest, admin_auth: dict = Depends(check_admin_auth)):
@@ -215,12 +188,10 @@ def admin_cancel_subscription(request: CancelSubscriptionRequest, admin_auth: di
     subscription = user_data.get('subscription', {})
     sub_id = subscription.get('subscription_id')
 
-    # 1. Zruš v Stripe (ak existuje ID)
     stripe_success = False
     if sub_id:
         stripe_success = stripe_service.cancel_subscription(sub_id)
     
-    # 2. Zruš v databáze (vždy, aj keď Stripe zlyhá alebo ID nie je)
     db_success = firebase.delete_user_subscription(user_id)
 
     return {
@@ -229,51 +200,6 @@ def admin_cancel_subscription(request: CancelSubscriptionRequest, admin_auth: di
         "message": f"Subscription for {request.email} processed."
     }
 
-
-# --- API ENDPOINTY: TESTOVANIE (Development only) ---
-
-@app.post("/api/test/chat", tags=["Test"])
-def test_chat(request: ChatRequest, dev_auth: dict = Depends(verify_dev_secret)):
-    """
-    🧪 TESTOVACÍ endpoint pre AI chat bez nutnosti Firebase tokenu.
-    Vyžaduje hlavičku: X-Dev-Secret
-    """
-    message = request.message.strip()
-    if not message:
-        raise HTTPException(status_code=400, detail="Message cannot be empty")
-
-    try:
-        system_prompt = ai_service.create_system_prompt({}, {})
-        message_response = ai_service.chat(message, system_prompt, [])
-
-        ai_odpoved = message_response.content
-        saved_entries = []
-
-        if message_response.function_calls:
-            for fc in message_response.function_calls:
-                fc_name = fc.name
-                fc_args = json.loads(fc.arguments)
-                saved_entries.append(f"[TEST] Function called: {fc_name} with args: {fc_args}")
-            
-            if not ai_odpoved:
-                ai_odpoved = "Functions executed (test mode)."
-
-        return {
-            "odpoved": ai_odpoved,
-            "saved_entries": saved_entries,
-            "test_mode": True
-        }
-    except Exception as e:
-        return {"error": str(e), "test_mode": True}
-
-@app.get("/api/test/status", tags=["Test"])
-def test_status(dev_auth: dict = Depends(verify_dev_secret)):
-    """Preverenie konfigurácie v testovacom režime."""
-    return {
-        "firebase_connected": firebase.is_connected(),
-        "ai_ready": bool(ai_service.api_key),
-        "stripe_ready": stripe_service.is_configured()
-    }
 
 # --- API ENDPOINTY: AI CHAT ---
 
@@ -401,41 +327,54 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
 # --- API ENDPOINTY: ŠTATISTIKY ---
 
 @app.get("/api/chart/{user_id}/{chart_type}", tags=["Statistics"])
-def get_chart_data_api(user_id: str, chart_type: str, days: int = 30, decoded_token: dict = Depends(verify_firebase_token)):
+def get_chart_data_api(
+    user_id: str, 
+    chart_type: ChartType, 
+    days: int = 30, 
+    decoded_token: dict = Depends(verify_firebase_token)
+):
     user_id = get_authorized_user_id(user_id, decoded_token)
-    allowed_types = {'calories', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
-    if chart_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Invalid chart type")
-    
-    return {"chart_type": chart_type, "data": stats_service.get_chart_data(user_id, chart_type, days), "days": days}
+    return {
+        "chart_type": chart_type, 
+        "data": stats_service.get_chart_data(user_id, chart_type.value, days), 
+        "days": days
+    }
 
 @app.get("/api/entries/{user_id}/{entry_type}", tags=["Statistics"])
-def get_entries_api(user_id: str, entry_type: str, days: int = 30, limit: int = 100, decoded_token: dict = Depends(verify_firebase_token)):
+def get_entries_api(
+    user_id: str, 
+    entry_type: EntryType, 
+    days: int = 30, 
+    limit: int = 100, 
+    decoded_token: dict = Depends(verify_firebase_token)
+):
     user_id = get_authorized_user_id(user_id, decoded_token)
-    return firebase.get_entries(user_id, entry_type, days, limit)
+    return firebase.get_entries(user_id, entry_type.value, days, limit)
 
 @app.post("/api/entries/{user_id}/{entry_type}", tags=["Entries"])
-def add_entry_api(user_id: str, entry_type: str, data: dict = Body(...), decoded_token: dict = Depends(verify_firebase_token)):
+def add_entry_api(
+    user_id: str, 
+    entry_type: EntryType, 
+    data: dict = Body(...), 
+    decoded_token: dict = Depends(verify_firebase_token)
+):
     user_id = get_authorized_user_id(user_id, decoded_token)
-    allowed_types = {'food', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
-    if entry_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Invalid entry type: {entry_type}")
-    
     print(f"[API] Adding {entry_type} entry for {user_id}: {data}")
-    success = firebase.save_entry(user_id, entry_type, data)
+    success = firebase.save_entry(user_id, entry_type.value, data)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to save entry")
     return {"status": "ok", "message": f"{entry_type} entry saved"}
 
 @app.delete("/api/entries/{user_id}/{entry_type}/{entry_id}", tags=["Entries"])
-def delete_entry_api(user_id: str, entry_type: str, entry_id: str, decoded_token: dict = Depends(verify_firebase_token)):
+def delete_entry_api(
+    user_id: str, 
+    entry_type: EntryType, 
+    entry_id: str, 
+    decoded_token: dict = Depends(verify_firebase_token)
+):
     user_id = get_authorized_user_id(user_id, decoded_token)
-    allowed_types = {'food', 'exercise', 'mood', 'stress', 'sleep', 'weight'}
-    if entry_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Invalid entry type: {entry_type}")
-    
     print(f"[API] Deleting {entry_type} entry {entry_id} for {user_id}")
-    success = firebase.delete_entry(user_id, entry_type, entry_id)
+    success = firebase.delete_entry(user_id, entry_type.value, entry_id)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete entry")
     return {"status": "ok", "message": f"{entry_type} entry deleted"}
@@ -660,10 +599,6 @@ def get_payment_status(user_id: str, decoded_token: dict = Depends(verify_fireba
 
 # --- API ENDPOINTY: EMAIL NOTIFIKÁCIE ---
 
-class SendWelcomeEmailRequest(BaseModel):
-    email: str
-    first_name: str
-
 @app.post("/api/email/welcome", tags=["Email"])
 def send_welcome_email_endpoint(request: SendWelcomeEmailRequest, decoded_token: dict = Depends(verify_firebase_token)):
     """Odošle uvítací email novému používateľovi."""
@@ -674,18 +609,6 @@ def send_welcome_email_endpoint(request: SendWelcomeEmailRequest, decoded_token:
     return {"sent": success}
 
 # --- API ENDPOINTY: AKTUALIZÁCIA PROFILU ---
-
-class UpdateProfileRequest(BaseModel):
-    firstName: Optional[str] = None
-    lastName: Optional[str] = None
-    age: Optional[int] = None
-    gender: Optional[str] = None
-    height: Optional[float] = None
-    currentWeight: Optional[float] = None
-    targetWeight: Optional[float] = None
-    fitnessGoal: Optional[str] = None
-    activityLevel: Optional[str] = None
-    profileImageUrl: Optional[str] = None
 
 @app.put("/api/profile/{user_id}", tags=["User"])
 def update_profile_api(user_id: str, request: UpdateProfileRequest, decoded_token: dict = Depends(verify_firebase_token)):
@@ -724,6 +647,6 @@ def serve_angular(full_path: str):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    print(f"\n🚀 FitMind Backend štartuje na http://0.0.0.0:{port}")
+    print(f"\n FitMind Backend startuje na http://0.0.0.0:{port}")
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=not IS_PRODUCTION)
 

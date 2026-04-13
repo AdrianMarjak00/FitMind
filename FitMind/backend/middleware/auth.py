@@ -35,7 +35,6 @@ async def verify_firebase_token(request: Request):
     """
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
-        # Log len cestu, nie celú hlavičku kvôli bezpečnosti
         print(f"[AUTH] No header or invalid format for: {request.url.path}")
         raise HTTPException(
             status_code=401, 
@@ -78,7 +77,6 @@ async def verify_firebase_token(request: Request):
         raise HTTPException(status_code=401, detail="auth/invalid-id-token")
     except Exception as e:
         print(f"[AUTH ERROR] Verification failed: {str(e)}")
-        # Ak auth nie je inicializovaný, vyhodí to chybu tu
         raise HTTPException(status_code=401, detail=f"auth/error: {str(e)[:100]}")
 
 async def check_admin_auth(request: Request):
