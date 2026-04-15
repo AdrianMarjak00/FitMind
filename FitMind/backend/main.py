@@ -63,6 +63,16 @@ from middleware import (
     check_admin_auth,
     verify_dev_secret
 )
+from schemas import (
+    ChatRequest,
+    CreateConversationRequest,
+    UpdateProfileRequest,
+    CreateCheckoutRequest,
+    CancelSubscriptionRequest,
+    SendWelcomeEmailRequest,
+    EntryType,
+    ChartType
+)
 
 # --- KONFIGURÁCIA APLIKÁCIE ---
 app = FastAPI(
@@ -106,11 +116,6 @@ allowed_origins = [
     "https://fitmind-dba6a.firebaseapp.com",
     "https://fitmind-backend-fvq7.onrender.com",
     "http://localhost:4200",
-    "http://localhost:4500",
-    "http://localhost:8080",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:65403" # Pridaný port z logu
 ]
 
 app.add_middleware(
@@ -137,20 +142,11 @@ def health():
         "status": "healthy",
         "timestamp": time.time(),
         "services": {
-            "firebase": {
-                "connected": firebase.is_connected(),
-                "db_initialized": firebase._db is not None
-            },
-            "stripe": {
-                "configured": stripe_service.is_configured() if 'stripe_service' in globals() else False
-            },
-            "ai": {
-                "configured": ai_service.is_configured() if 'ai_service' in globals() else False
-            }
+            "firebase": {"connected": firebase.is_connected()},
+            "stripe": {"configured": stripe_service.is_configured()},
+            "ai": {"configured": ai_service.is_configured()}
         },
-        "environment": {
-            "production": IS_PRODUCTION
-        }
+        "environment": {"production": IS_PRODUCTION}
     }
 
 # --- API ENDPOINTY: ADMIN PANEL ---
@@ -221,8 +217,7 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
     # Limity podľa plánu (ak je subscription aktívna)
     plan_limits = {
         "free": 10,
-        "basic": 10000,    # Premium plán
-        "pro": 10000       # Premium plán
+        "basic": 10000,
     }
 
     # Ak subscription nie je aktívna, použij free limit
@@ -230,7 +225,7 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         daily_limit = plan_limits["free"]
         effective_plan = "free"
     else:
-        daily_limit = plan_limits.get(plan_type, 20)
+        daily_limit = plan_limits.get(plan_type, plan_limits["free"])
         effective_plan = plan_type
 
     # 2. Kontrola limitov

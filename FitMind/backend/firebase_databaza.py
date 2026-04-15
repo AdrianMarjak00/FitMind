@@ -361,111 +361,6 @@ class FirebaseService:
             print(f"[ERROR] Chyba pri nacitani adminov: {e}")
             return []
     
-    # === CHAT HISTÓRIA ===
-    
-    def save_chat_message(self, user_id: str, role: str, content: str, metadata: Optional[Dict] = None) -> bool:
-        """
-        Uloží správu do konverzačnej histórie
-        
-        Args:
-            user_id: ID používateľa
-            role: Rola ('user' alebo 'assistant')
-            content: Obsah správy
-            metadata: Dodatočné metadáta (napr. function_call, saved_entries)
-            
-        Returns:
-            True ak sa podarilo uložiť
-        """
-        if not self.is_connected():
-            return False
-        try:
-            message_data = {
-                'role': role,
-                'content': content,
-                'timestamp': firestore.SERVER_TIMESTAMP
-            }
-            
-            if metadata:
-                message_data['metadata'] = metadata
-            
-            # Ulož do subkolekcie chatHistory
-            self._db.collection('users').document(user_id).collection('chatHistory').add(message_data)
-            return True
-        except Exception as e:
-            print(f"[ERROR] Chyba pri ukladani chat spravy: {e}")
-            return False
-    
-    def get_chat_history(self, user_id: str, limit: int = 20) -> List[Dict]:
-        """
-        Získa konverzačnú históriu používateľa
-        
-        Args:
-            user_id: ID používateľa
-            limit: Maximálny počet správ (default: 20)
-            
-        Returns:
-            Zoznam správ
-        """
-        if not self.is_connected():
-            return []
-        try:
-            chat_ref = self._db.collection('users').document(user_id).collection('chatHistory')
-            # Zoraď podľa timestampu zostupne a obmedz počet
-            query = chat_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(limit)
-            docs = list(query.stream())
-            
-            # Reverzuj poradie (chceme chronologické poradie)
-            messages = []
-            for doc in reversed(docs):
-                data = doc.to_dict()
-                # Konvertuj Firestore timestamp na ISO string
-                timestamp = None
-                if 'timestamp' in data and data['timestamp']:
-                    ts = data['timestamp']
-                    try:
-                        if hasattr(ts, 'isoformat'):
-                            timestamp = ts.isoformat()
-                        elif hasattr(ts, 'timestamp'):
-                            from datetime import datetime, timezone
-                            timestamp = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc).isoformat()
-                    except Exception:
-                        timestamp = None
-
-                messages.append({
-                    'role': data.get('role', 'user'),
-                    'content': data.get('content', ''),
-                    'timestamp': timestamp
-                })
-
-            return messages
-        except Exception as e:
-            print(f"[ERROR] Chyba pri nacitani chat historie: {e}")
-            return []
-    
-    def clear_chat_history(self, user_id: str) -> bool:
-        """
-        Vymaže konverzačnú históriu používateľa
-
-        Args:
-            user_id: ID používateľa
-
-        Returns:
-            True ak sa podarilo vymazať
-        """
-        if not self.is_connected():
-            return False
-        try:
-            chat_ref = self._db.collection('users').document(user_id).collection('chatHistory')
-            docs = chat_ref.stream()
-
-            for doc in docs:
-                doc.reference.delete()
-
-            return True
-        except Exception as e:
-            print(f"[ERROR] Chyba pri mazani chat historie: {e}")
-            return False
-
     # === RATE LIMITING ===
 
     def check_daily_message_limit(self, user_id: str, daily_limit: int = 20) -> Dict[str, any]:
@@ -799,82 +694,39 @@ class FirebaseService:
         status: str,
         subscription_id: Optional[str] = None
     ) -> bool:
-        """
-        Uloží informácie o platbe/subscription do profilu používateľa.
-
-        Args:
-            user_id: Firebase UID
-            stripe_customer_id: Stripe customer ID
-            plan_type: Typ plánu (basic, pro, premium)
-            status: Status (active, canceled, past_due)
-            subscription_id: Stripe subscription ID (pre premium)
-
-        Returns:
-            True ak sa podarilo uložiť
-        """
+        """Uloží informácie o platbe/subscription do profilu používateľa."""
         if not self.is_connected():
             return False
-
         try:
-            user_ref = self._db.collection('users').document(user_id)
-
-            update_data = {
+            self._db.collection('users').document(user_id).update({
                 'stripe_customer_id': stripe_customer_id,
-                f'active_plans.{plan_type}': {
+                'subscription': {
+                    'plan_type': plan_type,
                     'status': status,
+                    'subscription_id': subscription_id,
                     'purchased_at': firestore.SERVER_TIMESTAMP,
-                    'updated_at': firestore.SERVER_TIMESTAMP,
-                    'subscription_id': subscription_id
+                    'updated_at': firestore.SERVER_TIMESTAMP
                 }
-            }
-
-            # Pre spätnú kompatibilitu/jednoduchosť stále ukladáme aj do hlavného poľa
-            update_data['subscription'] = {
-                'plan_type': plan_type,
-                'status': status,
-                'purchased_at': firestore.SERVER_TIMESTAMP,
-                'updated_at': firestore.SERVER_TIMESTAMP,
-                'subscription_id': subscription_id
-            }
-
-            user_ref.update(update_data)
+            })
             print(f"[FIREBASE] Payment info saved for user {user_id}, plan: {plan_type}")
             return True
-
         except Exception as e:
             print(f"[ERROR] Chyba pri ukladaní payment info: {e}")
             return False
 
     def get_user_subscription(self, user_id: str) -> Optional[Dict]:
-        """
-        Získa informácie o subscription používateľa.
-
-        Returns:
-            Dict s plan_type, status, stripe_customer_id, atď. alebo None
-        """
+        """Získa informácie o subscription používateľa."""
         if not self.is_connected():
             return None
-
         try:
-            user_ref = self._db.collection('users').document(user_id)
-            doc = user_ref.get()
-
+            doc = self._db.collection('users').document(user_id).get()
             if not doc.exists:
                 return None
-
             data = doc.to_dict()
             subscription = data.get('subscription', {})
-            active_plans = data.get('active_plans', {})
-
-            # Pridaj stripe_customer_id ak existuje
             if data.get('stripe_customer_id'):
                 subscription['stripe_customer_id'] = data['stripe_customer_id']
-            
-            # Pridaj všetky aktívne plány
-            subscription['active_plans'] = active_plans
-
             return subscription if subscription else None
-
         except Exception as e:
             print(f"[ERROR] Chyba pri načítaní subscription: {e}")
             return None
@@ -913,55 +765,32 @@ class FirebaseService:
         subscription_id: Optional[str] = None,
         plan_type: Optional[str] = None
     ) -> bool:
-        """
-        Aktualizuje status subscription pre konkrétny plan.
-        """
+        """Aktualizuje status subscription."""
         if not self.is_connected():
             return False
-
         try:
             user_ref = self._db.collection('users').document(user_id)
             doc = user_ref.get()
-            
             if not doc.exists:
                 return False
-                
-            data = doc.to_dict()
-            active_plans = data.get('active_plans', {})
-            
-            # Ak nemáme plan_type, skúsime ho nájsť podľa subscription_id
-            if not plan_type and subscription_id:
-                for p_type, p_data in active_plans.items():
-                    if p_data.get('subscription_id') == subscription_id:
-                        plan_type = p_type
-                        break
-            
-            # Ak stále nevieme plan_type, použijeme ten z hlavného subscription (pre istotu)
-            if not plan_type:
-                plan_type = data.get('subscription', {}).get('plan_type')
 
+            if not plan_type:
+                plan_type = doc.to_dict().get('subscription', {}).get('plan_type')
             if not plan_type:
                 return False
 
             update_data = {
-                f'active_plans.{plan_type}.status': status,
-                f'active_plans.{plan_type}.updated_at': firestore.SERVER_TIMESTAMP
+                'subscription.status': status,
+                'subscription.updated_at': firestore.SERVER_TIMESTAMP
             }
-
-            # Tiež aktualizuj hlavné pole ak je to ten istý plán
-            if data.get('subscription', {}).get('plan_type') == plan_type:
-                update_data['subscription.status'] = status
-                update_data['subscription.updated_at'] = firestore.SERVER_TIMESTAMP
-
+            if subscription_id:
+                update_data['subscription.subscription_id'] = subscription_id
             if period_end:
-                update_data[f'active_plans.{plan_type}.current_period_end'] = datetime.fromtimestamp(period_end)
-                if data.get('subscription', {}).get('plan_type') == plan_type:
-                    update_data['subscription.current_period_end'] = datetime.fromtimestamp(period_end)
+                update_data['subscription.current_period_end'] = datetime.fromtimestamp(period_end)
 
             user_ref.update(update_data)
             print(f"[FIREBASE] Subscription status updated for user {user_id}, plan {plan_type}: {status}")
             return True
-
         except Exception as e:
             print(f"[ERROR] Chyba pri aktualizácii subscription status: {e}")
             return False
@@ -982,18 +811,16 @@ class FirebaseService:
             return None
 
     def delete_user_subscription(self, user_id: str) -> bool:
-        """Natvrdo nastaví subscription na 'free' a zruší status v databáze."""
+        """Nastaví subscription na 'free' a zruší status v databáze."""
         if not self.is_connected():
             return False
         try:
-            user_ref = self._db.collection('users').document(user_id)
-            user_ref.update({
+            self._db.collection('users').document(user_id).update({
                 'subscription': {
                     'plan_type': 'free',
                     'status': 'canceled',
                     'updated_at': firestore.SERVER_TIMESTAMP
-                },
-                'active_plans': {} # Vymaže zoznam aktívnych plánov
+                }
             })
             return True
         except Exception as e:

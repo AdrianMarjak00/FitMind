@@ -15,12 +15,10 @@ class StripeService:
     # Mapovanie plánov na Stripe Price IDs
     PRICE_IDS = {
         "basic": os.getenv("STRIPE_PRICE_BASIC", ""),
-        "pro": os.getenv("STRIPE_PRICE_PRO", ""),
     }
 
-    # Plány ktoré sú subscriptions
-    # Teraz sú oba platené plány (Basic aj Pro) predplatné
-    SUBSCRIPTION_PLANS = ["basic", "pro"]
+    # Platené plány (subscriptions)
+    SUBSCRIPTION_PLANS = ["basic"]
 
     def __init__(self):
         """Inicializuje Stripe s API kľúčom z environment variables."""
