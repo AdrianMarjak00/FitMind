@@ -6,49 +6,41 @@ from typing import Optional
 
 
 class EmailService:
-    """
-    Služba pre odosielanie emailov cez SMTP.
-    Konfiguruje sa cez environment premenné:
-    - SMTP_SERVER, SMTP_PORT
-    - SMTP_USER, SMTP_PASS
-    """
-    _instance = None
+    """Singleton service pre odosielanie emailov cez SMTP."""
 
-    def __init__(self):
-        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_user = os.getenv("SMTP_USER", "")
-        self.smtp_pass = os.getenv("SMTP_PASS", "")
+    _instance = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
+    def __init__(self):
+        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        self.smtp_port   = int(os.getenv("SMTP_PORT", "587"))
+        self.smtp_user   = os.getenv("SMTP_USER", "")
+        self.smtp_pass   = os.getenv("SMTP_PASS", "")
+
     def is_configured(self) -> bool:
-        """Skontroluje, či sú zadané prihlasovacie údaje pre SMTP."""
         return bool(self.smtp_user and self.smtp_pass)
 
     def _send_email(self, to_email: str, subject: str, html_content: str) -> bool:
-        """Interná metóda na fyzické odoslanie emailu."""
         if not self.is_configured():
             print(f"[EMAIL] Not configured! To: {to_email}, Subject: {subject}")
             return False
 
         try:
             msg = MIMEMultipart()
-            # Meno odosielateľa
-            msg['From'] = f"FitMind <{self.smtp_user}>"
-            msg['To'] = to_email
+            msg['From']    = f"FitMind <{self.smtp_user}>"
+            msg['To']      = to_email
             msg['Subject'] = subject
-
             msg.attach(MIMEText(html_content, 'html'))
 
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.smtp_user, self.smtp_pass)
                 server.send_message(msg)
-            
+
             print(f"[EMAIL] Sent successfully to {to_email}")
             return True
         except Exception as e:
@@ -56,7 +48,10 @@ class EmailService:
             return False
 
     def send_welcome_email(self, to_email: str, first_name: str) -> bool:
-        """Odošle uvítací email novému používateľovi."""
+        if not self.is_configured():
+            print(f"[EMAIL] Mock Welcome email -> {to_email} (User: {first_name})")
+            return True
+
         subject = f"Vitaj vo FitMind, {first_name}! 🚀"
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
@@ -73,14 +68,9 @@ class EmailService:
             <p style="font-size: 0.8rem; color: #888;">Tím FitMind AI</p>
         </div>
         """
-        if not self.is_configured():
-             print(f"[EMAIL] Mock Welcome email -> {to_email} (User: {first_name})")
-             return True
-             
         return self._send_email(to_email, subject, html)
 
     def send_payment_success_email(self, to_email: str, first_name: str, plan_type: str, amount: float) -> bool:
-        """Odošle email po úspešnej platbe."""
         subject = f"Platba prijatá - Vitaj v {plan_type.upper()} pláne! 💎"
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #1a1a1a; border-radius: 10px; background-color: #0b0b0b; color: #fff;">
@@ -102,8 +92,7 @@ class EmailService:
         return self._send_email(to_email, subject, html)
 
     def send_subscription_renewed_email(self, to_email: str, first_name: str, plan_type: str, amount: float, next_date: str) -> bool:
-        """Odošle email o úspešnom obnovení predplatného."""
-        subject = f"Tvoje predplatné FitMind bolo obnovené 🔄"
+        subject = "Tvoje predplatné FitMind bolo obnovené 🔄"
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h2 style="color: #3ddc84;">Ahoj {first_name},</h2>
@@ -117,7 +106,6 @@ class EmailService:
         return self._send_email(to_email, subject, html)
 
     def send_subscription_canceled_email(self, to_email: str, first_name: str, plan_type: str, end_date: str) -> bool:
-        """Odošle email pri zrušení predplatného."""
         subject = "Tvoje predplatné FitMind bolo zrušené ☹️"
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">

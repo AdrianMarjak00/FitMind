@@ -1,61 +1,61 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from enum import Enum
 
+
 class EntryType(str, Enum):
-    food = "food"
+    """Povolené typy záznamov pre /api/entries endpointy."""
+    food     = "food"
     exercise = "exercise"
-    mood = "mood"
-    stress = "stress"
-    sleep = "sleep"
-    weight = "weight"
+    mood     = "mood"
+    stress   = "stress"
+    sleep    = "sleep"
+    weight   = "weight"
+
 
 class ChartType(str, Enum):
+    """Povolené typy grafov pre /api/chart endpointy."""
     calories = "calories"
     exercise = "exercise"
-    mood = "mood"
-    stress = "stress"
-    sleep = "sleep"
-    weight = "weight"
+    mood     = "mood"
+    stress   = "stress"
+    sleep    = "sleep"
+    weight   = "weight"
 
-# --- AI CHAT MODELY ---
+
 class ChatRequest(BaseModel):
-    """Model pre prichádzajúcu správu od užívateľa"""
-    message: str = Field(..., max_length=2000)
-    conversation_id: Optional[str] = None
+    message: str = Field(..., max_length=2000, description="Správa pre AI trénera")
+    conversation_id: Optional[str] = Field(None, description="ID konverzácie")
+
 
 class CreateConversationRequest(BaseModel):
-    """Model pre vytvorenie novej četovej konverzácie"""
-    title: Optional[str] = "Nová konverzácia"
+    title: Optional[str] = Field("Nová konverzácia", description="Názov konverzácie")
 
-# --- PROFIL A POUŽÍVATEĽ ---
+
 class UpdateProfileRequest(BaseModel):
-    """Model pre aktualizáciu údajov v profile používateľa"""
-    firstName: Optional[str] = None
-    lastName: Optional[str] = None
-    age: Optional[int] = None
-    gender: Optional[str] = None
-    height: Optional[float] = None
-    currentWeight: Optional[float] = None
-    targetWeight: Optional[float] = None
-    fitnessGoal: Optional[str] = None
-    activityLevel: Optional[str] = None
-    profileImageUrl: Optional[str] = None
+    """Všetky polia sú voliteľné – pošli len to, čo chceš zmeniť."""
+    firstName:       Optional[str]   = None
+    lastName:        Optional[str]   = None
+    age:             Optional[int]   = None
+    gender:          Optional[str]   = None
+    height:          Optional[float] = None
+    currentWeight:   Optional[float] = None
+    targetWeight:    Optional[float] = None
+    fitnessGoal:     Optional[str]   = None
+    activityLevel:   Optional[str]   = None
+    profileImageUrl: Optional[str]   = None
 
-# --- PLATBY (STRIPE) ---
+
 class CreateCheckoutRequest(BaseModel):
-    """Model pre vytvorenie platobnej relácie"""
-    plan_type: str  # napr. "basic" alebo "pro"
-    success_url: str
-    cancel_url: str
+    plan_type:   str = Field(..., description="Typ plánu: 'basic'")
+    success_url: str = Field(..., description="URL po úspešnej platbe")
+    cancel_url:  str = Field(..., description="URL pri zrušení platby")
 
-# --- ADMIN PANEL ---
+
 class CancelSubscriptionRequest(BaseModel):
-    """Model pre admina na zrušenie predplatného podľa emailu"""
-    email: str
+    email: str = Field(..., description="Email používateľa ktorému sa ruší subscription")
 
-# --- EMAILOVÉ NOTIFIKÁCIE ---
+
 class SendWelcomeEmailRequest(BaseModel):
-    """Model pre odoslanie uvítacieho emailu"""
-    email: str
-    first_name: str
+    email:      str = Field(..., description="Email príjemcu")
+    first_name: str = Field(..., description="Krstné meno pre personalizáciu")

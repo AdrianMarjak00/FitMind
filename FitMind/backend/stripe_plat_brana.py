@@ -1,27 +1,17 @@
-"""
-Stripe Payment Service pre FitMind
-"""
-
 import stripe
 import os
 from typing import Optional, Dict, Any
 
 
 class StripeService:
-    """
-    Singleton service pre Stripe API operácie.
-    """
+    """Singleton service pre Stripe API operácie."""
 
-    # Mapovanie plánov na Stripe Price IDs
     PRICE_IDS = {
         "basic": os.getenv("STRIPE_PRICE_BASIC", ""),
     }
-
-    # Platené plány (subscriptions)
     SUBSCRIPTION_PLANS = ["basic"]
 
     def __init__(self):
-        """Inicializuje Stripe s API kľúčom z environment variables."""
         self._api_key = os.getenv("STRIPE_SECRET_KEY")
         self._webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
 
@@ -31,7 +21,6 @@ class StripeService:
             print("[STRIPE] WARNING: STRIPE_SECRET_KEY not set!")
 
     def is_configured(self) -> bool:
-        """Skontroluje či je Stripe správne nakonfigurovaný."""
         return bool(self._api_key)
 
     def create_checkout_session(
@@ -42,18 +31,12 @@ class StripeService:
         success_url: str,
         cancel_url: str
     ) -> Optional[Dict[str, Any]]:
-        """
-        Vytvorí Stripe Checkout Session pre platbu.
-        """
+        """Vytvorí Stripe Checkout Session pre platbu."""
         if not self.is_configured():
-            print("[STRIPE] Error: Service not configured")
             return None
-
         if plan_type == "free":
-            print("[STRIPE] Free plan requested, skipping Stripe")
             return None
 
-        # Dynamické načítanie ID z env (aby sme nemuseli reštartovať server)
         price_id = os.getenv(f"STRIPE_PRICE_{plan_type.upper()}", "")
 
         try:
@@ -61,47 +44,32 @@ class StripeService:
                 print(f"[STRIPE] Error: Valid Price ID missing for plan {plan_type}")
                 return None
 
-            # Získaj detaily o cene zo Stripe, aby sme vedeli či je to subscription
             price_details = stripe.Price.retrieve(price_id)
             is_recurring = price_details.get("type") == "recurring"
 
             session_params = {
                 "payment_method_types": ["card"],
-                "line_items": [{
-                    "price": price_id,
-                    "quantity": 1
-                }],
+                "line_items": [{"price": price_id, "quantity": 1}],
                 "mode": "subscription" if is_recurring else "payment",
                 "success_url": success_url + "?session_id={CHECKOUT_SESSION_ID}",
                 "cancel_url": cancel_url,
                 "customer_email": user_email,
-                "metadata": {
-                    "user_id": user_id,
-                    "plan_type": plan_type
-                },
+                "metadata": {"user_id": user_id, "plan_type": plan_type},
                 "allow_promotion_codes": True,
                 "payment_method_options": {
-                    "card": {
-                        "request_three_d_secure": "automatic"
-                    }
+                    "card": {"request_three_d_secure": "automatic"}
                 }
             }
 
             if is_recurring:
                 session_params["subscription_data"] = {
-                    "metadata": {
-                        "user_id": user_id,
-                        "plan_type": plan_type
-                    }
+                    "metadata": {"user_id": user_id, "plan_type": plan_type}
                 }
 
             session = stripe.checkout.Session.create(**session_params)
             print(f"[STRIPE] Checkout session created: {session.id}")
 
-            return {
-                "session_id": session.id,
-                "url": session.url
-            }
+            return {"session_id": session.id, "url": session.url}
 
         except stripe.error.StripeError as e:
             print(f"[STRIPE] Stripe error: {str(e)}")
@@ -114,14 +82,13 @@ class StripeService:
         if not self._webhook_secret:
             return None
         try:
-            event = stripe.Webhook.construct_event(payload, sig_header, self._webhook_secret)
-            return event
+            return stripe.Webhook.construct_event(payload, sig_header, self._webhook_secret)
         except Exception as e:
             print(f"[STRIPE] Webhook error: {e}")
             return None
 
     def get_plan_details(self, plan_type: str) -> Optional[Dict[str, Any]]:
-        """Vráti detaily o pláne priamo v kóde."""
+        """Vráti detaily o pláne."""
         plans = {
             "free": {
                 "name": "Zdarma",
@@ -141,16 +108,7 @@ class StripeService:
         return plans.get(plan_type)
 
     def create_customer_portal_session(self, customer_id: str, return_url: str = "https://fit-mind.sk/training") -> Optional[Dict[str, Any]]:
-        """
-        Vytvorí Stripe Customer Portal session pre správu subscription.
-
-        Args:
-            customer_id: Stripe customer ID
-            return_url: URL kam sa presmeruje po opustení portálu
-
-        Returns:
-            Dict s URL pre portal alebo None pri chybe
-        """
+        """Vytvorí Stripe Customer Portal session pre správu subscription."""
         if not self.is_configured():
             return None
 
@@ -166,15 +124,13 @@ class StripeService:
         except Exception as e:
             print(f"[STRIPE] Unexpected portal error: {str(e)}")
             return None
+
     def cancel_subscription(self, subscription_id: str) -> bool:
-        """
-        Zruší aktívne predplatné v Stripe.
-        """
+        """Zruší aktívne predplatné v Stripe."""
         if not self.is_configured() or not subscription_id:
             return False
 
         try:
-            # Okamžité zrušenie
             stripe.Subscription.delete(subscription_id)
             print(f"[STRIPE] Subscription {subscription_id} canceled.")
             return True

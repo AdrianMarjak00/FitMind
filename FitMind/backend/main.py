@@ -74,11 +74,24 @@ from schemas import (
     ChartType
 )
 
-# --- KONFIGURÁCIA APLIKÁCIE ---
+# ============================================================
+# KONFIGURÁCIA APLIKÁCIE
+# Swagger UI dostupné na: /docs
+# ReDoc dostupné na:      /redoc
+# ============================================================
 app = FastAPI(
     title="FitMind AI Backend",
-    description="Backend API pre inteligentnú fitness a wellness platformu FitMind",
-    version="2.0.0"
+    description=(
+        "Backend API pre FitMind – AI fitness & wellness platformu.\n\n"
+        "## Autentifikácia\n"
+        "Väčšina endpointov vyžaduje Firebase ID token v hlavičke:\n"
+        "`Authorization: Bearer <firebase_id_token>`\n\n"
+        "## Verejné endpointy (bez tokenu)\n"
+        "- `GET /api/ping` – rýchly test\n"
+        "- `GET /api/health` – stav služieb\n"
+    ),
+    version="2.0.0",
+    contact={"name": "FitMind", "url": "https://fit-mind.sk"},
 )
 
 # --- MIDDLEWARE ---
@@ -135,9 +148,19 @@ coach_service = CoachService(firebase)
 stripe_service = StripeService()
 email_service = EmailService()
 
-@app.get("/api/health", tags=["System"])
+# ============================================================
+# VEREJNÉ ENDPOINTY – nevyžadujú Firebase token
+# ============================================================
+
+@app.get("/api/ping", tags=["System"], summary="Rýchly test – bez tokenu")
+def ping():
+    """Overí, že backend beží. Nevyžaduje žiadnu autentifikáciu."""
+    return {"ok": True, "message": "FitMind backend beží"}
+
+
+@app.get("/api/health", tags=["System"], summary="Stav všetkých služieb")
 def health():
-    """Zdravotná kontrola aplikácie a služieb."""
+    """Vráti stav Firebase, Stripe a AI služby."""
     return {
         "status": "healthy",
         "timestamp": time.time(),
@@ -149,7 +172,9 @@ def health():
         "environment": {"production": IS_PRODUCTION}
     }
 
-# --- API ENDPOINTY: ADMIN PANEL ---
+# ============================================================
+# ADMIN ENDPOINTY – vyžadujú admin token
+# ============================================================
 
 @app.get("/api/admin/user-debug/{email}", tags=["Admin"])
 def admin_get_user_debug(email: str, admin_auth: dict = Depends(check_admin_auth)):
@@ -197,7 +222,9 @@ def admin_cancel_subscription(request: CancelSubscriptionRequest, admin_auth: di
     }
 
 
-# --- API ENDPOINTY: AI CHAT ---
+# ============================================================
+# AI CHAT – komunikácia s AI trénerom
+# ============================================================
 
 @app.post("/api/chat", tags=["AI Coach"])
 def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_token)):
@@ -319,7 +346,9 @@ def chat(request: ChatRequest, decoded_token: dict = Depends(verify_firebase_tok
         traceback.print_exc()
         return {"odpoved": sanitize_error_message(e, IS_PRODUCTION), "error_detail": str(e) if not IS_PRODUCTION else None}
 
-# --- API ENDPOINTY: ŠTATISTIKY ---
+# ============================================================
+# ŠTATISTIKY & ZÁZNAMY (jedlo, cvičenie, nálada, spánok...)
+# ============================================================
 
 @app.get("/api/chart/{user_id}/{chart_type}", tags=["Statistics"])
 def get_chart_data_api(
@@ -382,7 +411,9 @@ def get_stats_api(user_id: str, days: int = 30, decoded_token: dict = Depends(ve
         "exercise": stats_service.get_exercise_summary(user_id, days)
     }
 
-# --- API ENDPOINTY: PROFIL A KONVERZÁCIE ---
+# ============================================================
+# PROFIL POUŽÍVATEĽA & KONVERZÁCIE
+# ============================================================
 
 @app.get("/api/profile/{user_id}", tags=["User"])
 def get_profile_api(user_id: str, decoded_token: dict = Depends(verify_firebase_token)):
@@ -420,7 +451,9 @@ def get_conversation_messages_api(user_id: str, conversation_id: str, limit: int
     user_id = get_authorized_user_id(user_id, decoded_token)
     return {"messages": firebase.get_conversation_messages(user_id, conversation_id, limit)}
 
-# --- API ENDPOINTY: PLATBY ---
+# ============================================================
+# PLATBY (Stripe)
+# ============================================================
 
 @app.post("/api/payment/create-checkout", tags=["Payment"])
 def create_checkout_session(request: CreateCheckoutRequest, decoded_token: dict = Depends(verify_firebase_token)):
@@ -592,7 +625,9 @@ def get_payment_status(user_id: str, decoded_token: dict = Depends(verify_fireba
     sub = firebase.get_user_subscription(user_id)
     return {"user_id": user_id, "subscription": sub or {"plan_type": "free", "status": "none"}}
 
-# --- API ENDPOINTY: EMAIL NOTIFIKÁCIE ---
+# ============================================================
+# EMAIL NOTIFIKÁCIE
+# ============================================================
 
 @app.post("/api/email/welcome", tags=["Email"])
 def send_welcome_email_endpoint(request: SendWelcomeEmailRequest, decoded_token: dict = Depends(verify_firebase_token)):
@@ -603,7 +638,7 @@ def send_welcome_email_endpoint(request: SendWelcomeEmailRequest, decoded_token:
     success = email_service.send_welcome_email(request.email, request.first_name)
     return {"sent": success}
 
-# --- API ENDPOINTY: AKTUALIZÁCIA PROFILU ---
+# (Aktualizácia profilu)
 
 @app.put("/api/profile/{user_id}", tags=["User"])
 def update_profile_api(user_id: str, request: UpdateProfileRequest, decoded_token: dict = Depends(verify_firebase_token)):
@@ -619,7 +654,9 @@ def update_profile_api(user_id: str, request: UpdateProfileRequest, decoded_toke
     success = firebase.update_profile(user_id, updates)
     return {"updated": success}
 
-# --- SERVOVANIE FRONTENDU ---
+# ============================================================
+# FRONTEND – servuje Angular dist/ (musí byť posledný route!)
+# ============================================================
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_DIR = os.path.join(BASE_DIR, "dist", "FitMind", "browser")
 
@@ -638,7 +675,9 @@ def serve_angular(full_path: str):
     
     return HTMLResponse("<h1>FitMind Loading...</h1>", status_code=200)
 
-# --- SPUSTENIE ---
+# ============================================================
+# SPUSTENIE (lokálne – Render používa gunicorn/uvicorn automaticky)
+# ============================================================
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))

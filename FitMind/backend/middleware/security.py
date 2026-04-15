@@ -82,12 +82,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
 
-        # Preskočiť CSP pre FastAPI docs (Swagger UI) v development móde
+        # Swagger UI (/docs, /redoc) – vynechaj CSP aby sa správne načítalo
         docs_paths = ["/docs", "/redoc", "/openapi.json"]
         is_docs_path = any(request.url.path.startswith(p) for p in docs_paths)
 
-        if is_docs_path and not IS_PRODUCTION:
-            # Pre docs endpointy v dev móde - minimálne headers
+        if is_docs_path:
             response.headers["X-Content-Type-Options"] = "nosniff"
             return response
 

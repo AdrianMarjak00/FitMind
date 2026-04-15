@@ -28,6 +28,6 @@ ENV PORT=8000
 # Expose port
 EXPOSE 8000
 
-# Run the application
-# We run main.py directly or via gunicorn/uvicorn
-CMD ["python", "backend/main.py"]
+# Spustenie cez gunicorn + uvicorn worker (produkčné nastavenie)
+WORKDIR /app/backend
+CMD ["gunicorn", "main:app", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--workers", "1"]
