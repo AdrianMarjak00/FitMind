@@ -1,38 +1,41 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+import os
 
-app = FastAPI(title="Test Angular-Python komunikácie")
+app = FastAPI(title="Test Angular-Python")
 
-# CORS - povolíme Angular (localhost:4200) aby mohol volať tento server
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=["*"],
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 
-# Pydantic model - Angular musí posielať JSON v tomto formáte
 class Polozka(BaseModel):
     nazov: str
     cena: float
 
-# Dočasné úložisko v pamäti (namiesto databázy)
 polozky: list[dict] = []
 
 
 @app.get("/polozky")
 def get_polozky():
-    """Angular si vypýta všetky uložené položky."""
     return polozky
 
 
 @app.post("/polozky")
 def pridaj_polozku(polozka: Polozka):
-    """Angular pošle novú položku, Pydantic ju zvaliduje a uložíme ju."""
-    nova = polozka.model_dump()
-    polozky.append(nova)
-    return {"status": "ok", "ulozena": nova, "celkovo": len(polozky)}
+    polozky.append(polozka.model_dump())
+    return {"status": "ok", "ulozena": polozka, "celkovo": len(polozky)}
+
+
+@app.get("/", response_class=HTMLResponse)
+def testovacia_stranka():
+    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+    with open(html_path, encoding="utf-8") as f:
+        return f.read()
 
 
 if __name__ == "__main__":

@@ -12,7 +12,6 @@ import { JedalnicekComponent } from './components/jedalnicek/jedalnicek';
 import { Training } from './components/training/training';
 import { SettingsComponent } from './components/settings/settings';
 import { PaymentSuccessComponent } from './components/payment-success/payment-success';
-import { TestPythonComponent } from './components/test-python/test-python';
 import { AdminGuard } from '../guards/admin.guard';
 import { AuthGuard } from '../guards/auth.guard';
 
@@ -29,7 +28,6 @@ export const routes: Routes = [
     { path: 'ai-chat', component: AiChatComponent, canActivate: [AuthGuard] },
     { path: 'settings', component: SettingsComponent, canActivate: [AuthGuard] },
     { path: 'payment-success', component: PaymentSuccessComponent, canActivate: [AuthGuard] },
-    { path: 'test-python', component: TestPythonComponent },
 
     { path: '**', redirectTo: '' }
 ];

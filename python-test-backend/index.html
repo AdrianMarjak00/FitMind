@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Angular ↔ Python komunikácie</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; background: #f9fafb; }
+    h1 { color: #4f46e5; }
+    .karta { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    h2 { margin-top: 0; font-size: 1em; color: #374151; }
+    label { display: block; margin-bottom: 4px; font-size: 0.9em; color: #6b7280; }
+    input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 10px; }
+    button { padding: 8px 18px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #4338ca; }
+    #sprava { padding: 10px; border-radius: 6px; margin-bottom: 10px; display: none; }
+    .ok  { background: #dcfce7; color: #166534; }
+    .err { background: #fee2e2; color: #b91c1c; }
+    ul { padding: 0; margin: 0; list-style: none; }
+    li { padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #374151; }
+    li:last-child { border-bottom: none; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+
+<h1>Test Angular ↔ Python komunikácie</h1>
+<p>Táto stránka je servovaná priamo z <strong>Python FastAPI servera</strong> na porte <code>8001</code>.<br>
+   Demonštruje rovnaké HTTP volania (POST / GET) ako Angular <code>HttpClient</code>.</p>
+
+<!-- POST -->
+<div class="karta">
+  <h2>📤 Odoslať položku do Pythonu — POST /polozky</h2>
+  <div id="sprava"></div>
+  <label>Názov</label>
+  <input id="nazov" placeholder="napr. Notebook" />
+  <label>Cena (€)</label>
+  <input id="cena" type="number" placeholder="napr. 999" />
+  <button onclick="odosliPost()">Odoslať do Pythonu</button>
+</div>
+
+<!-- GET -->
+<div class="karta">
+  <h2>📥 Načítať položky z Pythonu — GET /polozky</h2>
+  <button onclick="nacitajGet()" style="background:#64748b; margin-bottom:14px">Načítať</button>
+  <ul id="zoznam"><li style="color:#9ca3af">Klikni „Načítať"...</li></ul>
+</div>
+
+<script>
+  const API = 'http://localhost:8001';
+
+  async function odosliPost() {
+    const nazov = document.getElementById('nazov').value.trim();
+    const cena  = parseFloat(document.getElementById('cena').value);
+    const msg   = document.getElementById('sprava');
+
+    if (!nazov || isNaN(cena) || cena <= 0) {
+      zobrazSpravu('Zadaj platný názov a cenu > 0', false);
+      return;
+    }
+
+    // Rovnaký JSON ako Angular HttpClient.post()
+    const odpoved = await fetch(`${API}/polozky`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ nazov, cena })
+    });
+    const data = await odpoved.json();
+
+    if (odpoved.ok) {
+      zobrazSpravu(`✅ "${nazov}" uložené! Celkovo: ${data.celkovo} položiek.`, true);
+      document.getElementById('nazov').value = '';
+      document.getElementById('cena').value  = '';
+      nacitajGet();
+    } else {
+      zobrazSpravu('❌ Chyba pri ukladaní', false);
+    }
+  }
+
+  async function nacitajGet() {
+    // Rovnaký GET ako Angular HttpClient.get()
+    const odpoved = await fetch(`${API}/polozky`);
+    const data    = await odpoved.json();
+    const zoznam  = document.getElementById('zoznam');
+
+    if (data.length === 0) {
+      zoznam.innerHTML = '<li style="color:#9ca3af">Zatiaľ žiadne položky. Odošli niečo cez POST!</li>';
+    } else {
+      zoznam.innerHTML = data
+        .map(p => `<li><strong>${p.nazov}</strong> — ${p.cena.toFixed(2)} €</li>`)
+        .join('');
+    }
+  }
+
+  function zobrazSpravu(text, ok) {
+    const el = document.getElementById('sprava');
+    el.textContent = text;
+    el.className = ok ? 'ok' : 'err';
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3500);
+  }
+</script>
+
+</body>
+</html>
