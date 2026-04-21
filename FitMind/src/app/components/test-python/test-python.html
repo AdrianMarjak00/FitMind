@@ -1,0 +1,31 @@
+<div class="test-container">
+  <h2>Test: Angular ↔ Python komunikácia</h2>
+  <p class="popis">
+    Tento komponent komunikuje s <strong>oddeleným</strong> Python serverom na
+    <code>http://localhost:8001</code> (nie s FitMind backendom).
+  </p>
+
+  <!-- Chybová hláška / úspech -->
+  <div class="sprava error" *ngIf="chyba">⚠️ {{ chyba }}</div>
+  <div class="sprava success" *ngIf="sprava && !chyba">✅ {{ sprava }}</div>
+
+  <!-- Formulár – POST do Pythonu -->
+  <div class="card">
+    <h3>Odoslať položku do Pythonu (POST)</h3>
+    <input [(ngModel)]="nova.nazov" placeholder="Názov (napr. Notebook)" />
+    <input [(ngModel)]="nova.cena" type="number" placeholder="Cena (napr. 999)" />
+    <button (click)="odosliPolozku()">Odoslať do Pythonu</button>
+  </div>
+
+  <!-- Zoznam – GET z Pythonu -->
+  <div class="card">
+    <h3>Položky uložené v Pythone (GET)</h3>
+    <button class="refresh" (click)="nacitajPolozky()">Obnoviť zoznam</button>
+    <p *ngIf="polozky.length === 0 && !chyba">Zatiaľ žiadne položky.</p>
+    <ul>
+      <li *ngFor="let p of polozky">
+        <strong>{{ p.nazov }}</strong> — {{ p.cena | number:'1.2-2' }} €
+      </li>
+    </ul>
+  </div>
+</div>
