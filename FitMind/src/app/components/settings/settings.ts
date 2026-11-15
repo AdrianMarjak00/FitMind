@@ -70,6 +70,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
   // Subscription data
   subscription: SubscriptionStatus | null = null;
+  readonly paymentsEnabled = environment.paymentsEnabled;
 
   private authSubscription?: Subscription;
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface SubscriptionStatus {
@@ -32,23 +32,23 @@ export interface CustomerPortalResponse {
   url: string;
 }
 
+/**
+ * Platby cez Stripe. Momentálne sú vypnuté (environment.paymentsEnabled = false):
+ * AI beží v zariadení používateľa a nič nestojí, takže všetko je odomknuté.
+ * Kód ostáva pripravený – po zapnutí volá serverless API na paymentsApiUrl.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class PaymentService {
-  private baseUrl = environment.apiUrl;
+  readonly enabled = environment.paymentsEnabled;
+  private baseUrl = environment.paymentsApiUrl;
 
   constructor(private http: HttpClient) { }
 
-  /**
-   * Vytvorí Stripe Checkout session a vráti URL pre presmerovanie.
-   *
-   * @param planType Typ plánu: 'free', 'basic', alebo 'pro'
-   * @returns Observable s URL pre Stripe Checkout
-   */
   createCheckoutSession(planType: string): Observable<CheckoutSessionResponse> {
+    if (!this.enabled) return throwError(() => new Error('Platby sú vypnuté'));
     const currentUrl = window.location.origin;
-
     return this.http.post<CheckoutSessionResponse>(`${this.baseUrl}/payment/create-checkout`, {
       plan_type: planType,
       success_url: `${currentUrl}/payment-success`,
@@ -56,37 +56,28 @@ export class PaymentService {
     });
   }
 
-  /**
-   * Získa stav subscription používateľa.
-   */
   getPaymentStatus(userId: string): Observable<PaymentStatusResponse> {
+    if (!this.enabled) {
+      return of({ user_id: userId, subscription: { plan_type: 'free', status: 'none' } });
+    }
     return this.http.get<PaymentStatusResponse>(`${this.baseUrl}/payment/status/${userId}`);
   }
 
-  /**
-   * Vytvorí URL pre Stripe Customer Portal (správa subscription).
-   */
   getCustomerPortalUrl(): Observable<CustomerPortalResponse> {
+    if (!this.enabled) return throwError(() => new Error('Platby sú vypnuté'));
     return this.http.post<CustomerPortalResponse>(`${this.baseUrl}/payment/customer-portal`, {});
   }
 
-  /**
-   * Skontroluje či má používateľ aktívnu subscription.
-   */
   isSubscriptionActive(status: SubscriptionStatus): boolean {
     return status.status === 'active';
   }
 
-  /**
-   * Skontroluje či má používateľ platený plán (basic alebo pro).
-   */
+  /** Má používateľ prístup k plným funkciám? Pri vypnutých platbách vždy áno. */
   hasPaidPlan(status: SubscriptionStatus): boolean {
+    if (!this.enabled) return true;
     return (status.plan_type === 'basic' || status.plan_type === 'pro') && status.status === 'active';
   }
 
-  /**
-   * Vráti názov plánu pre zobrazenie.
-   */
   getPlanDisplayName(planType: string): string {
     const names: Record<string, string> = {
       'free': 'Bezplatný',

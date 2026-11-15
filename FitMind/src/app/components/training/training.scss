@@ -172,3 +172,73 @@ $gold: #ffd700;
     color: black !important;
   }
 }
+
+// 6. OSOBNÝ TRÉNINGOVÝ PLÁN
+.days-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  color: #aaa;
+  font-size: 0.9rem;
+
+  button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 100px;
+    color: #ddd;
+    padding: 6px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+
+    &:hover { border-color: $primary; }
+    &.active { background: $primary; border-color: $primary; color: #000; }
+  }
+}
+
+.plan-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.plan-card {
+  &:hover { transform: translateY(-6px); }
+
+  .plan-item {
+    align-items: flex-start;
+
+    span { flex: 1; }
+    em {
+      font-style: normal;
+      color: $primary;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+  }
+}
+
+.plan-tips {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  margin: 50px auto 0;
+  padding: 28px;
+  background: $surface;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 24px;
+  color: #ccc;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    margin: 0 0 14px;
+    mat-icon { color: $gold; }
+  }
+
+  ul { margin: 0 0 22px; padding-left: 20px; line-height: 1.7; }
+}

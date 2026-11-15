@@ -1,59 +1,50 @@
 # FitMind
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.5.
+AI fitness tréner, denník jedla a pohybu. Angular 20 + Firebase (Auth, Firestore, Hosting).
 
-## Development server
+Aplikácia beží **bez vlastného servera a bez platených API**:
 
-To start a local development server, run:
+- **Hosting** – statický build na Firebase Hosting (bezplatný plán Spark).
+- **Databáza** – Firestore, appka do nej číta a zapisuje priamo z prehliadača; prístup strážia `FitMind/firestore.rules`.
+- **AI tréner** – vlastný engine v TypeScripte (`FitMind/src/app/ai/`), ktorý beží v zariadení používateľa.
+- **Voliteľný LLM** – jazykový model cez WebLLM/WebGPU, tiež v zariadení (stiahne sa raz, ~1,5 GB).
+- **PWA** – appka sa dá nainštalovať na Windows, Android aj iOS.
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Vývoj
 
 ```bash
-ng generate component component-name
+cd FitMind
+npm install
+npm start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Appka beží na `http://localhost:4200/`.
+
+## Nasadenie
+
+Push do vetvy `main` spustí GitHub Action (`.github/workflows/deploy.yml`), ktorá appku zostaví a nasadí na Firebase Hosting.
+
+Bezpečnostné pravidlá databázy sa nasadzujú ručne po každej zmene `firestore.rules`:
 
 ```bash
-ng generate --help
+cd FitMind
+firebase deploy --only firestore:rules
 ```
 
-## Building
+## Štruktúra AI enginu (`FitMind/src/app/ai/`)
 
-To build the project run:
+| Súbor | Čo robí |
+| --- | --- |
+| `engine.ts` | Rozpozná zámer správy, vytiahne z nej záznamy a zloží odpoveď |
+| `food-db.ts`, `exercise-db.ts` | Databáza jedál (kcal a makrá na 100 g) a aktivít (MET) |
+| `knowledge.ts` | Znalostná báza – odpovede na otázky o chudnutí, svaloch, spánku… |
+| `planner.ts` | Tréningové plány a návrhy jedál podľa profilu |
+| `coach.ts` | Týždenný report, odporúčania, pokrok k cieľom |
+| `context.ts`, `text.ts` | Výpočty (BMR, ciele) a práca so slovenským textom |
 
-```bash
-ng build
-```
+Engine je čistý TypeScript bez závislosti na prehliadači, takže sa dá použiť aj v natívnych appkách (Capacitor).
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Platby
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Stripe je vypnutý (`paymentsEnabled: false` v `FitMind/src/environments/`), všetky funkcie sú odomknuté.
+Pôvodný Python backend so Stripe integráciou ostal v `FitMind/backend/` ako archív – appka ho nepoužíva.

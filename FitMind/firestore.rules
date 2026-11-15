@@ -1,0 +1,79 @@
+rules_version = '2';
+
+// FitMind – aplikácia číta a zapisuje priamo z prehliadača (bez backendu),
+// preto sú tieto pravidlá jedinou ochranou dát. Nasadenie:
+//   firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Polia o predplatnom smie meniť len server (Stripe webhook cez Admin SDK).
+    function billingUntouched() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['subscription', 'stripe_customer_id']);
+    }
+
+    // Profil používateľa
+    match /users/{uid} {
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny(['subscription', 'stripe_customer_id']);
+      allow update: if isOwner(uid) && billingUntouched();
+      allow delete: if isOwner(uid);
+
+      // Denník (jedlo, tréningy, váha, spánok, nálada, stres) a AI konverzácie
+      match /{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Zoznam adminov – každý si vie overiť len seba, zapisuje sa iba z konzoly
+    match /admins/{uid} {
+      allow get: if isOwner(uid);
+      allow list, write: if false;
+    }
+
+    // Verejné recenzie
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.resource.data.author is string
+        && request.resource.data.author.size() >= 3
+        && request.resource.data.author.size() <= 60
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow update, delete: if isAdmin();
+    }
+
+    // Admin štatistiky
+    match /overall_stats/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /activities/{activityId} {
+      allow read, delete: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Všetko ostatné je zakázané
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,6 +1,4 @@
 import { Injectable, inject, NgZone, Injector, runInInjectionContext } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment';
 
 import {
   Auth,
@@ -24,7 +22,6 @@ export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
   private ngZone = inject(NgZone);
-  private http = inject(HttpClient);
   private injector = inject(Injector);
   private currentUser$ = authState(this.auth);
 
@@ -120,10 +117,6 @@ export class AuthService {
         map(snapshot => !snapshot.empty)
       );
     });
-  }
-
-  sendWelcomeEmail(email: string, firstName: string): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/email/welcome`, { email, first_name: firstName });
   }
 
   checkUserHasProfile(uid: string): Observable<boolean> {

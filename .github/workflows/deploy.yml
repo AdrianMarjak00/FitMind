@@ -1,4 +1,4 @@
-name: Build and Deploy to Firebase
+name: Build and Deploy to Firebase Hosting
 on:
   push:
     branches: [ main ]
@@ -9,17 +9,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: FitMind/package-lock.json
+
+      - name: Install dependencies
         working-directory: ./FitMind
-        # Toto stiahne všetky knižnice potrebné pre build
-        run: npm install
+        run: npm ci
 
       - name: Build Angular
         working-directory: ./FitMind
-        # Spustíme build cez npx, aby sme mali istotu, že nájde ng
         run: npx ng build --configuration production
 
-      - name: Deploy to Firebase
+      # Bezplatný hosting (Firebase Spark). Backend už nie je potrebný:
+      # dáta idú priamo do Firestore a AI beží v zariadení používateľa.
+      - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
