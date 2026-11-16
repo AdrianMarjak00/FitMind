@@ -8,7 +8,7 @@ import {
 } from './meal-planner';
 import { weeklyReportText } from './coach';
 import {
-  CoachContext, EntryType, bmi, bmiLabel, bmr, currentWeight, dayTotals, firstName,
+  CoachContext, CustomFood, EntryType, bmi, bmiLabel, bmr, currentWeight, dayTotals, firstName,
   num, proteinTarget, sortByTime, targetCalories, tdee
 } from './context';
 import { norm, parseNumber, pick, round, stem, tokens } from './text';
@@ -24,7 +24,9 @@ import { norm, parseNumber, pick, round, stem, tokens } from './text';
 
 export type EngineAction =
   | { kind: 'save'; type: EntryType; data: any; label: string }
-  | { kind: 'undo' };
+  | { kind: 'undo' }
+  /** Zapamätaj si nové jedlo, aby ho tréner nabudúce poznal. */
+  | { kind: 'learn'; food: CustomFood };
 
 export interface EngineResult {
   text: string;
@@ -32,6 +34,8 @@ export interface EngineResult {
   intent: string;
   /** Engine otázke nerozumel – môže ju prevziať voliteľný LLM. */
   fallback?: boolean;
+  /** Neznáme jedlo, na ktorého kalórie sa tréner práve opýtal. */
+  pending?: { name: string; count: number };
 }
 
 // ------------------------------------------------------------
@@ -189,6 +193,7 @@ interface Parse {
   when: When;
   asks: string[];        // doplňujúce otázky, keď chýba údaj
   estimated?: boolean;   // množstvá jedla sú odhad z opisu, nie z váhy
+  pending?: { name: string; count: number };
 }
 
 const HOURS_RE = /(\d+(?:\.\d+)?)\s*(?:a pol\s*)?(?:h|hod\w*)\b|\b(pol hodin\w*|hodinu a pol|tristvrte hodin\w*|stvrt hodin\w*|hodinu|hodinku)\b/g;
@@ -252,7 +257,7 @@ function detectSleep(p: Parse, ctx: CoachContext): void {
     if (bare) best = { index: bare.index, length: bare[0].length, hours: parseFloat(bare[1]) };
   }
   if (!best) {
-    if (!p.question && /\b(spal|spala|naspal|naspala)\b/.test(p.work)) {
+    if (!p.question && /\b(spal|spala|naspal|naspala|vyspal|vyspala)\b/.test(p.work)) {
       p.asks.push('Koľko hodín si spal? Napíš napríklad „spal som 7 hodín“ a zapíšem to.');
     }
     return;
@@ -415,7 +420,48 @@ interface FoodHit {
 
 interface FoodScan { hits: FoodHit[]; quantified: boolean; estimated: boolean; work: string; }
 
-function findFoods(work: string): FoodScan {
+type FoodIndex = Map<string, AliasEntry<FoodItem>[]>;
+
+/** Jedlá naučené od používateľa ako dočasný index (kcal platí na 1 kus). */
+function customIndex(list?: CustomFood[]): FoodIndex | null {
+  if (!list || !list.length) return null;
+  return buildIndex(list.map(c => ({
+    name: c.name, aliases: [c.name], kcal: c.calories, protein: 0, carbs: 0, fats: 0,
+    portion: 100, piece: 100, custom: true
+  } as FoodItem)));
+}
+
+/** Slová, ktoré sa po odrezaní koncovky zhodujú s jedlom, ale jedlom nie sú ("hrozný deň"). */
+const NEVER_FOOD = new Set(['hrozny', 'hrozne', 'hroznu', 'hroznou', 'hroznym', 'kolegami', 'kolegom', 'kolega', 'kolegovia']);
+
+/** Jednoslovné aliasy na hľadanie s toleranciou preklepu. */
+const SINGLE_ALIASES: Array<{ stem: string; entry: AliasEntry<FoodItem> }> = [];
+FOOD_INDEX.forEach(list => list.forEach(entry => {
+  if (entry.stems.length === 1 && entry.stems[0].length >= 5) SINGLE_ALIASES.push({ stem: entry.stems[0], entry });
+}));
+
+function withinOneEdit(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++edits > 1) return false;
+    if (a.length > b.length) i++;
+    else if (a.length < b.length) j++;
+    else if (a[i + 1] === b[j] && a[i] === b[j + 1]) { i += 2; j += 2; }   // prehodené písmená
+    else { i++; j++; }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+
+/** Preklep v názve jedla: "banna" → banán, "jogrut" → jogurt. */
+function fuzzyFood(tok: Tok): AliasEntry<FoodItem> | null {
+  if (tok.t.length < 5 || tok.s.length < 4 || FILLER.has(tok.t) || UNITS.has(tok.s)) return null;
+  const found = SINGLE_ALIASES.find(c => c.stem[0] === tok.s[0] && withinOneEdit(tok.s, c.stem));
+  return found ? found.entry : null;
+}
+
+function findFoods(work: string, custom: FoodIndex | null = null): FoodScan {
   const toks = tokenize(work);
   const hits: FoodHit[] = [];
   const used = new Set<number>();
@@ -423,10 +469,22 @@ function findFoods(work: string): FoodScan {
   let out = work;
 
   for (let i = 0; i < toks.length; i++) {
-    const hit = matchAt(FOOD_INDEX, toks, i);
+    if (NEVER_FOOD.has(toks[i].t)) continue;
+    const before = toks.slice(Math.max(0, i - 3), i).map(t => t.t);
+    const foodContext = before.some(t => parseNumber(t) !== null || UNITS.has(stem(t)) || EAT_VERB.test(t)) &&
+      !/^(s|so|k|ku|pri|od|u)$/.test(before[before.length - 1] || '');
+    const hit = (custom && matchAt(custom, toks, i)) || matchAt(FOOD_INDEX, toks, i) ||
+      (foodContext ? fuzzyFood(toks[i]) : null);
     if (!hit) continue;
     const item = hit.item;
     const len = hit.stems.length;
+
+    // "s tým mliekom", "k tomu chlebu" – odkaz na jedlo, ktoré už bolo zapísané
+    if (i >= 2 && /^(s|so|k|ku)$/.test(toks[i - 2].t) && /^(tym|tou|tomu|tej|tymi|tymto|touto)$/.test(toks[i - 1].t)) {
+      for (let k = i - 2; k < i + len; k++) { used.add(k); }
+      i += len - 1;
+      continue;
+    }
     let grams: number | null = null;
     let explicit = false;
     let size = 1;
@@ -440,6 +498,7 @@ function findFoods(work: string): FoodScan {
       return true;
     };
     const resolve = (count: number, un: Unit | undefined): number => {
+      if (item.custom) return un && un.kind === 'amount' ? 100 : count * 100;
       if (!un) return count * (item.piece ?? item.portion);
       if (un.kind === 'amount') return count * un.value;
       if (un.kind === 'piece') return count * (item.piece ?? item.slice ?? item.portion);
@@ -523,10 +582,21 @@ function findFoods(work: string): FoodScan {
     quantified = true;
   }
 
-  return { hits, quantified, estimated: hits.some(h => !h.explicit), work: out };
+  // množstvá priradené rozpoznaným jedlám už nepatria k ničomu neznámemu
+  used.forEach(k => { out = blank(out, toks[k].i, toks[k].t.length); });
+
+  return { hits, quantified, estimated: hits.some(h => !h.explicit && !h.item.custom), work: out };
 }
 
 function foodEntry(hit: FoodHit, meal: MealType, date?: string): any {
+  if (hit.item.custom) {
+    const count = round(hit.grams / 100, 2);
+    return {
+      name: count === 1 ? hit.item.name : `${hit.item.name} ×${String(count).replace('.', ',')}`,
+      calories: Math.round(hit.item.kcal * count), protein: 0, carbs: 0, fats: 0,
+      mealType: meal, category: 'food', date
+    };
+  }
   const k = hit.grams / 100;
   const calories = Math.round(hit.item.kcal * k * hit.factor);
   const extraFat = (calories - hit.item.kcal * k) / 9;
@@ -573,6 +643,48 @@ function unknownWords(work: string): number {
     !UNITS.has(stem(t)) && !FRIED_RE.test(t) && !/^(zapek|pecen|varen|dusen|grilovan|domac|cerstv|special|babkin|mamin)/.test(t)).length;
 }
 
+const NOT_FOOD = /^(hodin|minut|sekund|dn|den|tyzd|mesiac|rok|krat|raz|kg|km|kcal|kalori|percent|eur|krok|seri|opakovan)/;
+
+function isContentWord(t: string): boolean {
+  return t.length >= 3 && /^[a-z]/.test(t) && !FILLER.has(t) && parseNumber(t) === null &&
+    !UNITS.has(stem(t)) && SIZE_EXACT[t] === undefined && SIZE_STEMS[stem(t)] === undefined &&
+    !NOT_FOOD.test(t) && !FRIED_RE.test(t) && !EAT_VERB.test(t);
+}
+
+/** Nerozpoznané položky, pri ktorých používateľ uviedol množstvo: "46 g tribitku", "kofila 1 ks". */
+function unknownItems(work: string): Array<{ token: string; count: number; unit: boolean }> {
+  const t = tokens(work);
+  const out: Array<{ token: string; count: number; unit: boolean }> = [];
+  for (let i = 0; i < t.length; i++) {
+    const n = parseNumber(t[i]);
+    if (n !== null) {
+      let j = i + 1;
+      const u = j < t.length ? UNITS.get(stem(t[j])) : undefined;
+      if (u) j++;
+      if (j < t.length && isContentWord(t[j])) {
+        out.push({ token: t[j], count: u && u.kind === 'amount' ? 1 : n, unit: !!u });
+        i = j;
+      }
+    } else if (isContentWord(t[i]) && i + 2 < t.length && parseNumber(t[i + 1]) !== null &&
+               UNITS.get(stem(t[i + 2]))?.kind === 'piece') {
+      out.push({ token: t[i], count: parseNumber(t[i + 1]) as number, unit: true });
+      i += 2;
+    }
+  }
+  return out;
+}
+
+/** Nájde slovo v pôvodnej správe (s diakritikou) podľa jeho normalizovanej podoby. */
+function originalWord(original: string, token: string): string {
+  const word = original.split(/\s+/).map(w => w.replace(/[.,!?:;()"„“]+/g, '')).find(w => norm(w) === token) || token;
+  return word[0].toUpperCase() + word.slice(1);
+}
+
+function askCalories(name: string, count: number): string {
+  return `„${name}“ ešte nepoznám. Koľko to má kalórií${count > 1 ? ' na jeden kus' : ''}? ` +
+    'Napíš mi len číslo (napríklad „240“) a nabudúce si to už budem pamätať.';
+}
+
 /** Z pôvodnej správy vytiahne názov jedla bez slovies a čísel. */
 function dishName(original: string): string {
   const name = original
@@ -591,7 +703,7 @@ function detectFood(p: Parse, ctx: CoachContext, original: string): void {
     p.work = blank(p.work, kcal.index, kcal[0].length);
   }
 
-  const scan = findFoods(p.work);
+  const scan = findFoods(p.work, customIndex(ctx.customFoods));
   const hits = scan.hits;
   const mealWord = parseMealType(p.full);
   const hasVerb = EAT_VERB.test(p.full) || LOG_VERB.test(p.full);
@@ -601,7 +713,19 @@ function detectFood(p: Parse, ctx: CoachContext, original: string): void {
   const meal = mealWord || mealByHour(ctx.now.getHours());
   const date = entryDate(ctx, p.when, meal);
 
-  const unknownMain = hits.length > 0 && EAT_VERB.test(p.full) && explicitKcal === null &&
+  // položka s množstvom, ktorú nepoznám → nezahodiť ju potichu, ale opýtať sa
+  const strong = EAT_VERB.test(p.full) || hits.length > 0 || /\b(dal\w* som si|som si dal\w*|dam si|davam si)\b/.test(p.full);
+  const unknown = wantsLog && explicitKcal === null
+    ? unknownItems(scan.work).filter(u => strong || u.unit)
+    : [];
+  if (unknown.length) {
+    const name = originalWord(original, unknown[0].token);
+    p.pending = { name, count: unknown[0].count };
+    p.asks.push(askCalories(name, unknown[0].count));
+    if (!hits.length) return;
+  }
+
+  const unknownMain = !unknown.length && hits.length > 0 && EAT_VERB.test(p.full) && explicitKcal === null &&
     hits.every(h => !h.explicit) &&
     hits.reduce((sum, h) => sum + h.item.kcal * h.grams / 100, 0) < 150 &&
     unknownWords(scan.work) >= 1;
@@ -630,12 +754,23 @@ function detectFood(p: Parse, ctx: CoachContext, original: string): void {
     const data = { name: label, calories: Math.round(explicitKcal), protein: 0, carbs: 0, fats: 0, mealType: meal, category: 'food', date };
     p.actions.push({ kind: 'save', type: 'food', label, data });
     p.notes.push(`🍽️ ${label} – ${data.calories} kcal`);
+    if (label.split(' ').length <= 3 && label !== 'Jedlo') {
+      p.actions.push({ kind: 'learn', food: { name: label, calories: data.calories } });
+      p.tips.push(`Zapamätal som si: ${label} = ${data.calories} kcal. Nabudúce stačí napísať názov.`);
+    }
     return;
   }
 
   // jedlo mimo databázy: odhadni ho podľa typu, nech používateľ nemusí nič počítať
   if ((!hits.length || unknownMain) && EAT_VERB.test(p.full) && !p.question && !p.future && !p.actions.length) {
     const guess = GUESSES.find(g => g.match.test(p.work));
+    const words = tokens(scan.work).filter(isContentWord);
+    if (!guess && !unknownMain && words.length === 1) {
+      const name = originalWord(original, words[0]);
+      p.pending = { name, count: 1 };
+      p.asks.push(askCalories(name, 1));
+      return;
+    }
     let size = 1;
     if (/dve porcie|dvojit|dvojnasob/.test(p.work)) size = 2;
     else if (/velk|poriadn|obrovsk|vela/.test(p.work)) size = 1.4;
@@ -883,9 +1018,39 @@ const FALLBACK =
 // Hlavná funkcia
 // ------------------------------------------------------------
 
+/** Zapíše jedlo, na ktoré sa tréner pýtal, a zapamätá si ho. */
+function logPending(ctx: CoachContext, perPiece: number): EngineResult {
+  const { name, count } = ctx.pending as { name: string; count: number };
+  const calories = Math.round(perPiece * count);
+  const label = count === 1 ? name : `${name} ×${String(count).replace('.', ',')}`;
+  const data = {
+    name: label, calories, protein: 0, carbs: 0, fats: 0,
+    mealType: mealByHour(ctx.now.getHours()), category: 'food'
+  };
+  const lines = [
+    '✅ Zapísané do denníka:', `  • 🍽️ ${label} – ${calories} kcal`, '',
+    ...todayLine(ctx, { calories, protein: 0, burned: 0 }), '',
+    `Zapamätal som si: ${name} = ${perPiece} kcal. Nabudúce stačí napísať názov.`
+  ];
+  return {
+    text: lines.join('\n'),
+    actions: [
+      { kind: 'save', type: 'food', data, label },
+      { kind: 'learn', food: { name, calories: perPiece } }
+    ],
+    intent: 'log'
+  };
+}
+
 export function respond(message: string, ctx: CoachContext): EngineResult {
   const full = norm(message);
   if (!full) return { text: FALLBACK, actions: [], intent: 'empty', fallback: true };
+
+  // odpoveď na otázku "koľko to má kalórií?" – stačí samotné číslo
+  if (ctx.pending) {
+    const answer = /^(?:asi |cca |okolo |priblizne |malo |mala |mal |ma |je to |bolo to |to je )*(\d{2,4})(?: ?(?:kcal|kalori\w*|kal))?$/.exec(full);
+    if (answer) return logPending(ctx, +answer[1]);
+  }
 
   const question = /\?/.test(message) ||
     /^(kolko|ako|co|aky|aka|ake|aku|preco|kedy|kde|ktor\w*|mozem|je |su |da sa|oplati|poradis|vies|navrhni|odporuc|porad|zostav|ukaz|povedz|chcem vediet)/.test(full);
@@ -905,11 +1070,25 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
   detectFood(p, ctx, message);
 
   if (p.actions.length) {
-    return { text: confirmation(p, ctx), actions: p.actions, intent: 'log' };
+    return { text: confirmation(p, ctx), actions: p.actions, intent: 'log', pending: p.pending };
   }
+  if (p.pending) return { text: p.asks.join('\n'), actions: [], intent: 'ask', pending: p.pending };
 
   const adjusted = adjustLast(full, ctx);
   if (adjusted) return adjusted;
+
+  // "a čo tá tribitka?" – používateľ pripomína jedlo, ktoré v zápise chýba
+  const also = /^a (?:co|este) (?:s |so )?(?:ta |ten |to |tie |tym |tou |tu |moja |moj )?(.+)$/.exec(full);
+  if (also && !/vies|mozes|dokazes|umies|robit|dalej|teraz/.test(also[1]) && (ctx.lastBatch || []).some(e => e.type === 'food')) {
+    if (findFoods(also[1], customIndex(ctx.customFoods)).hits.length) {
+      return respond(`zjedol som ${also[1]}`, ctx);
+    }
+    const word = tokens(also[1]).filter(isContentWord).pop();
+    if (word) {
+      const name = originalWord(message, word);
+      return { text: askCalories(name, 1), actions: [], intent: 'ask', pending: { name, count: 1 } };
+    }
+  }
 
   const short = tokens(full).length <= 5;
   const has = (re: RegExp) => re.test(full);
@@ -931,7 +1110,7 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
   if (short && has(/dakujem|vdaka|\bdik\b|diky|si super|super si|parada/)) {
     return { text: pick(['Rado sa stalo! 💪 Ideme ďalej.', 'Nemáš za čo. Som tu, kedykoľvek budeš potrebovať. 🙂', 'S radosťou! Daj vedieť, keď budeš chcieť niečo zapísať alebo poradiť.']), actions: [], intent: 'thanks' };
   }
-  if (has(/co (vsetko )?(vies|dokazes|umies|zvladnes)|kto si|^pomoc$|^help$|ako (ta|to) pouzivat|ako fungujes|co mozem (napisat|robit)|s cim (mi )?(vies )?pomoz/)) {
+  if (has(/co (este )?(vsetko )?(este )?(vies|dokazes|umies|zvladnes)|kto si|^pomoc$|^help$|ako (ta|to) pouzivat|ako fungujes|co mozem (napisat|robit)|s cim (mi )?(vies )?pomoz/)) {
     return { text: CAPABILITIES, actions: [], intent: 'capabilities' };
   }
 
@@ -950,7 +1129,7 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
   }
 
   const need = has(/potrebujem|mam (jest|prijat|zjest|mat)|denne|by som mal/);
-  const foods = findFoods(full).hits;
+  const foods = findFoods(full, customIndex(ctx.customFoods)).hits;
   if (foods.length && !need && !planning && (short || has(/kalori|kcal|bielkovin|protein|sacharid|tuk|cukr|hodnot|zdrav/))) {
     return { text: nutritionLookup(foods), actions: [], intent: 'nutrition' };
   }
@@ -980,7 +1159,7 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
     }
     return { text: dayPlanText(ctx, opts), actions: [], intent: 'menu' };
   }
-  if (has(/(co|nieco|navrh\w*|odporuc\w*|porad\w*|tip\w*|recept\w*|inspirac\w*|napad\w*).*(jest|zjest|jedl\w*|ranajk\w*|obed\w*|vecer\w*|desiat\w*|olovrant|snack|dat si|uvarit|navarit|pod zub)|co si (mam )?dat|som hladn|mam hlad|co (mam )?(dnes )?varit/)) {
+  if (has(/(co|nieco|navrh\w*|odporuc\w*|porad\w*|tip\w*|recept\w*|inspirac\w*|napad\w*).*(jest|zjest|jedl\w*|ranajk\w*|obed\w*|vecer\w*|desiat\w*|olovrant|snack|dat si|uvarit|navarit|pod zub)|co si (mam )?dat|som hladn|mam hlad|\b(hrozny|velky|strasny|vlci) hlad|hladujem|co (mam )?(dnes )?varit/)) {
     return { text: mealSuggestion(ctx, full), actions: [], intent: 'meal' };
   }
 
@@ -994,7 +1173,7 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
       };
     }
   }
-  if (has(/(trening\w*|cvicebn\w*|posilnovac\w*|fitness) plan|plan (cvicen|trening|na cvicen)|zostav.*(plan|trening)|ako (mam )?(zacat )?(cvicit|trenovat)|co (mam )?(dnes )?(cvicit|trenovat)|aky trening|rozpis (cvicen|trening)|navrhni.*trening|chcem zacat cvicit/)) {
+  if (has(/(trening\w*|cvicebn\w*|posilnovac\w*|fitness) plan|plan (cvicen|trening|na cvicen)|zostav.*(plan|trening)|ako (mam )?(zacat )?(cvicit|trenovat)|co (mam )?(dnes )?(cvicit|trenovat)|aky trening|rozpis (cvicen|trening)|navrhni.*trening|chcem zacat cvicit|porad\w* .*(trening|cvicen)|pomoz\w* .*(trening|cvicen)/)) {
     const days = /(\d)\s*(?:x|krat|dni|dny|den|treningy|treningov)/.exec(full);
     return { text: workoutPlanText(buildWorkoutPlan(ctx, days ? +days[1] : undefined)), actions: [], intent: 'plan' };
   }

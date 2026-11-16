@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, BehaviorSubject, from } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { CoachContext, EMPTY_ENTRIES, EntryType } from '../ai/context';
+import { CoachContext, CustomFood, EMPTY_ENTRIES, EntryType } from '../ai/context';
 import { goalProgress, recommendations, weeklyReport } from '../ai/coach';
 import { EngineResult, respond } from '../ai/engine';
 import { toDate } from '../ai/text';
@@ -86,6 +86,12 @@ export class AiService {
   /** Záznamy uložené v tomto rozhovore – aby sa dal posledný vrátiť späť. */
   private savedStack: Array<Array<{ type: EntryType; id: string; data: any }>> = [];
 
+  /** Jedlá naučené od používateľa – načítajú sa raz a potom sa držia v pamäti. */
+  private customFoods: CustomFood[] | null = null;
+  private customFoodsUser = '';
+  /** Neznáme jedlo, na ktorého kalórie sa tréner naposledy pýtal. */
+  private pending: { name: string; count: number } | undefined;
+
   constructor(private data: FitDataService, private llm: LlmService) { }
 
   // === CHAT ===
@@ -99,9 +105,15 @@ export class AiService {
       this.data.getProfile(userId).catch(() => null),
       this.data.getCoachEntries(userId).catch(() => ({ ...EMPTY_ENTRIES }))
     ]);
+    if (this.customFoods === null || this.customFoodsUser !== userId) {
+      this.customFoods = await this.data.getCustomFoods(userId).catch(() => []);
+      this.customFoodsUser = userId;
+    }
     const last = this.savedStack[this.savedStack.length - 1];
     return {
       profile, entries, now: new Date(),
+      customFoods: this.customFoods,
+      pending: this.pending,
       canUndo: this.savedStack.length > 0,
       lastBatch: last?.map(e => ({ type: e.type, data: e.data }))
     };
@@ -115,6 +127,7 @@ export class AiService {
     try {
       const ctx = await this.loadContext(userId);
       const result: EngineResult = respond(message, ctx);
+      this.pending = result.pending;
       let text = result.text;
       let source: 'engine' | 'llm' = 'engine';
       const saved: string[] = [];
@@ -132,6 +145,10 @@ export class AiService {
             console.error('[AI] zápis zlyhal', err);
             failed++;
           }
+        } else if (action.kind === 'learn') {
+          const key = action.food.name.toLowerCase();
+          this.customFoods = [...(this.customFoods || []).filter(f => f.name.toLowerCase() !== key), action.food];
+          this.data.saveCustomFood(userId, action.food).catch(err => console.warn('[AI] jedlo sa nepodarilo zapamätať', err));
         } else if (action.kind === 'undo') {
           const last = this.savedStack.pop() || [];
           await Promise.all(last.map(e => this.data.deleteEntry(userId, e.type, e.id).catch(() => undefined)));

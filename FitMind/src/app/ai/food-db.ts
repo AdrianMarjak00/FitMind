@@ -17,6 +17,8 @@ export interface FoodItem {
   piece?: number;
   /** Hmotnosť plátku / kúska (pizza, šunka). */
   slice?: number;
+  /** Naučené od používateľa: kcal platí na 1 kus, nie na 100 g. */
+  custom?: boolean;
   /** Množstvo, keď je to len príloha ("káva s mliekom"). */
   side?: number;
   drink?: boolean;
@@ -150,11 +152,11 @@ export const FOODS: FoodItem[] = [
   f('Med', 'med', 320, 0.3, 80, 0, 15),
   f('Džem', 'dzem|lekvar|marmelada', 250, 0.4, 62, 0.1, 20),
   f('Nutella', 'nutella|nutela|cokoladova natierka', 540, 6, 57, 31, 20),
-  f('Čokoláda', 'cokolada|cokolady|cokoladu|milka|horka cokolada', 540, 7, 55, 32, 30, { pc: 100, sl: 15 }),
-  f('Čokoládová tyčinka', 'tycinka|snickers|mars|twix|horalka|horalky|kofila|tatranka', 500, 7, 58, 27, 50, { pc: 50 }),
+  f('Čokoláda', 'cokolada|cokolady|cokoladu|milka|horka cokolada|studentska pecat|figaro|orion|lindt', 540, 7, 55, 32, 30, { pc: 100, sl: 15 }),
+  f('Čokoládová tyčinka', 'tycinka|snickers|mars|twix|horalka|horalky|kofila|tatranka|tatranky|kavenky|kavenka|mila|lina|deli|margot|corny', 500, 7, 58, 27, 50, { pc: 50 }),
   f('Proteínová tyčinka', 'proteinova tycinka|proteinka', 370, 30, 35, 12, 60, { pc: 60 }),
   f('Keksy', 'keksy|susienky|keks|oreo|bebe', 470, 6.5, 68, 19, 40, { pc: 10 }),
-  f('Koláč', 'kolac|kolace|buchta|babovka|strudla|zavin|muffin|croissant|sisla|siska|donut|pagac', 380, 6, 50, 17, 90, { pc: 90 }),
+  f('Koláč', 'kolac|kolace|buchta|babovka|strudla|zavin|muffin|sisla|siska|donut|pagac', 380, 6, 50, 17, 90, { pc: 90 }),
   f('Torta', 'torta|zakusok|kremes|cheesecake|tiramisu', 350, 5, 40, 19, 120, { pc: 120 }),
   f('Zmrzlina', 'zmrzlina|zmrzliny|nanuk|kopcek zmrzliny', 200, 3.5, 24, 10, 100, { pc: 60 }),
   f('Čipsy', 'cipsy|chipsy|chips|chrumky|slane tycinky|krekry', 530, 6, 52, 33, 60),
@@ -187,7 +189,7 @@ export const FOODS: FoodItem[] = [
   f('Energetický nápoj', 'energetak|energeticky napoj|red bull|redbull|monster|semtex', 46, 0, 11, 0, 250, { d: true, pc: 250 }),
   f('Iontový nápoj', 'iontovy napoj|ionťak|isostar|gatorade', 25, 0, 6, 0, 500, { d: true }),
   f('Pivo', 'pivo|piva|piv|pivko', 43, 0.4, 3.5, 0, 500, { d: true, pc: 500 }),
-  f('Nealko pivo', 'nealko pivo|nealkoholicke pivo|nealko|radler', 26, 0.3, 6, 0, 500, { d: true, pc: 500 }),
+  f('Nealko pivo', 'nealko pivo|nealkoholicke pivo|nealko|radler|birell', 26, 0.3, 6, 0, 500, { d: true, pc: 500 }),
   f('Víno', 'vino|vina|biele vino|cervene vino|pohar vina|sekt|prosecco', 83, 0.1, 2.5, 0, 200, { d: true, pc: 200 }),
   f('Tvrdý alkohol', 'borovicka|vodka|slivovica|rum|whisky|palenka|panak|poldeci|tvrdy alkohol', 230, 0, 0, 0, 40, { d: true, pc: 40 }),
   f('Rastlinné mlieko', 'ovsene mlieko|mandlove mlieko|sojove mlieko|rastlinne mlieko', 40, 1, 6.5, 1.5, 250, { d: true, sd: 30 }),
@@ -236,6 +238,20 @@ export const FOODS: FoodItem[] = [
   f('Miešaný drink', 'aperol|drink|koktejl|koktail|mojito|gin tonic|gin s tonikom|spritz', 100, 0, 10, 0, 200, { d: true, pc: 200 }),
 
   f('Polievka', 'polievka|polievky|zeleninova polievka s masom|krémová polievka|kremova polievka', 50, 2.5, 5, 2, 350),
+
+  // --- Značkové sladkosti a mliečne dezerty ---
+  f('3Bit', '3 bit|3bit|tribit|tribitka|tribitky|tri bit', 530, 7, 56, 31, 46, { pc: 46 }),
+  f('Fidorka', 'fidorka|fidorky', 540, 7, 52, 33, 30, { pc: 30 }),
+  f('Kinder Bueno', 'kinder bueno|bueno|kinder cokolada|kinder', 570, 9, 50, 37, 43, { pc: 43 }),
+  f('Pralinky', 'pralinky|pralinka|bonbony|bonbon|bonboniera|raffaello|ferrero|toffifee|merci', 580, 7, 48, 40, 36, { pc: 12 }),
+  f('Lentilky', 'lentilky|m m|skittles|dražé|draze', 470, 4, 72, 18, 40),
+  f('Banány v čokoláde', 'banany v cokolade|banan v cokolade', 440, 3, 70, 16, 50, { pc: 25 }),
+  f('Oblátky', 'oblatky|oblatka|vafle|vafla|kupelne oblatky', 520, 6, 62, 27, 30, { pc: 15 }),
+  f('Nanuk v čokoláde', 'magnum|nanuk v cokolade|misa|eskimo', 300, 4, 28, 19, 80, { pc: 80 }),
+  f('Pribináčik', 'pribinacik|termix|lipanek|tvarohovy dezert|bobik|monte|smotanovy dezert', 190, 6, 15, 12, 80, { pc: 80 }),
+  f('Jogurtový nápoj', 'jogurtovy napoj|actimel|activia napoj|pitny jogurt', 75, 2.8, 11, 1.6, 250, { d: true, pc: 250 }),
+  f('Croissant', 'croissant|kroasan|croissanty|7 days', 420, 8, 45, 23, 60, { pc: 60 }),
+  f('Vianočka', 'vianocka|mazanec|brioška|brioska|loupak|makovka|makovnik|orechovnik', 330, 8, 55, 9, 60, { pc: 60 }),
 
   // --- Omáčky ---
   f('Smotanová omáčka', 'smotanova omacka|smotanovou omackou|biela omacka|bešamel|besamel', 150, 2, 6, 13, 100),

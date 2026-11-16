@@ -195,3 +195,60 @@ describe('workout planner', () => {
     expect(buildWorkoutPlan(context(), 9).days).toHaveLength(5);
   });
 });
+
+describe('unknown and branded foods', () => {
+  it('knows branded snacks, including number-first names', () => {
+    const result = saves('teraz som mal liter polotučného mlieka a jednu 46 g tribitku');
+    expect(result.map(a => a.data.name)).toEqual(['Mlieko (1000 ml)', '3Bit (46 g)']);
+    expect(saves('mal som s tým mliekom ešte 3bit 1ks').map(a => a.data.name)).toEqual(['3Bit (46 g)']);
+  });
+
+  it('asks about an unknown item instead of dropping it silently', () => {
+    const result = respond('mal som liter mlieka a jednu 40 g bombičku', context());
+    expect(result.actions.filter(a => a.kind === 'save')).toHaveLength(1);
+    expect(result.pending).toEqual({ name: 'Bombičku', count: 1 });
+    expect(result.text).toContain('ešte nepoznám');
+  });
+
+  it('asks when only an unknown item with a count is mentioned', () => {
+    const result = respond('mal som bombičku 2 ks', context());
+    expect(result.intent).toBe('ask');
+    expect(result.pending).toEqual({ name: 'Bombičku', count: 2 });
+  });
+
+  it('logs and learns the food when the user answers with a number', () => {
+    const result = respond('240', context({ pending: { name: 'Bombička', count: 2 } }));
+    const save = result.actions.find((a): a is Save => a.kind === 'save');
+    expect(save?.data).toMatchObject({ name: 'Bombička ×2', calories: 480 });
+    expect(result.actions).toContainEqual({ kind: 'learn', food: { name: 'Bombička', calories: 240 } });
+  });
+
+  it('uses a learned food next time, in any grammatical case', () => {
+    const ctx = context({ customFoods: [{ name: 'Bombička', calories: 240 }] });
+    expect(saves('zjedol som bombičku', ctx)[0].data).toMatchObject({ name: 'Bombička', calories: 240 });
+    expect(saves('zjedol som 2 bombičky', ctx)[0].data.calories).toBe(480);
+  });
+
+  it('learns a food logged with explicit calories', () => {
+    const result = respond('zjedol som gofru 380 kcal', context());
+    expect(result.actions).toContainEqual({ kind: 'learn', food: { name: 'Gofru', calories: 380 } });
+  });
+
+  it('handles "a čo tá …" after a food log', () => {
+    const ctx = context({ lastBatch: [{ type: 'food', data: { name: 'Mlieko (1000 ml)', calories: 470 } }] });
+    expect(respond('a čo tá tribitka', ctx).actions.filter(a => a.kind === 'save')).toHaveLength(1);
+    const unknown = respond('a čo tá bombička', ctx);
+    expect(unknown.intent).toBe('ask');
+    expect(unknown.pending?.name).toBe('Bombička');
+  });
+
+  it('tolerates a typo in a food name', () => {
+    expect(saves('zjedol som jogrut')[0].data.name).toContain('jogurt');
+    expect(saves('zjedol som 2 banny')[0].data.name).toContain('Banán');
+  });
+
+  it('does not ask about non-food words with numbers', () => {
+    expect(respond('zjedol som 2 vajcia pred 3 hodinami', context()).pending).toBeUndefined();
+    expect(respond('mal som 2 schôdzky', context()).pending).toBeUndefined();
+  });
+});
