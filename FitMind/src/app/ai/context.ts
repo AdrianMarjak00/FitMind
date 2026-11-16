@@ -2,6 +2,13 @@ import { dayKey, round, toDate } from './text';
 
 export type EntryType = 'food' | 'exercise' | 'mood' | 'stress' | 'sleep' | 'weight';
 
+/** Jedlo, ktoré si tréner zapamätal od používateľa (nie je v databáze). */
+export interface CustomFood {
+  name: string;
+  /** Kalórie na jeden kus / jednu porciu. */
+  calories: number;
+}
+
 export interface CoachEntries {
   food: any[];
   exercise: any[];
@@ -20,6 +27,10 @@ export interface CoachContext {
   canUndo?: boolean;
   /** Posledný zápis z tohto chatu – aby sa dal prepočítať ("bola to veľká porcia"). */
   lastBatch?: Array<{ type: EntryType; data: any }>;
+  /** Jedlá, ktoré sa tréner naučil od tohto používateľa. */
+  customFoods?: CustomFood[];
+  /** Neznáme jedlo z predošlej správy, pri ktorom čakáme na kalórie. */
+  pending?: { name: string; count: number };
 }
 
 export const EMPTY_ENTRIES: CoachEntries = {

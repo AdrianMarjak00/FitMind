@@ -154,6 +154,18 @@ export const TOPICS: Topic[] = [
     }
   },
   {
+    id: 'hard-day',
+    match: /(tazk|zly|narocn|hrozn|dlh|strasn|nanic)\w* (den|tyzden|obdobie)|nestiham|vela prace|mam toho vela|uz nevladzem|je toho na mna vela/,
+    answer: ctx => {
+      const name = (ctx.profile?.firstName || '').trim();
+      return `${name ? name + ', to' : 'To'} znie ako náročný deň. 💚 Nemusíš dnes stihnúť všetko.\n\n` +
+        '  • ak nemáš silu na tréning, stačí 10–15 minút chôdze vonku\n' +
+        '  • najedz sa normálne – po ťažkom dni telo pýta sladké, pomôže jedlo s bielkovinami\n' +
+        '  • choď dnes spať o trochu skôr, zajtra to bude ľahšie\n\n' +
+        'Ak chceš, napíš mi, čo si dnes jedol, a pozriem, čo ti ešte chýba. Alebo len napíš, čo ťa trápi.';
+    }
+  },
+  {
     id: 'plateau',
     match: /stagn|vaha stoji|vaha sa nehybe|nechudnem|plato|plateau|neklesa|zasekl/,
     answer: () =>

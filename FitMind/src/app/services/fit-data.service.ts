@@ -1,9 +1,10 @@
 import { Injectable, Injector, inject, runInInjectionContext } from '@angular/core';
 import {
   Firestore, Timestamp, addDoc, collection, deleteDoc, doc, getDoc, getDocs,
-  limit, orderBy, query, updateDoc, where, writeBatch
+  limit, orderBy, query, setDoc, updateDoc, where, writeBatch
 } from '@angular/fire/firestore';
-import { CoachEntries, EntryType } from '../ai/context';
+import { CoachEntries, CustomFood, EntryType } from '../ai/context';
+import { norm } from '../ai/text';
 import { toDate } from '../ai/text';
 
 export interface StoredMessage { role: 'user' | 'assistant'; content: string; timestamp: string | null; }
@@ -98,6 +99,27 @@ export class FitDataService {
       safe('mood', 7, 30), safe('sleep', 7, 30), safe('stress', 7, 30)
     ]);
     return { food, exercise, weight, mood, sleep, stress };
+  }
+
+  // ---------------- Jedlá naučené od používateľa ----------------
+
+  getCustomFoods(userId: string): Promise<CustomFood[]> {
+    return this.run(async () => {
+      const snap = await getDocs(query(collection(this.firestore, 'users', userId, 'customFoods'), limit(300)));
+      return snap.docs
+        .map(d => ({ name: String(d.data()['name'] || ''), calories: Number(d.data()['calories']) || 0 }))
+        .filter(f => f.name && f.calories > 0);
+    });
+  }
+
+  /** Uloží (alebo prepíše) jedlo pod kľúčom z jeho názvu, takže sa nezdvojuje. */
+  saveCustomFood(userId: string, food: CustomFood): Promise<void> {
+    return this.run(async () => {
+      const id = norm(food.name).replace(/[^a-z0-9]+/g, '-').slice(0, 80) || 'jedlo';
+      await setDoc(doc(this.firestore, 'users', userId, 'customFoods', id), {
+        name: food.name, calories: food.calories, updatedAt: Timestamp.now()
+      });
+    });
   }
 
   // ---------------- Konverzácie ----------------
