@@ -1,6 +1,66 @@
 <section class="training-page">
   <div class="hero-glow"></div>
 
+  @if (!paymentsEnabled && plan) {
+  <div class="container">
+    <header class="page-header">
+      <div class="main-badge">
+        <mat-icon>fitness_center</mat-icon>
+        <span>PLÁN PODĽA TVOJHO PROFILU</span>
+      </div>
+
+      <h1 class="title-lg">Tvoj tréningový <span>plán</span></h1>
+      <p class="subtitle">
+        {{ plan.title }}. {{ plan.summary }}
+        @if (!isLoggedIn) { Po prihlásení ho prispôsobím tvojmu cieľu a úrovni aktivity. }
+      </p>
+
+      <div class="days-switch">
+        <span>Tréningov týždenne:</span>
+        @for (option of dayOptions; track option) {
+        <button [class.active]="planDays === option" (click)="rebuildPlan(option)">{{ option }}×</button>
+        }
+      </div>
+    </header>
+
+    <div class="training-grid plan-grid">
+      @for (day of plan.days; track day.day) {
+      <mat-card class="training-card plan-card">
+        <div class="card-tag">{{ day.day | uppercase }}</div>
+        <mat-card-header>
+          <div mat-card-avatar class="icon-wrapper">
+            <mat-icon>bolt</mat-icon>
+          </div>
+          <mat-card-title>{{ day.name }}</mat-card-title>
+          <mat-card-subtitle>{{ day.focus }}</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="benefits-list">
+            @for (item of day.items; track item.name) {
+            <div class="benefit-item plan-item">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{ item.name }}</span>
+              <em>{{ item.detail }}</em>
+            </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+      }
+    </div>
+
+    <div class="plan-tips">
+      <h3><mat-icon>lightbulb</mat-icon> Tipy k plánu</h3>
+      <ul>
+        @for (tip of plan.tips; track tip) { <li>{{ tip }}</li> }
+      </ul>
+      <a mat-raised-button class="buy-btn primary" [routerLink]="isLoggedIn ? '/ai-chat' : '/register'">
+        {{ isLoggedIn ? 'ZAPÍSAŤ TRÉNING V AI CHATE' : 'VYTVORIŤ ÚČET ZADARMO' }}
+      </a>
+    </div>
+  </div>
+  } @else {
   <div class="container">
     <header class="page-header">
       <div class="main-badge">
@@ -126,4 +186,5 @@
 
     </div>
   </div>
+  }
 </section>

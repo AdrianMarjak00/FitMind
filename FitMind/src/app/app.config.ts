@@ -1,4 +1,5 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideZoneChangeDetection } from '@angular/core';
+import { provideServiceWorker } from '@angular/service-worker';
 // Pridaný import withInMemoryScrolling
 import { provideRouter, withInMemoryScrolling } from '@angular/router'; 
 import { routes } from './app.routes';
@@ -40,6 +41,12 @@ export const appConfig: ApplicationConfig = {
     provideFirebaseApp(() => initializeApp(firebaseConfig)),
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
+
+    // PWA: appka sa dá nainštalovať a škrupina funguje aj offline
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000'
+    }),
 
     {
       provide: NGX_ECHARTS_CONFIG,

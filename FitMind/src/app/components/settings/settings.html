@@ -49,7 +49,7 @@
       </mat-card>
 
       <!-- Predplatné -->
-      <mat-card class="settings-card subscription-card">
+      <mat-card class="settings-card subscription-card" *ngIf="paymentsEnabled">
         <mat-card-content>
           <h3>Predplatné</h3>
           <div class="subscription-info">

@@ -628,3 +628,108 @@ $border: rgba(255, 255, 255, 0.1);
     background: #333;
   }
 }
+
+// === Rozšírený režim (model v zariadení) ===
+.chat-header .header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .llm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #ccc;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: 0.2s;
+
+    span { font-size: 0.7rem; font-weight: 700; }
+    &:hover { border-color: $primary; }
+    &.on { border-color: $primary; color: $primary; }
+    &.loading { border-color: #f5a623; color: #f5a623; }
+  }
+}
+
+.llm-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 1rem 0.75rem;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+
+  .llm-panel-text {
+    flex: 1;
+    min-width: 0;
+
+    strong { color: #fff; font-size: 0.9rem; }
+    p { color: #aaa; font-size: 0.82rem; line-height: 1.45; margin: 4px 0 0; }
+    small { color: #999; font-size: 0.75rem; }
+    .llm-error { color: #ff6b6b; }
+  }
+
+  .llm-progress {
+    height: 6px;
+    margin: 10px 0 4px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+
+    .bar { height: 100%; background: $primary; transition: width 0.3s; }
+  }
+
+  .llm-toggle {
+    flex-shrink: 0;
+    background: $primary;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+// === Uvítanie a rýchle návrhy ===
+.chat-welcome {
+  margin: auto;
+  max-width: 560px;
+  text-align: center;
+  padding: 1.5rem 1rem;
+
+  h4 { color: #fff; font-size: 1.15rem; margin: 0 0 0.5rem; }
+  p { color: #999; font-size: 0.9rem; margin: 0 0 1.1rem; }
+
+  .quick-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+
+    button {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 100px;
+      color: #ddd;
+      padding: 0.5rem 0.95rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: 0.2s;
+
+      &:hover { border-color: $primary; color: $primary; }
+    }
+  }
+}

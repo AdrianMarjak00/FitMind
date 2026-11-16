@@ -365,10 +365,14 @@ export class DashboardComponent implements OnInit {
   }
 
   // Získaj počet dní pre aktuálny filter (od dnes dozadu)
+  // Backend: cutoff = (now - timedelta(days=N)) at midnight
+  // Pre days=0: cutoff = dnes o polnoci → len dnešné záznamy
+  // Pre days=6: cutoff = pred 6 dňami o polnoci → 7 dní vrátane dnes
   getFilterDays(): number {
     if (this.selectedPeriod !== 'custom') {
       const option = this.periodOptions.find(o => o.id === this.selectedPeriod);
-      return option ? option.days : 7;
+      const raw = option ? option.days : 7;
+      return Math.max(0, raw - 1); // Oprava off-by-one v backende
     }
 
     // Pre vlastný rozsah počítame dni od DNES po ZAČIATOK rozsahu
@@ -377,10 +381,10 @@ export class DashboardComponent implements OnInit {
       today.setHours(23, 59, 59, 999);
       const diffTime = today.getTime() - this.customDateFrom.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return Math.max(1, diffDays);
+      return Math.max(0, diffDays - 1);
     }
 
-    return 7; // Default
+    return 6; // Default (týždeň)
   }
 
   // Zmena obdobia
@@ -405,11 +409,14 @@ export class DashboardComponent implements OnInit {
 
   // Získaj popis aktuálneho obdobia
   getPeriodLabel(): string {
-    const days = this.getFilterDays();
-    if (days === 1) return 'Dnes';
-    if (days <= 7) return `${days} dní`;
-    if (days <= 31) return `${days} dní`;
-    return `${days} dní`;
+    const opt = this.periodOptions.find(o => o.id === this.selectedPeriod);
+    if (opt) return opt.label;
+    if (this.customDateFrom && this.customDateTo) {
+      const from = new Date(this.customDateFrom).toLocaleDateString('sk-SK');
+      const to = new Date(this.customDateTo).toLocaleDateString('sk-SK');
+      return `${from} – ${to}`;
+    }
+    return 'Vlastné';
   }
 
 
@@ -646,17 +653,72 @@ export class DashboardComponent implements OnInit {
     this.selectedDetailType = null;
   }
 
+  private entryToDate(timestamp: any): Date | null {
+    if (!timestamp) return null;
+    try {
+      if (timestamp.toDate) return timestamp.toDate();
+      if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+      return new Date(timestamp);
+    } catch { return null; }
+  }
+
+  private dateToStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  private filterEntriesByDate(entries: any[]): any[] {
+    if (this.selectedPeriod === 'today') {
+      const todayStr = this.dateToStr(new Date());
+      return entries.filter(e => {
+        const d = this.entryToDate(e.timestamp);
+        return d ? this.dateToStr(d) === todayStr : true;
+      });
+    }
+    if (this.selectedPeriod === 'week') {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      monday.setHours(0, 0, 0, 0);
+      return entries.filter(e => {
+        const d = this.entryToDate(e.timestamp);
+        return d ? d >= monday : true;
+      });
+    }
+    if (this.selectedPeriod === 'month') {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return entries.filter(e => {
+        const d = this.entryToDate(e.timestamp);
+        return d ? d >= startOfMonth : true;
+      });
+    }
+    if (this.selectedPeriod === 'custom' && this.customDateFrom && this.customDateTo) {
+      const from = new Date(this.customDateFrom);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(this.customDateTo);
+      to.setHours(23, 59, 59, 999);
+      return entries.filter(e => {
+        const d = this.entryToDate(e.timestamp);
+        return d ? d >= from && d <= to : true;
+      });
+    }
+    return entries;
+  }
+
   // Získaj záznamy pre aktuálne vybraný typ
   getSelectedEntries(): any[] {
+    let entries: any[] = [];
     switch (this.selectedDetailType) {
-      case 'food': return this.recentFoodEntries;
-      case 'exercise': return this.recentWorkoutEntries;
-      case 'weight': return this.recentWeightEntries;
-      case 'mood': return this.recentMoodEntries;
-      case 'sleep': return this.recentSleepEntries;
-      case 'stress': return this.recentStressEntries;
+      case 'food':     entries = this.recentFoodEntries; break;
+      case 'exercise': entries = this.recentWorkoutEntries; break;
+      case 'weight':   entries = this.recentWeightEntries; break;
+      case 'mood':     entries = this.recentMoodEntries; break;
+      case 'sleep':    entries = this.recentSleepEntries; break;
+      case 'stress':   entries = this.recentStressEntries; break;
       default: return [];
     }
+    return this.filterEntriesByDate(entries);
   }
 
   // Získaj názov pre aktuálne vybraný typ

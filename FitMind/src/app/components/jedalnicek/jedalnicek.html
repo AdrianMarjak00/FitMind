@@ -15,6 +15,55 @@
       </p>
     </header>
 
+    @if (plan) {
+    <div class="my-plan">
+      <div class="my-plan-head">
+        <div>
+          <h2>Tvoj jedálniček na dnes</h2>
+          <p>
+            Vypočítaný na <strong>{{ plan.target }} kcal</strong> podľa tvojho profilu.
+            Spolu {{ plan.calories }} kcal · bielkoviny {{ plan.protein }} g · sacharidy {{ plan.carbs }} g · tuky {{ plan.fats }} g
+          </p>
+        </div>
+        <button mat-flat-button class="regen-btn" (click)="regenerate()">
+          <mat-icon>autorenew</mat-icon> Iný návrh
+        </button>
+      </div>
+
+      <div class="my-plan-filters">
+        <div class="pill-group">
+          <span>Jedál denne</span>
+          @for (count of mealOptions; track count) {
+          <button [class.active]="mealsPerDay === count" (click)="setMeals(count)">{{ count }}</button>
+          }
+        </div>
+        <div class="pill-group">
+          @for (option of dietOptions; track option.value) {
+          <button [class.active]="diet === option.value" (click)="setDiet(option.value)">{{ option.label }}</button>
+          }
+        </div>
+      </div>
+
+      <div class="my-plan-meals">
+        @for (meal of plan.meals; track meal.label) {
+        <div class="my-meal">
+          <div class="my-meal-top">
+            <span class="my-meal-label">{{ meal.label }}</span>
+            <span class="my-meal-kcal">{{ meal.calories }} kcal</span>
+          </div>
+          <h3>{{ meal.name }}</h3>
+          <p class="my-meal-ingredients">{{ ingredients(meal.ingredients) }}</p>
+          <p class="my-meal-macros">B {{ meal.protein }} g · S {{ meal.carbs }} g · T {{ meal.fats }} g</p>
+        </div>
+        }
+      </div>
+      <p class="my-plan-note">
+        Ryža, cestoviny a zemiaky sú vo varenom stave. Týždenný plán a nákupný zoznam ti zostaví
+        <a routerLink="/ai-chat">AI tréner</a> – napíš mu „jedálniček na týždeň“.
+      </p>
+    </div>
+    }
+
     <div class="diet-grid">
       
       <mat-card class="diet-card weight-loss">

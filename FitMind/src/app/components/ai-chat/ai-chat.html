@@ -38,9 +38,43 @@
         <h3>🤖 FitMind AI Coach - Tvoj Osobný Tréner</h3>
       </div>
       <div class="header-buttons">
+        <button class="llm-btn" [class.on]="llmState.status === 'ready'" [class.loading]="llmState.status === 'loading'"
+          (click)="showLlmInfo = !showLlmInfo" title="Rozšírený režim – jazykový model v zariadení">
+          🧠
+          @if (llmState.status === 'loading') { <span>{{ llmState.progress }}%</span> }
+          @if (llmState.status === 'ready') { <span>ON</span> }
+        </button>
         <button (click)="clearChat()" class="clear-btn" title="Vyčistiť konverzáciu">🗑️</button>
       </div>
     </div>
+
+    @if (showLlmInfo) {
+    <div class="llm-panel">
+      <div class="llm-panel-text">
+        <strong>Rozšírený režim (experimentálne)</strong>
+        @if (llmState.status === 'unsupported') {
+        <p>Toto zariadenie alebo prehliadač nepodporuje WebGPU, takže jazykový model tu nespustíš. FitMind AI funguje
+          naplno aj bez neho.</p>
+        } @else {
+        <p>FitMind AI beží celý v tvojom zariadení. Navyše si môžeš stiahnuť jazykový model (približne 1,5 GB, stačí
+          raz), ktorý odpovie aj na voľné otázky mimo bežných tém. Nič sa neposiela na server. Odporúčam počítač s
+          lepšou grafikou a Wi-Fi.</p>
+        }
+        @if (llmState.status === 'loading') {
+        <div class="llm-progress">
+          <div class="bar" [style.width.%]="llmState.progress"></div>
+        </div>
+        <small>{{ llmState.detail }} {{ llmState.progress }}%</small>
+        }
+        @if (llmState.status === 'error') { <small class="llm-error">{{ llmState.detail }}</small> }
+      </div>
+      @if (llmState.status !== 'unsupported') {
+      <button class="llm-toggle" (click)="toggleLlm()">
+        {{ llmState.status === 'ready' ? 'Vypnúť' : llmState.status === 'loading' ? 'Zrušiť' : 'Stiahnuť a zapnúť' }}
+      </button>
+      }
+    </div>
+    }
 
     @if (savedEntries.length > 0) {
     <div class="saved-entries-notification">
@@ -49,7 +83,7 @@
     }
 
     @if (!userId) { <div class="warning-message">⚠️ Pre použitie AI coacha sa musíte prihlásiť</div> }
-    @if (!backendRunning && userId) { <div class="warning-message backend-warning">⚠️ Backend server nebeží!</div> }
+    @if (sendError) { <div class="warning-message">⚠️ {{ sendError }}</div> }
 
     @if (userId && !isPremium && !canSendMessage) {
     <div class="upgrade-banner">
@@ -73,6 +107,17 @@
     }
 
     <div class="messages-container" #messagesContainer>
+      @if (userId && !isLoading && !(aiService.messages$ | async)?.length) {
+      <div class="chat-welcome">
+        <h4>Ahoj! Som tvoj FitMind tréner.</h4>
+        <p>Napíš mi, čo si jedol alebo ako si cvičil, a zapíšem to do denníka. Alebo vyskúšaj:</p>
+        <div class="quick-prompts">
+          @for (prompt of quickPrompts; track prompt) {
+          <button (click)="usePrompt(prompt)">{{ prompt }}</button>
+          }
+        </div>
+      </div>
+      }
       @for (msg of aiService.messages$ | async; track $index) {
       <div [ngClass]="{ 'user-message': msg.role === 'user', 'ai-message': msg.role === 'assistant' }">
         <div class="message-bubble">

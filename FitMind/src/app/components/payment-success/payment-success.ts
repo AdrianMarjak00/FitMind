@@ -35,7 +35,7 @@ export class PaymentSuccessComponent implements OnInit {
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       this.sessionId = params['session_id'];
-      if (this.sessionId) {
+      if (this.sessionId && environment.paymentsEnabled) {
         this.verifySession(this.sessionId);
       } else {
         this.loading = false;
@@ -44,7 +44,7 @@ export class PaymentSuccessComponent implements OnInit {
   }
 
   verifySession(sessionId: string) {
-    this.http.post(`${environment.apiUrl}/payment/verify-session`, { session_id: sessionId })
+    this.http.post(`${environment.paymentsApiUrl}/payment/verify-session`, { session_id: sessionId })
       .subscribe({
         next: (res: any) => {
           console.log('Payment verified:', res);

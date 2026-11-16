@@ -1,5 +1,7 @@
 export const environment = {
   production: true,
-  // Render backend URL pre production build
-  apiUrl: 'https://fitmind-backend-fvq7.onrender.com/api'
+  // Platby (Stripe) sú zatiaľ vypnuté – všetky funkcie sú odomknuté pre každého.
+  // Po zapnutí musí paymentsApiUrl ukazovať na serverless funkciu so Stripe kľúčmi.
+  paymentsEnabled: false,
+  paymentsApiUrl: ''
 };

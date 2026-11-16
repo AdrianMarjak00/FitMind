@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
-import { AiService, ChatMessage, WeeklyReport, GoalProgress, Conversation } from '../../services/ai.service';
+import { AiService, WeeklyReport, GoalProgress, Conversation } from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
-import { BackendStatusService } from '../../services/backend-status.service';
+import { LlmService, LlmState } from '../../services/llm.service';
 import { PaymentService, SubscriptionStatus } from '../../services/payment.service';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,12 +23,29 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   message = '';
   isLoading = false;
   savedEntries: string[] = [];
+  sendError = '';
   private userSubscription?: Subscription;
   private conversationsSubscription?: Subscription;
   private activeConvSubscription?: Subscription;
+  private llmSubscription?: Subscription;
+  private messagesSubscription?: Subscription;
+  private lastMessageCount = 0;
 
-  backendRunning = true;
   showHistory = false;
+
+  // Voliteľný jazykový model v zariadení
+  llmState: LlmState = { status: 'off', progress: 0, detail: '' };
+  showLlmInfo = false;
+
+  // Rýchle návrhy pre prázdny chat
+  readonly quickPrompts = [
+    'Koľko mi dnes ostáva kalórií?',
+    'Čo si mám dať na večeru?',
+    'Jedálniček na týždeň',
+    'Zostav mi tréningový plán',
+    'Ako sa mi darilo tento týždeň?',
+    'Čo všetko vieš?'
+  ];
 
   // Conversations
   conversations: Conversation[] = [];
@@ -43,16 +60,16 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   weeklyReport: WeeklyReport | null = null;
   goalProgress: GoalProgress | null = null;
 
-  // Premium / Message limits
+  // Premium / limity správ (aktívne len keď sú zapnuté platby)
   readonly FREE_DAILY_LIMIT = 10;
-  isPremium = false;
+  isPremium = true;
   messagesUsedToday = 0;
   subscription: SubscriptionStatus | null = null;
 
   constructor(
     public aiService: AiService,
     private authService: AuthService,
-    private backendStatus: BackendStatusService,
+    public llm: LlmService,
     private paymentService: PaymentService
   ) { }
 
@@ -76,7 +93,7 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       // Highlight calories with color
       .replace(/(\d+)\s*kcal/gi, '<span class="highlight-calories">$1 kcal</span>')
       // Highlight numbers with units (g, kg, cm, min, etc.)
-      .replace(/(\d+)\s*(g|kg|cm|min|hodín|rokov)/gi, '<span class="highlight-number">$1$2</span>')
+      .replace(/(\d+)\s*(g|kg|cm|min|hodín|rokov)\b/gi, '<span class="highlight-number">$1 $2</span>')
       // Highlight percentages and standalone numbers
       .replace(/(\d+)%/g, '<span class="highlight-number">$1%</span>')
       .replace(/(\d+)\/(\d+)/g, '<span class="highlight-number">$1/$2</span>')
@@ -90,12 +107,26 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   ngAfterViewChecked(): void {
-    this.scrollToBottom();
+    // Skroluj len keď pribudla správa – inak by sa nedalo čítať históriu
+    if (this.pendingScroll) {
+      this.pendingScroll = false;
+      this.scrollToBottom();
+    }
   }
+  private pendingScroll = false;
 
   ngOnInit(): void {
-    this.backendStatus.checkBackendStatus().subscribe(isRunning => {
-      this.backendRunning = isRunning;
+    this.llmSubscription = this.llm.state$.subscribe(state => this.llmState = state);
+    // Ak si používateľ model už raz zapol, načítaj ho z cache prehliadača
+    if (this.llm.wasEnabled() && this.llm.isSupported()) {
+      this.llm.enable();
+    }
+
+    this.messagesSubscription = this.aiService.messages$.subscribe(messages => {
+      if (messages.length !== this.lastMessageCount) {
+        this.lastMessageCount = messages.length;
+        this.pendingScroll = true;
+      }
     });
 
     // Subscribe to conversations list
@@ -112,9 +143,7 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.currentUser = user;
       this.userId = user?.uid || '';
       if (this.userId) {
-        // Načítaj konverzácie pri inicializácii
         this.aiService.loadConversations(this.userId);
-        this.loadRecommendations();
         this.loadSubscriptionStatus();
         this.loadDailyMessageCount();
       }
@@ -131,7 +160,7 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
         this.isPremium = this.paymentService.hasPaidPlan(response.subscription);
       },
       error: () => {
-        this.isPremium = false;
+        this.isPremium = !this.paymentService.enabled;
       }
     });
   }
@@ -163,36 +192,56 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.userSubscription?.unsubscribe();
     this.conversationsSubscription?.unsubscribe();
     this.activeConvSubscription?.unsubscribe();
+    this.llmSubscription?.unsubscribe();
+    this.messagesSubscription?.unsubscribe();
+  }
+
+  // === MODEL V ZARIADENÍ ===
+
+  toggleLlm(): void {
+    if (this.llmState.status === 'ready' || this.llmState.status === 'loading') {
+      this.llm.disable();
+    } else {
+      this.llm.enable();
+    }
+  }
+
+  usePrompt(prompt: string): void {
+    if (this.isLoading) return;
+    this.message = prompt;
+    this.sendMessage();
   }
 
   sendMessage(): void {
-    if (!this.message.trim() || !this.userId) return;
+    if (!this.message.trim() || !this.userId || this.isLoading) return;
 
-    if (!this.backendRunning) {
-      alert('⚠️ Backend server nebeží!');
-      return;
-    }
-
-    // Kontrola limitu správ pre free používateľov
+    // Kontrola limitu správ (len pri zapnutých platbách)
     if (!this.canSendMessage) {
       return; // UI zobrazí upgrade banner
     }
 
     this.isLoading = true;
     this.savedEntries = [];
+    this.sendError = '';
+    const text = this.message.trim();
+    this.message = '';
 
-    this.aiService.sendMessage(this.userId, this.message.trim()).subscribe({
+    this.aiService.sendMessage(this.userId, text).subscribe({
       next: (response) => {
-        this.message = '';
-        this.incrementMessageCount(); // Zvýš počítadlo správ
+        this.incrementMessageCount();
         if (response.saved_entries && response.saved_entries.length > 0) {
           this.savedEntries = response.saved_entries;
           setTimeout(() => { if (this.showInsights) this.refreshCurrentTab(); }, 1000);
           setTimeout(() => { this.savedEntries = []; }, 5000);
         }
-        setTimeout(() => this.scrollToBottom(), 100);
+        this.pendingScroll = true;
       },
-      error: () => { this.isLoading = false; },
+      error: () => {
+        this.isLoading = false;
+        this.message = text;
+        this.sendError = 'Správu sa nepodarilo spracovať. Skontroluj pripojenie a skús to znova.';
+        setTimeout(() => this.sendError = '', 6000);
+      },
       complete: () => this.isLoading = false
     });
   }

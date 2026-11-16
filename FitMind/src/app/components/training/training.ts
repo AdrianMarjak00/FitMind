@@ -5,17 +5,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { PaymentService, SubscriptionStatus } from '../../services/payment.service';
 import { AuthService } from '../../services/auth.service';
+import { AiService } from '../../services/ai.service';
+import { CoachContext, EMPTY_ENTRIES } from '../../ai/context';
+import { WorkoutPlan, buildWorkoutPlan } from '../../ai/planner';
 
 @Component({
   selector: 'app-training',
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     MatCardModule,
     MatIconModule,
     MatDividerModule,
@@ -32,21 +36,36 @@ export class Training implements OnInit, OnDestroy {
   userId: string | null = null;
   isLoggedIn = false;
 
+  /** Pri vypnutých platbách stránka ukazuje osobný tréningový plán. */
+  readonly paymentsEnabled: boolean;
+  plan: WorkoutPlan | null = null;
+  planDays = 0;
+  readonly dayOptions = [3, 4, 5];
+  private context: CoachContext = { profile: null, entries: { ...EMPTY_ENTRIES }, now: new Date() };
+
   private authSubscription?: Subscription;
 
   constructor(
     private paymentService: PaymentService,
     private authService: AuthService,
+    private aiService: AiService,
     private router: Router
-  ) { }
+  ) {
+    this.paymentsEnabled = this.paymentService.enabled;
+  }
 
   ngOnInit(): void {
+    this.rebuildPlan();
     this.authSubscription = this.authService.getCurrentUser().subscribe(user => {
       this.isLoggedIn = !!user;
       this.userId = user?.uid || null;
 
       if (this.userId) {
         this.loadSubscriptionStatus();
+        this.aiService.getCoachContext(this.userId).subscribe({
+          next: ctx => { this.context = ctx; this.rebuildPlan(); },
+          error: () => { /* ostane všeobecný plán */ }
+        });
       }
     });
   }
@@ -54,6 +73,15 @@ export class Training implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.authSubscription?.unsubscribe();
   }
+
+  // === TRÉNINGOVÝ PLÁN ===
+
+  rebuildPlan(days?: number): void {
+    this.plan = buildWorkoutPlan(this.context, days);
+    this.planDays = this.plan.daysPerWeek;
+  }
+
+  // === PLATBY (aktívne len pri paymentsEnabled) ===
 
   loadSubscriptionStatus(): void {
     if (!this.userId) return;
@@ -76,11 +104,9 @@ export class Training implements OnInit, OnDestroy {
     }
 
     if (planType === 'free') {
-      // Free plán je predvolený, ak používateľ nemá žiadny iný
       return;
     }
 
-    // Ak má používateľ už aktívnu subscription pre daný plán, presmeruj na customer portal
     const isSubscriptionPlan = planType === 'basic' || planType === 'pro';
     if (this.currentSubscription?.status === 'active' &&
       this.currentSubscription?.plan_type === planType &&
@@ -100,12 +126,7 @@ export class Training implements OnInit, OnDestroy {
         this.isLoading = false;
         this.loadingPlan = null;
         console.error('Error creating checkout session:', err);
-
-        if (err.status === 503) {
-          alert('Systém nie je momentálne dostupný. Skúste to neskôr.');
-        } else {
-          alert('Nepodarilo sa spustiť proces. Skúste to znova.');
-        }
+        alert('Nepodarilo sa spustiť proces. Skúste to znova.');
       }
     });
   }
@@ -120,7 +141,7 @@ export class Training implements OnInit, OnDestroy {
       error: (err) => {
         this.isLoading = false;
         console.error('Error opening customer portal:', err);
-        alert('Nepodarilo sa otvoriť správu predplatného. Pravdepodobne ešte nemáte vytvorený zákaznícky profil v Stripe.');
+        alert('Nepodarilo sa otvoriť správu predplatného.');
       }
     });
   }
@@ -128,13 +149,11 @@ export class Training implements OnInit, OnDestroy {
   hasPlan(planType: string): boolean {
     if (!this.currentSubscription) return false;
 
-    // Ak ide o free, zobraziť ako aktívne len ak nemá iný platený plán
     if (planType === 'free') {
       const hasPaidPlan = Object.values(this.currentSubscription.active_plans || {}).some(p => p.status === 'active');
       return !hasPaidPlan;
     }
 
-    // Skontroluj konkrétny plán v active_plans
     const plan = this.currentSubscription.active_plans?.[planType];
     return plan?.status === 'active';
   }
