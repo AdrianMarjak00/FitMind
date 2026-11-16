@@ -2,7 +2,12 @@
 
 **FitMind** je open-source fitness a wellness aplikácia v slovenčine: denník jedla a pohybu, štatistiky, tréningové plány, jedálničky a AI tréner, ktorý beží priamo v zariadení používateľa.
 
-Web: [fit-mind.sk](https://fit-mind.sk) · Licencia: [MIT](LICENSE)
+[![CI](https://github.com/AdrianMarjak00/FitMind/actions/workflows/ci.yml/badge.svg)](https://github.com/AdrianMarjak00/FitMind/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+Živá verzia: [fitmind-dba6a.web.app](https://fitmind-dba6a.web.app) · [Ako prispieť](CONTRIBUTING.md)
+
+> **In English:** FitMind is an open-source fitness app for Slovak speakers: a food and exercise diary, charts, workout plans, meal plans and an AI coach. The coach is a rule-based natural-language engine written in plain TypeScript. It runs on the user's device, needs no server and no LLM API, and understands Slovak sentences such as "na obed som mal veľký tanier guláša" (I had a big plate of goulash for lunch). The engine and its Slovak food database (about 190 foods) can be reused outside this app.
 
 ## Čo vie
 
@@ -40,6 +45,32 @@ Aplikácia nepotrebuje vlastný server ani platené API.
 
 Engine je čistý TypeScript bez závislosti na prehliadači, takže sa dá použiť aj v natívnych appkách.
 
+### Použitie enginu mimo aplikácie
+
+Priečinok `FitMind/src/app/ai/` si môžeš skopírovať do vlastného projektu (Node, React Native, Capacitor…). Engine je funkcia: dostane správu a kontext používateľa, vráti text odpovede a zoznam záznamov na uloženie. Sám nič neukladá.
+
+```ts
+import { respond } from './ai/engine';
+
+const result = respond('na raňajky som mal 2 vajcia a chlieb s maslom', {
+  now: new Date(),
+  profile: { currentWeight: 80, height: 180, age: 30, gender: 'male', fitnessGoal: 'maintain' },
+  entries: { food: [], exercise: [], weight: [], mood: [], sleep: [], stress: [] }
+});
+
+result.text;     // odpoveď pre používateľa
+result.actions;  // [{ kind: 'save', type: 'food', data: { name: 'Vajce (110 g)', calories: 157, … } }, …]
+```
+
+## Testy
+
+```bash
+cd FitMind
+npm test
+```
+
+Testy v `FitMind/tests/ai/` overujú porozumenie slovenským vetám, odhad porcií, jedálničky a tréningové plány. Bežia v Node bez prehliadača.
+
 ## Spustenie
 
 Potrebuješ Node.js 22.
@@ -70,7 +101,7 @@ Pôvodný Python backend so Stripe integráciou ostal v `FitMind/backend/` ako a
 
 ## Prispievanie
 
-Chyby a nápady hlás cez Issues, zmeny posielaj ako pull request. Najľahšie sa prispieva do databázy jedál (`food-db.ts`) a receptov (`meal-planner.ts`).
+Chyby a nápady hlás cez Issues, zmeny posielaj ako pull request. Najľahšie sa prispieva do databázy jedál (`food-db.ts`) a receptov (`meal-planner.ts`) – postup je v [CONTRIBUTING.md](CONTRIBUTING.md). Platia [pravidlá správania](CODE_OF_CONDUCT.md), bezpečnostné chyby hlás podľa [SECURITY.md](SECURITY.md).
 
 ## Licencia
 
