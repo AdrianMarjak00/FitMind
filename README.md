@@ -5,7 +5,7 @@
 [![CI](https://github.com/AdrianMarjak00/FitMind/actions/workflows/ci.yml/badge.svg)](https://github.com/AdrianMarjak00/FitMind/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Web: [fit-mind.sk](https://fit-mind.sk) · [Ako prispieť](CONTRIBUTING.md)
+Živá verzia: [fitmind-dba6a.web.app](https://fitmind-dba6a.web.app) · [Ako prispieť](CONTRIBUTING.md)
 
 > **In English:** FitMind is an open-source fitness app for Slovak speakers: a food and exercise diary, charts, workout plans, meal plans and an AI coach. The coach is a rule-based natural-language engine written in plain TypeScript. It runs on the user's device, needs no server and no LLM API, and understands Slovak sentences such as "na obed som mal veľký tanier guláša" (I had a big plate of goulash for lunch). The engine and its Slovak food database (about 190 foods) can be reused outside this app.
 
