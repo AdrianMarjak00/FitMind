@@ -1,9 +1,11 @@
 import { ACTIVITIES, ActivityItem } from './exercise-db';
 import { FOODS, FoodItem } from './food-db';
 import { CAPABILITIES, findTopic } from './knowledge';
+import { MUSCLE_EXERCISES, buildWorkoutPlan, workoutPlanText } from './planner';
 import {
-  MEAL_SK, MUSCLE_EXERCISES, MealType, buildWorkoutPlan, dayMenuText, suggestMeals, workoutPlanText
-} from './planner';
+  MEAL_SK_ACC, MealType, dayPlanText, ingredientText, parseMenuOptions, shoppingListText,
+  suggestMeals, weekPlanText, weekSeed
+} from './meal-planner';
 import { weeklyReportText } from './coach';
 import {
   CoachContext, EntryType, bmi, bmiLabel, bmr, currentWeight, dayTotals, firstName,
@@ -86,7 +88,7 @@ function blank(text: string, start: number, length: number): string {
 
 type Unit =
   | { kind: 'amount'; value: number }   // gramy / mililitre
-  | { kind: 'piece' } | { kind: 'slice' } | { kind: 'portion' };
+  | { kind: 'piece' } | { kind: 'slice' } | { kind: 'bit' } | { kind: 'portion' };
 
 const UNITS = new Map<string, Unit>();
 function unit(words: string, u: Unit): void {
@@ -102,17 +104,34 @@ unit('l|liter|litra|litre|litrov', { kind: 'amount', value: 1000 });
 unit('lyzica|lyzice|lyzic|pl', { kind: 'amount', value: 15 });
 unit('lyzicka|lyzicky|lyziciek', { kind: 'amount', value: 5 });
 unit('hrst|hrste', { kind: 'amount', value: 30 });
+unit('kocka|kocky|kociek|stvorcek|stvorceky', { kind: 'amount', value: 8 });
+unit('riadok|riadky|riadkov', { kind: 'amount', value: 25 });
 unit('pohar|pohare|poharov|salka|salky|hrncek|sklenica|sklenicu', { kind: 'amount', value: 250 });
-unit('flasa|flasu|flase', { kind: 'amount', value: 500 });
+unit('flasa|flasu|flase|krigel|krigle', { kind: 'amount', value: 500 });
 unit('plechovka|plechovku|plechovky', { kind: 'amount', value: 330 });
-unit('ks|kus|kusy|kusov|x|kusok|kusky', { kind: 'piece' });
+unit('ks|kus|kusy|kusov|x|kelimok|kelimky|konzerva|konzervu|konzervy|balenie|balicek|sacok|tabulka|tabulku', { kind: 'piece' });
 unit('platok|platky|platkov|krajec|krajce|krajcov|kolecko|kolecka', { kind: 'slice' });
+unit('kusok|kusky|kuskov|kustik|trojuholnik|trojuholniky|rez|rezy|kopcek|kopceky|kopcekov', { kind: 'bit' });
 unit('porcia|porciu|porcie|tanier|taniere|miska|misku|misky', { kind: 'portion' });
 
-const SIZE_WORDS: Record<string, number> = {
-  velky: 1.5, velka: 1.5, velke: 1.5, velku: 1.5, dvojity: 2, dvojite: 2, dvojitu: 2,
-  maly: 0.7, male: 0.7, malu: 0.7, mensi: 0.7, mensiu: 0.7, mensie: 0.7
+/** Slová o veľkosti porcie – "veľký tanier", "menšia porcia", "dvojitý burger". */
+const SIZE_STEMS: Record<string, number> = {
+  obrovsk: 1.7, kopcovit: 1.6, velk: 1.4, poriadn: 1.4, vacs: 1.3,
+  dvojit: 2, polovicn: 0.5, detsk: 0.6, mens: 0.7, drobn: 0.6
 };
+const SIZE_EXACT: Record<string, number> = {
+  maly: 0.7, male: 0.7, malu: 0.7, mala: 0.7, plny: 1.3, plna: 1.3, plne: 1.3, plnu: 1.3,
+  extra: 1.4, mega: 1.7, xxl: 1.7
+};
+function sizeOf(tok: Tok | undefined): number | null {
+  if (!tok) return null;
+  return SIZE_EXACT[tok.t] ?? SIZE_STEMS[tok.s] ?? null;
+}
+
+/** Úprava jedla, ktorá mení kalórie. */
+const FRIED_RE = /^(vypraz|vysmaz|smazen|fritovan|obalovan)/;
+const LIGHT_RE = /^(nizkotucn|odtucnen|light|lajt|dietn)/;
+const ALREADY_FRIED = /vypráž|hranolky|langoš|čipsy|placky|nugety|krokety|rezeň/i;
 
 // ------------------------------------------------------------
 // Čas a typ jedla
@@ -169,6 +188,7 @@ interface Parse {
   future: boolean;
   when: When;
   asks: string[];        // doplňujúce otázky, keď chýba údaj
+  estimated?: boolean;   // množstvá jedla sú odhad z opisu, nie z váhy
 }
 
 const HOURS_RE = /(\d+(?:\.\d+)?)\s*(?:a pol\s*)?(?:h|hod\w*)\b|\b(pol hodin\w*|hodinu a pol|tristvrte hodin\w*|stvrt hodin\w*|hodinu|hodinku)\b/g;
@@ -382,9 +402,20 @@ function detectExercise(p: Parse, ctx: CoachContext): void {
   });
 }
 
-interface FoodHit { item: FoodItem; grams: number; }
+interface FoodHit {
+  item: FoodItem;
+  grams: number;
+  /** Násobok kalórií kvôli úprave (vyprážané ×1,3, light ×0,75). */
+  factor: number;
+  tag: string;
+  /** Používateľ uviedol presné množstvo (g, ml, kusy) – nie je to odhad z opisu. */
+  explicit: boolean;
+  sized: boolean;
+}
 
-function findFoods(work: string): { hits: FoodHit[]; quantified: boolean; work: string } {
+interface FoodScan { hits: FoodHit[]; quantified: boolean; estimated: boolean; work: string; }
+
+function findFoods(work: string): FoodScan {
   const toks = tokenize(work);
   const hits: FoodHit[] = [];
   const used = new Set<number>();
@@ -397,28 +428,48 @@ function findFoods(work: string): { hits: FoodHit[]; quantified: boolean; work: 
     const item = hit.item;
     const len = hit.stems.length;
     let grams: number | null = null;
-
-    const free = (k: number) => k >= 0 && !used.has(k);
-    let j = i - 1;
+    let explicit = false;
     let size = 1;
-    if (free(j) && SIZE_WORDS[toks[j].t]) { size = SIZE_WORDS[toks[j].t]; used.add(j); j--; }
+    let sized = false;
 
-    const u = free(j) ? UNITS.get(toks[j].s) : undefined;
+    const free = (k: number) => k >= 0 && k < toks.length && !used.has(k);
+    const takeSize = (k: number): boolean => {
+      const value = free(k) ? sizeOf(toks[k]) : null;
+      if (value === null) return false;
+      size *= value; sized = true; used.add(k);
+      return true;
+    };
     const resolve = (count: number, un: Unit | undefined): number => {
       if (!un) return count * (item.piece ?? item.portion);
       if (un.kind === 'amount') return count * un.value;
       if (un.kind === 'piece') return count * (item.piece ?? item.slice ?? item.portion);
       if (un.kind === 'slice') return count * (item.slice ?? item.piece ?? 25);
+      if (un.kind === 'bit') return count * (item.slice ?? item.piece ?? item.portion * 0.4);
       return count * item.portion;
     };
+
+    let j = i - 1;
+    if (takeSize(j)) j--;                       // "veľká pizza"
+
+    const u = free(j) ? UNITS.get(toks[j].s) : undefined;
     if (u) {
-      const n = free(j - 1) ? parseNumber(toks[j - 1].t) : null;
+      used.add(j);
+      let k = j - 1;
+      if (takeSize(k)) k--;                     // "veľký tanier polievky"
+      const n = free(k) ? parseNumber(toks[k].t) : null;
+      if (n !== null) { used.add(k); takeSize(k - 1); }
       grams = resolve(n ?? 1, u);
-      used.add(j); if (n !== null) used.add(j - 1);
+      explicit = u.kind === 'amount' || n !== null;
       quantified = true;
     } else {
       const n = free(j) ? parseNumber(toks[j].t) : null;
-      if (n !== null) { grams = resolve(n, undefined); used.add(j); quantified = true; }
+      if (n !== null) {
+        grams = resolve(n, undefined);
+        used.add(j);
+        takeSize(j - 1);
+        explicit = true;
+        quantified = true;
+      }
     }
 
     // množstvo až za jedlom: "ryža 200 g"
@@ -429,6 +480,7 @@ function findFoods(work: string): { hits: FoodHit[]; quantified: boolean; work: 
       if (n !== null && un) {
         grams = resolve(n, un);
         used.add(k); used.add(k + 1);
+        explicit = true;
         quantified = true;
       }
     }
@@ -438,34 +490,98 @@ function findFoods(work: string): { hits: FoodHit[]; quantified: boolean; work: 
       grams = withWord && item.side ? item.side : item.portion;
     }
     grams = Math.round(grams * size);
-    if (size !== 1) quantified = true;
+    if (sized) quantified = true;
 
-    if (grams > 0 && grams <= 5000) hits.push({ item, grams });
+    // spôsob úpravy v okolí jedla: "vyprážaný", "nízkotučný"
+    let factor = 1;
+    let tag = '';
+    const around = [i - 2, i - 1, i + len, i + len + 1]
+      .filter(k => k >= 0 && k < toks.length && !(k >= i && k < i + len))
+      .map(k => toks[k].t);
+    if (around.some(t => FRIED_RE.test(t)) && !ALREADY_FRIED.test(item.name)) { factor = 1.3; tag = ', vyprážané'; }
+    else if (around.some(t => LIGHT_RE.test(t))) { factor = 0.75; tag = ', light'; }
+
+    if (grams > 0 && grams <= 5000) hits.push({ item, grams, factor, tag, explicit, sized });
     for (let k = i; k < i + len; k++) {
       used.add(k);
       out = blank(out, toks[k].i, toks[k].t.length);
     }
     i += len - 1;
   }
-  return { hits, quantified, work: out };
+
+  // veľkosť porcie povedaná mimo jedla: "guláš, veľká porcia", "trochu ryže", "dve porcie"
+  let global = 1;
+  if (/dve porcie|dvojnasob|nasup|\bdupl/.test(work)) global = 2;
+  else if (/pol porcie|polovic\w* porci|len polovic|iba polovic/.test(work)) global = 0.5;
+  else if (/(velk|poriadn|obrovsk|vacs)\w* porci|bolo toho vela|vela toho|poriadne som sa najedol/.test(work)) global = 1.4;
+  else if (/(mal|mens)\w* porci|bolo toho malo|len trochu|iba trochu/.test(work)) global = 0.7;
+  else if (/\b(trochu|trosku|trosicku|ochutnal\w*|par hryzov|zopar hryzov)\b/.test(work)) global = 0.4;
+  if (global !== 1) {
+    hits.forEach(h => {
+      if (!h.explicit && !h.sized) { h.grams = Math.round(h.grams * global); h.sized = true; }
+    });
+    quantified = true;
+  }
+
+  return { hits, quantified, estimated: hits.some(h => !h.explicit), work: out };
 }
 
 function foodEntry(hit: FoodHit, meal: MealType, date?: string): any {
   const k = hit.grams / 100;
+  const calories = Math.round(hit.item.kcal * k * hit.factor);
+  const extraFat = (calories - hit.item.kcal * k) / 9;
   return {
-    name: `${hit.item.name} (${hit.grams} ${hit.item.drink ? 'ml' : 'g'})`,
-    calories: Math.round(hit.item.kcal * k),
+    name: `${hit.item.name}${hit.tag} (${hit.grams} ${hit.item.drink ? 'ml' : 'g'})`,
+    calories,
     protein: round(hit.item.protein * k, 1),
     carbs: round(hit.item.carbs * k, 1),
-    fats: round(hit.item.fats * k, 1),
+    fats: round(Math.max(0, hit.item.fats * k + extraFat), 1),
     mealType: meal,
     category: hit.item.drink ? 'drink' : 'food',
     date
   };
 }
 
+/** Odhad pre jedlo, ktoré nie je v databáze – podľa toho, o aký typ jedla ide. */
+const GUESSES: Array<{ match: RegExp; type: string; kcal: number; p: number; c: number; f: number }> = [
+  { match: /polievk|vyvar|boršč|borsc/, type: 'polievka', kcal: 180, p: 9, c: 18, f: 7 },
+  { match: /privar|kasa|kase|kasu/, type: 'prívarok alebo kaša', kcal: 330, p: 13, c: 42, f: 10 },
+  { match: /salat/, type: 'šalát', kcal: 280, p: 10, c: 15, f: 19 },
+  { match: /pizz/, type: 'pizza', kcal: 850, p: 35, c: 105, f: 30 },
+  { match: /cestovin|spaget|rezanc|penne|lasag|noky|gnocch|tagliat|fusill/, type: 'cestovinové jedlo', kcal: 620, p: 24, c: 78, f: 22 },
+  { match: /rizot|ryz/, type: 'jedlo s ryžou', kcal: 520, p: 26, c: 65, f: 15 },
+  { match: /burger|sendvic|baget|toast|wrap|tortill|hot ?dog|panini|chlebic/, type: 'sendvič alebo burger', kcal: 480, p: 22, c: 45, f: 22 },
+  { match: /kolac|zakus|tort|buchta|strudl|dezert|susien|kremes|palacink|lievanc|sisk|donut|muffin|brownie/, type: 'dezert', kcal: 360, p: 6, c: 48, f: 16 },
+  { match: /smoothie|shake|koktail|koktejl|napoj|limonad/, type: 'nápoj', kcal: 180, p: 3, c: 36, f: 2 },
+  { match: /mas|rezen|steak|stehn|kridel|rebr|pecen|gulas|perkelt|paprikas|ragu|rolad|katuv|placka|soté|sote|plnen/, type: 'mäsité hlavné jedlo', kcal: 620, p: 38, c: 45, f: 30 },
+  { match: /ryb|losos|tresk|pstruh|kapor|zubac/, type: 'rybie jedlo', kcal: 480, p: 35, c: 35, f: 22 },
+  { match: /zemiak|knedl|halusk|pirohy|strapack|placky/, type: 'múčne alebo zemiakové jedlo', kcal: 580, p: 16, c: 80, f: 20 },
+  { match: /tycink|keks|cukrik|cokolad|sladkost|zmrzlin|nanuk/, type: 'sladkosť', kcal: 230, p: 3, c: 30, f: 11 },
+  { match: /baklazan|cuket|zelenin|karfiol|brokolic|spenat|hrib|sampin|tekvic|kapust|fazulk|sparg/, type: 'zeleninové jedlo', kcal: 320, p: 10, c: 28, f: 18 }
+];
+
 const EAT_VERB = /\b(zjedol|zjedla|jedol|jedla|zjedli|vypil|vypila|pil som|pila som|ranajkoval\w*|obedoval\w*|veceral\w*|desiatoval\w*|olovrantoval\w*|papal\w*|zhltol|zhltla|dojedol|dojedla|najedol|najedla|schrumal\w*)\b/;
 const LOG_VERB = /\b(mal som|mala som|mal som si|som si dal\w*|som mal|som mala|som si daval\w*|dal som si|dala som si|daval\w* som si|zapis|zapisat|pridaj|pridat|zaznamenaj|zaznac|uloz|dnes som mal\w*|bolo na|bol na|bola na)\b/;
+
+const FILLER = new Set(('som si sa mi ma to ten ta tu tam a aj i s so z zo na v vo do po pri k ku od pre len iba este uz dnes vcera rano vecer potom ' +
+  'zjedol zjedla jedol jedla mal mala dal dala vypil vypila bol bola bolo dobre velmi trochu trosku pol nieco nejaky nejaku nejake ' +
+  'ranajky obed veceru veceri desiatu olovrant tanier porcia porciu misku kus kusok velky velku velke maly malu male').split(' '));
+
+/** Koľko slov v texte ostalo nerozpoznaných (po vymaskovaní známych jedál). */
+function unknownWords(work: string): number {
+  return tokens(work).filter(t => t.length >= 4 && !FILLER.has(t) && !/^\d/.test(t) &&
+    !UNITS.has(stem(t)) && !FRIED_RE.test(t) && !/^(zapek|pecen|varen|dusen|grilovan|domac|cerstv|special|babkin|mamin)/.test(t)).length;
+}
+
+/** Z pôvodnej správy vytiahne názov jedla bez slovies a čísel. */
+function dishName(original: string): string {
+  const name = original
+    .replace(/\d+([.,]\d+)?\s*(kcal|kal\w*)/gi, ' ')
+    .replace(/^\s*(dnes|včera|vcera|predvčerom)?\s*(na\s+(raňajky|ranajky|obed|večeru|veceru|desiatu|olovrant)\s+)?(som\s+)?(si\s+)?(zjedol|zjedla|jedol|jedla|mal|mala|dal|dala|vypil|vypila|zapíš|zapis|pridaj)?(\s+som)?(\s+si)?(\s+mi)?/i, ' ')
+    .replace(/\b(na\s+(raňajky|ranajky|obed|večeru|veceru|desiatu|olovrant))\b/gi, ' ')
+    .replace(/[.,!?:;()]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  return name ? name[0].toUpperCase() + name.slice(1) : 'Jedlo';
+}
 
 function detectFood(p: Parse, ctx: CoachContext, original: string): void {
   let explicitKcal: number | null = null;
@@ -475,22 +591,30 @@ function detectFood(p: Parse, ctx: CoachContext, original: string): void {
     p.work = blank(p.work, kcal.index, kcal[0].length);
   }
 
-  const { hits, quantified, work } = findFoods(p.work);
+  const scan = findFoods(p.work);
+  const hits = scan.hits;
   const mealWord = parseMealType(p.full);
   const hasVerb = EAT_VERB.test(p.full) || LOG_VERB.test(p.full);
   const lookup = /\b(kolko|ake|aka|aku|ma|maju|obsahuj\w*)\b.*\b(kalori\w*|kcal|bielkovin|protein\w*|sacharid\w*|tuk\w*|cukr\w*|hodnot\w*)\b/.test(p.full) && !hasVerb;
-  const wantsLog = !p.future && !lookup && (hasVerb || (!p.question && (!!mealWord || quantified || explicitKcal !== null)));
+  const wantsLog = !p.future && !lookup && (hasVerb || (!p.question && (!!mealWord || scan.quantified || explicitKcal !== null)));
 
   const meal = mealWord || mealByHour(ctx.now.getHours());
   const date = entryDate(ctx, p.when, meal);
 
-  if (hits.length && wantsLog) {
-    p.work = work;
+  const unknownMain = hits.length > 0 && EAT_VERB.test(p.full) && explicitKcal === null &&
+    hits.every(h => !h.explicit) &&
+    hits.reduce((sum, h) => sum + h.item.kcal * h.grams / 100, 0) < 150 &&
+    unknownWords(scan.work) >= 1;
+
+  if (hits.length && wantsLog && !unknownMain) {
+    p.work = scan.work;
     const entries = hits.map(h => foodEntry(h, meal, date));
     if (explicitKcal !== null && entries.length === 1 && explicitKcal > 0) {
       const scale = entries[0].calories > 0 ? explicitKcal / entries[0].calories : 1;
       entries[0].calories = Math.round(explicitKcal);
       (['protein', 'carbs', 'fats'] as const).forEach(key => entries[0][key] = round(entries[0][key] * scale, 1));
+    } else if (scan.estimated) {
+      p.estimated = true;
     }
     for (const e of entries) {
       p.actions.push({ kind: 'save', type: 'food', label: e.name, data: e });
@@ -502,20 +626,61 @@ function detectFood(p: Parse, ctx: CoachContext, original: string): void {
 
   // neznáme jedlo s uvedenými kalóriami: "zjedol som langoš 600 kcal"
   if (!hits.length && explicitKcal !== null && explicitKcal > 0 && explicitKcal < 6000 && wantsLog) {
-    const name = original
-      .replace(/\d+([.,]\d+)?\s*(kcal|kal\w*)/gi, ' ')
-      .replace(/^\s*(dnes|včera|vcera|predvčerom)?\s*(na\s+\S+\s+)?(som\s+)?(si\s+)?(zjedol|zjedla|jedol|jedla|mal|mala|dal|dala|vypil|vypila|zapíš|zapis|pridaj)?(\s+som)?(\s+si)?(\s+mi)?/i, ' ')
-      .replace(/[.,!?:;()]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
-    const label = name ? name[0].toUpperCase() + name.slice(1) : 'Jedlo';
+    const label = dishName(original);
     const data = { name: label, calories: Math.round(explicitKcal), protein: 0, carbs: 0, fats: 0, mealType: meal, category: 'food', date };
     p.actions.push({ kind: 'save', type: 'food', label, data });
     p.notes.push(`🍽️ ${label} – ${data.calories} kcal`);
     return;
   }
 
-  if (!hits.length && EAT_VERB.test(p.full) && !p.question && !p.actions.length) {
-    p.asks.push('Toto jedlo ešte v databáze nemám. Napíš mi ho aj s kalóriami, napríklad „zjedol som langoš 600 kcal“, a zapíšem ho.');
+  // jedlo mimo databázy: odhadni ho podľa typu, nech používateľ nemusí nič počítať
+  if ((!hits.length || unknownMain) && EAT_VERB.test(p.full) && !p.question && !p.future && !p.actions.length) {
+    const guess = GUESSES.find(g => g.match.test(p.work));
+    let size = 1;
+    if (/dve porcie|dvojit|dvojnasob/.test(p.work)) size = 2;
+    else if (/velk|poriadn|obrovsk|vela/.test(p.work)) size = 1.4;
+    else if (/pol porcie|polovic/.test(p.work)) size = 0.5;
+    else if (/\bmal[yaeu]\b|mens|trochu|kusok/.test(p.work)) size = 0.7;
+    const base = guess || { type: 'bežné hlavné jedlo', kcal: 600, p: 28, c: 60, f: 25 };
+    const label = dishName(original);
+    const data = {
+      name: `${label} (odhad)`,
+      calories: Math.round(base.kcal * size),
+      protein: Math.round(base.p * size), carbs: Math.round(base.c * size), fats: Math.round(base.f * size),
+      mealType: meal, category: guess?.type === 'nápoj' ? 'drink' : 'food', date
+    };
+    p.actions.push({ kind: 'save', type: 'food', label: data.name, data });
+    p.notes.push(`🍽️ ${label} – približne ${data.calories} kcal`);
+    p.tips.push(`Toto jedlo v databáze nemám, preto som ho odhadol ako ${base.type} v bežnej porcii. ` +
+      'Ak poznáš presnejšie číslo, napíš „zmaž posledný záznam“ a pošli mi ho s kalóriami.');
   }
+}
+
+/** "Bola to veľká porcia" – prepočíta jedlá z posledného zápisu. */
+function adjustLast(full: string, ctx: CoachContext): EngineResult | null {
+  const foods = (ctx.lastBatch || []).filter(e => e.type === 'food');
+  if (!foods.length) return null;
+  let factor = 0;
+  if (/dvojnasob|dvojit\w* porci|dve porcie|2 porcie/.test(full)) factor = 2;
+  else if (/polovic|pol porcie/.test(full)) factor = 0.5;
+  else if (/(bol[aoi]?|bolo) (to |toho )?(ovela |trochu |o nieco )?(velk|vacs|viac|vela|poriadn)|(velk|vacs|poriadn|obrovsk)\w* porci|^(viac|vacsie)$/.test(full)) factor = 1.4;
+  else if (/(bol[aoi]?|bolo) (to |toho )?(ovela |trochu |o nieco )?(mal|mens|menej)|(mal|mens)\w* porci|^(menej|mensie)$/.test(full)) factor = 0.7;
+  if (!factor) return null;
+
+  const actions: EngineAction[] = [{ kind: 'undo' }];
+  const lines: string[] = [];
+  for (const e of ctx.lastBatch || []) {
+    if (e.type !== 'food') { actions.push({ kind: 'save', type: e.type, data: e.data, label: '' }); continue; }
+    const d = { ...e.data };
+    (['calories', 'protein', 'carbs', 'fats'] as const).forEach(key => d[key] = round(num(d[key]) * factor, key === 'calories' ? 0 : 1));
+    d.name = String(d.name).replace(/\((\d+) (g|ml)\)/, (_m, g, u) => `(${Math.round(+g * factor)} ${u})`);
+    actions.push({ kind: 'save', type: 'food', data: d, label: d.name });
+    lines.push(`  • 🍽️ ${d.name} – ${d.calories} kcal`);
+  }
+  return {
+    text: `✅ Upravil som posledný zápis (×${String(factor).replace('.', ',')}):\n${lines.join('\n')}`,
+    actions, intent: 'adjust'
+  };
 }
 
 // ------------------------------------------------------------
@@ -565,7 +730,9 @@ function confirmation(p: Parse, ctx: CoachContext): string {
   }
   if (p.tips.length) lines.push('', ...p.tips);
   if (p.asks.length) lines.push('', ...p.asks);
-  if (foods.length) lines.push('', 'Ak množstvo nesedí, napíš „zmaž posledný záznam“ a pošli mi ho presnejšie (napr. v gramoch).');
+  if (foods.length && p.estimated) {
+    lines.push('', 'Množstvá som odhadol z opisu ako bežné porcie. Ak to bolo inak, napíš napríklad „bola to veľká porcia“ alebo „bolo toho menej“.');
+  }
   return lines.join('\n');
 }
 
@@ -665,17 +832,34 @@ function mealSuggestion(ctx: CoachContext, text: string): string {
   const target = targetCalories(ctx);
   const t = dayTotals(ctx);
   const left = target ? target - t.calories : 0;
-  const share: Record<MealType, number> = { breakfast: 0.28, lunch: 0.38, dinner: 0.32, snack: 0.14 };
-  const budget = target ? Math.max(150, Math.min(left, target * share[type] * 1.2)) : 0;
-  const meals = suggestMeals(ctx, type, budget);
-  const lines = [`🍽️ **Tipy na ${MEAL_SK[type] === 'večera' ? 'večeru' : MEAL_SK[type] === 'desiata' ? 'desiatu' : MEAL_SK[type]}**`];
+  const share: Record<MealType, number> = { breakfast: 0.26, lunch: 0.36, dinner: 0.28, snack: 0.11 };
+  const budget = target ? Math.round(Math.max(150, Math.min(left, target * share[type] * 1.15))) : 500;
+  const meals = suggestMeals(ctx, type, budget, 3, parseMenuOptions(text, ctx, excludedFoods(text)));
+  const lines = [`🍽️ **Tipy na ${MEAL_SK_ACC[type]}**`];
   if (target) {
-    lines.push(left > 0 ? `Dnes ti ostáva ${left} kcal, takže hľadám niečo do ${Math.round(budget)} kcal.` : 'Dnešný cieľ už máš naplnený, preto vyberám ľahšie možnosti.');
+    lines.push(left > 0 ? `Dnes ti ostáva ${left} kcal, porcie som nastavil približne na ${budget} kcal.` : 'Dnešný cieľ už máš naplnený, preto sú porcie menšie.');
   }
   lines.push('');
-  meals.forEach(mm => lines.push(`  • ${mm.name} – približne ${mm.kcal} kcal, ${mm.protein} g bielkovín`));
+  meals.forEach(meal => {
+    lines.push(`**${meal.name}** – ${meal.calories} kcal, bielkoviny ${meal.protein} g`);
+    lines.push(`  • ${meal.ingredients.map(ingredientText).join(', ')}`);
+  });
   lines.push('', 'Keď si niečo z toho dáš, napíš mi to a zapíšem ti to.');
   return lines.join('\n');
+}
+
+/** Suroviny, ktoré používateľ nechce: "bez rýb", "nemám rád tvaroh", "okrem vajec". */
+function excludedFoods(text: string): string[] {
+  const names = new Set<string>();
+  const re = /\b(?:bez|okrem|nechcem|neznasam|nemam rad|nemam rada|nejem|alergi\w* na)\s+([a-z ]{3,40})/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    findFoods(m[1]).hits.forEach(h => names.add(h.item.name));
+    if (/ryb|ryby/.test(m[1])) ['Ryba', 'Losos', 'Tuniak'].forEach(n => names.add(n));
+    if (/vajc|vajec|vajic/.test(m[1])) names.add('Vajce');
+    if (/orech|arasid/.test(m[1])) ['Orechy', 'Arašidové maslo'].forEach(n => names.add(n));
+  }
+  return Array.from(names);
 }
 
 function greeting(ctx: CoachContext): string {
@@ -707,9 +891,10 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
     /^(kolko|ako|co|aky|aka|ake|aku|preco|kedy|kde|ktor\w*|mozem|je |su |da sa|oplati|poradis|vies|navrhni|odporuc|porad|zostav|ukaz|povedz|chcem vediet)/.test(full);
   const future = /\b(chcem|chcel\w* by som|pojdem|planujem|zajtra|mal\w* by som|chystam sa|rozmyslam|mam ist|oplati sa|mozem)\b/.test(full);
 
+  const planning = /jedalnic|nakupn\w* zoznam|zoznam na nakup|\bplan\w*|\bmenu\b|recept|navrhn|odporuc|porad\w* mi|\btip\w*/.test(full);
   const p: Parse = {
     work: full, full, actions: [], notes: [], tips: [], asks: [],
-    question, future, when: parseWhen(full)
+    question, future: future || planning, when: parseWhen(full)
   };
 
   detectWeight(p, ctx);
@@ -722,6 +907,9 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
   if (p.actions.length) {
     return { text: confirmation(p, ctx), actions: p.actions, intent: 'log' };
   }
+
+  const adjusted = adjustLast(full, ctx);
+  if (adjusted) return adjusted;
 
   const short = tokens(full).length <= 5;
   const has = (re: RegExp) => re.test(full);
@@ -750,7 +938,7 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
   if (has(/(kolko|co) .*(dnes|zatial).*(zjedol|zjedla|prijal|prijala|najedol|mal|mala)|kolko (mi )?(dnes )?(este )?(zostava|ostava|zvysuje|mozem (este )?(zjest|jest))|dnesn\w* (prijem|kalori\w*|bilanc\w*|prehlad|sumar)|ako som na tom dnes|kolko mam dnes|bilanc|moj dnesok|dnesny den/)) {
     return { text: todayStatus(ctx), actions: [], intent: 'today' };
   }
-  if (has(/tyzden|tyzdn|report|zhrnutie|sumar|ako sa mi dari|ako som na tom|pokrok|progres|vyhodnot|statistik|prehlad/)) {
+  if (has(/tyzden|tyzdn|report|zhrnutie|sumar|ako sa mi dari|ako som na tom|pokrok|progres|vyhodnot|statistik|prehlad/) && !has(/jedalnic|nakup|strav|menu|diet/)) {
     return { text: weeklyReportText(ctx), actions: [], intent: 'weekly' };
   }
   if (has(/(moja|aka|aku|akej) .*vah|kolko vazim|vyvoj vahy|trend vahy|moju vahu/)) {
@@ -763,7 +951,7 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
 
   const need = has(/potrebujem|mam (jest|prijat|zjest|mat)|denne|by som mal/);
   const foods = findFoods(full).hits;
-  if (foods.length && !need && (short || has(/kalori|kcal|bielkovin|protein|sacharid|tuk|cukr|hodnot|zdrav/))) {
+  if (foods.length && !need && !planning && (short || has(/kalori|kcal|bielkovin|protein|sacharid|tuk|cukr|hodnot|zdrav/))) {
     return { text: nutritionLookup(foods), actions: [], intent: 'nutrition' };
   }
 
@@ -780,8 +968,17 @@ export function respond(message: string, ctx: CoachContext): EngineResult {
     };
   }
 
-  if (has(/jedalnic|jedalny listok|menu na (den|dnes|zajtra|cely)|co (mam )?jest cely den|plan stravy|stravovac\w* plan|co jest pocas dna/)) {
-    return { text: dayMenuText(ctx), actions: [], intent: 'menu' };
+  if (has(/nakupn\w* zoznam|zoznam (na )?nakup|co (mam )?(na)?kupit|nakup na tyzden/)) {
+    return { text: shoppingListText(ctx, parseMenuOptions(full, ctx, excludedFoods(full))), actions: [], intent: 'shopping' };
+  }
+  if (has(/jedalnic|jedalny listok|menu na (den|dnes|zajtra|cely|tyzden)|co (mam )?jest cely den|plan stravy|stravovac\w* plan|co jest pocas dna|dieta na|diet\w* plan|naplanuj.*(jedl|strav)/)) {
+    const opts = parseMenuOptions(full, ctx, excludedFoods(full));
+    const another = has(/\b(iny|inak|dalsi|zmen|novy|nove|este jeden)\b/);
+    if (has(/tyzden|tyzdn|7 dni|sedem dni|cely tyzden/)) {
+      if (another) opts.seed = weekSeed(ctx.now) + Math.floor(Math.random() * 1e6) + 1;
+      return { text: weekPlanText(ctx, opts), actions: [], intent: 'menu-week' };
+    }
+    return { text: dayPlanText(ctx, opts), actions: [], intent: 'menu' };
   }
   if (has(/(co|nieco|navrh\w*|odporuc\w*|porad\w*|tip\w*|recept\w*|inspirac\w*|napad\w*).*(jest|zjest|jedl\w*|ranajk\w*|obed\w*|vecer\w*|desiat\w*|olovrant|snack|dat si|uvarit|navarit|pod zub)|co si (mam )?dat|som hladn|mam hlad|co (mam )?(dnes )?varit/)) {
     return { text: mealSuggestion(ctx, full), actions: [], intent: 'meal' };

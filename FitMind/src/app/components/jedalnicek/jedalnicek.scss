@@ -265,3 +265,96 @@ $bg-dark: #050505;
   .ai-card { padding: 30px 20px; }
   .ai-info h2 { font-size: 1.8rem; }
 }
+
+// === Osobný jedálniček vypočítaný z profilu ===
+.my-plan {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 60px;
+  padding: 28px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(61, 220, 132, 0.25);
+
+  .my-plan-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+
+    h2 { color: #fff; margin: 0 0 6px; font-size: 1.6rem; font-weight: 800; }
+    p { color: #aaa; margin: 0; font-size: 0.95rem; line-height: 1.5; }
+    strong { color: #3ddc84; }
+  }
+
+  .regen-btn {
+    background: #3ddc84 !important;
+    color: #000 !important;
+    font-weight: 700;
+    border-radius: 12px;
+  }
+
+  .my-plan-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 28px;
+    margin: 22px 0;
+  }
+
+  .pill-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #999;
+    font-size: 0.85rem;
+
+    button {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 100px;
+      color: #ddd;
+      padding: 6px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+
+      &:hover { border-color: #3ddc84; }
+      &.active { background: #3ddc84; border-color: #3ddc84; color: #000; }
+    }
+  }
+
+  .my-plan-meals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .my-meal {
+    padding: 18px;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+
+    .my-meal-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .my-meal-label { color: #3ddc84; }
+    .my-meal-kcal { color: #ffd700; }
+    h3 { color: #fff; font-size: 1.02rem; margin: 10px 0 8px; line-height: 1.35; }
+    .my-meal-ingredients { color: #bbb; font-size: 0.86rem; line-height: 1.5; margin: 0 0 10px; }
+    .my-meal-macros { color: #777; font-size: 0.78rem; margin: 0; }
+  }
+
+  .my-plan-note {
+    color: #888;
+    font-size: 0.85rem;
+    margin: 20px 0 0;
+    a { color: #3ddc84; }
+  }
+}

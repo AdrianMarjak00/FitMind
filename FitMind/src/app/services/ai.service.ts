@@ -84,7 +84,7 @@ export class AiService {
   public activeConversationId$ = this.activeConversationIdSubject.asObservable();
 
   /** Záznamy uložené v tomto rozhovore – aby sa dal posledný vrátiť späť. */
-  private savedStack: Array<Array<{ type: EntryType; id: string }>> = [];
+  private savedStack: Array<Array<{ type: EntryType; id: string; data: any }>> = [];
 
   constructor(private data: FitDataService, private llm: LlmService) { }
 
@@ -99,7 +99,12 @@ export class AiService {
       this.data.getProfile(userId).catch(() => null),
       this.data.getCoachEntries(userId).catch(() => ({ ...EMPTY_ENTRIES }))
     ]);
-    return { profile, entries, now: new Date(), canUndo: this.savedStack.length > 0 };
+    const last = this.savedStack[this.savedStack.length - 1];
+    return {
+      profile, entries, now: new Date(),
+      canUndo: this.savedStack.length > 0,
+      lastBatch: last?.map(e => ({ type: e.type, data: e.data }))
+    };
   }
 
   private async handleMessage(userId: string, message: string, conversationId?: string): Promise<ChatResponse> {
@@ -115,14 +120,14 @@ export class AiService {
       const saved: string[] = [];
 
       // 1. Vykonaj akcie enginu (zápisy do denníka, vrátenie späť)
-      const batch: Array<{ type: EntryType; id: string }> = [];
+      const batch: Array<{ type: EntryType; id: string; data: any }> = [];
       let failed = 0;
       for (const action of result.actions) {
         if (action.kind === 'save') {
           try {
             const id = await this.data.addEntry(userId, action.type, action.data);
-            batch.push({ type: action.type, id });
-            saved.push(action.label);
+            batch.push({ type: action.type, id, data: action.data });
+            if (action.label) saved.push(action.label);
           } catch (err) {
             console.error('[AI] zápis zlyhal', err);
             failed++;

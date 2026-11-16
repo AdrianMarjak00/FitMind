@@ -18,6 +18,8 @@ export interface CoachContext {
   now: Date;
   /** Či existuje záznam z tohto chatu, ktorý sa dá vrátiť späť. */
   canUndo?: boolean;
+  /** Posledný zápis z tohto chatu – aby sa dal prepočítať ("bola to veľká porcia"). */
+  lastBatch?: Array<{ type: EntryType; data: any }>;
 }
 
 export const EMPTY_ENTRIES: CoachEntries = {

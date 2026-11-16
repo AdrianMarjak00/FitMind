@@ -29,6 +29,10 @@ const SUFFIXES = [
 /** Hrubý slovenský stemmer – odreže pádovú koncovku, aby "ryžu" = "ryža". */
 export function stem(word: string): string {
   if (/^\d/.test(word)) return word;
+  // vkladné samohlásky: halušiek → halušk(y), paradajok → paradajk(y), krajec → krajc(e)
+  if (word.length >= 6 && word.endsWith('iek')) return word.slice(0, -3) + 'k';
+  if (word.length >= 5 && word.endsWith('ok')) return word.slice(0, -2) + 'k';
+  if (word.length >= 5 && word.endsWith('ec')) return word.slice(0, -2) + 'c';
   for (const s of SUFFIXES) {
     if (word.length - s.length >= 3 && word.endsWith(s)) {
       return word.slice(0, -s.length);

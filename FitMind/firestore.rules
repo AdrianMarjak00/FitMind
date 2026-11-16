@@ -47,18 +47,39 @@ service cloud.firestore {
       allow list, write: if false;
     }
 
-    // Verejné recenzie
+    // Recenzie – čítať môže každý, pridať len prihlásený používateľ
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if request.resource.data.author is string
-        && request.resource.data.author.size() >= 3
+      allow create: if signedIn()
+        && request.resource.data.author is string
         && request.resource.data.author.size() <= 60
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 2000
         && request.resource.data.rating is number
         && request.resource.data.rating >= 1
         && request.resource.data.rating <= 5;
-      allow update, delete: if isAdmin();
+      allow update, delete: if isAdmin()
+        || (signedIn() && request.auth.uid == resource.data.userId);
+    }
+
+    // Staršie kolekcie z prvej verzie appky (ponechané kvôli spätnej kompatibilite)
+    match /journals/{docId} {
+      allow read, update, delete: if isOwner(resource.data.uid);
+      allow create: if isOwner(request.resource.data.uid);
+    }
+    match /workouts/{docId} {
+      allow read, update, delete: if isOwner(resource.data.uid);
+      allow create: if isOwner(request.resource.data.uid);
+    }
+    match /meals/{docId} {
+      allow read, update, delete: if isOwner(resource.data.uid);
+      allow create: if isOwner(request.resource.data.uid);
+    }
+    match /userFitnessProfiles/{uid} {
+      allow read, write: if isOwner(uid);
+      match /{sub=**} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // Admin štatistiky

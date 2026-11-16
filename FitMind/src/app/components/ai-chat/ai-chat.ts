@@ -41,6 +41,7 @@ export class AiChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   readonly quickPrompts = [
     'Koľko mi dnes ostáva kalórií?',
     'Čo si mám dať na večeru?',
+    'Jedálniček na týždeň',
     'Zostav mi tréningový plán',
     'Ako sa mi darilo tento týždeň?',
     'Čo všetko vieš?'
