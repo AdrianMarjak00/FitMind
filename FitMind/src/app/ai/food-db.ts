@@ -19,6 +19,8 @@ export interface FoodItem {
   slice?: number;
   /** Naučené od používateľa: kcal platí na 1 kus, nie na 100 g. */
   custom?: boolean;
+  /** Produkt z katalógu Open Food Facts (food-catalog.ts). */
+  catalog?: boolean;
   /** Množstvo, keď je to len príloha ("káva s mliekom"). */
   side?: number;
   drink?: boolean;
@@ -242,7 +244,7 @@ export const FOODS: FoodItem[] = [
   // --- Značkové sladkosti a mliečne dezerty ---
   f('3Bit', '3 bit|3bit|tribit|tribitka|tribitky|tri bit', 530, 7, 56, 31, 46, { pc: 46 }),
   f('Fidorka', 'fidorka|fidorky', 540, 7, 52, 33, 30, { pc: 30 }),
-  f('Kinder Bueno', 'kinder bueno|bueno|kinder cokolada|kinder', 570, 9, 50, 37, 43, { pc: 43 }),
+  f('Kinder Bueno', 'kinder bueno|bueno', 570, 9, 50, 37, 43, { pc: 43 }),
   f('Pralinky', 'pralinky|pralinka|bonbony|bonbon|bonboniera|raffaello|ferrero|toffifee|merci', 580, 7, 48, 40, 36, { pc: 12 }),
   f('Lentilky', 'lentilky|m m|skittles|dražé|draze', 470, 4, 72, 18, 40),
   f('Banány v čokoláde', 'banany v cokolade|banan v cokolade', 440, 3, 70, 16, 50, { pc: 25 }),

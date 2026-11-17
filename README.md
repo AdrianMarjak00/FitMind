@@ -7,7 +7,7 @@
 
 Živá verzia: [fitmind-dba6a.web.app](https://fitmind-dba6a.web.app) · [Ako prispieť](CONTRIBUTING.md)
 
-> **In English:** FitMind is an open-source fitness app for Slovak speakers: a food and exercise diary, charts, workout plans, meal plans and an AI coach. The coach is a rule-based natural-language engine written in plain TypeScript. It runs on the user's device, needs no server and no LLM API, and understands Slovak sentences such as "na obed som mal veľký tanier guláša" (I had a big plate of goulash for lunch). The engine and its Slovak food database (about 190 foods) can be reused outside this app.
+> **In English:** FitMind is an open-source fitness app for Slovak speakers: a food and exercise diary, charts, workout plans, meal plans and an AI coach. The coach is a rule-based natural-language engine written in plain TypeScript. It runs on the user's device, needs no server and no LLM API, and understands Slovak sentences such as "na obed som mal veľký tanier guláša" (I had a big plate of goulash for lunch). It also searches a catalogue of thousands of products sold in Slovakia and Czechia, built from Open Food Facts (ODbL). The engine and its food data can be reused outside this app.
 
 ## Čo vie
 
@@ -37,6 +37,7 @@ Aplikácia nepotrebuje vlastný server ani platené API.
 | --- | --- |
 | `engine.ts` | Rozpozná zámer správy, vytiahne z nej záznamy a zloží odpoveď |
 | `food-db.ts`, `exercise-db.ts` | Databáza jedál (kcal a makrá na 100 g) a aktivít (MET) |
+| `food-catalog.ts` | Vyhľadávanie v katalógu tisícov produktov zo slovenských a českých obchodov |
 | `meal-planner.ts` | Jedálničky z receptov, porcie podľa kalorického cieľa, nákupný zoznam |
 | `planner.ts` | Tréningové plány podľa profilu |
 | `knowledge.ts` | Odpovede na otázky o chudnutí, svaloch, spánku, doplnkoch… |
@@ -44,6 +45,22 @@ Aplikácia nepotrebuje vlastný server ani platené API.
 | `context.ts`, `text.ts` | Výpočty (BMR, ciele) a práca so slovenským textom |
 
 Engine je čistý TypeScript bez závislosti na prehliadači, takže sa dá použiť aj v natívnych appkách.
+
+### Databáza potravín
+
+Tréner hľadá jedlo v tomto poradí:
+
+1. **Jedlá, ktoré sa naučil od používateľa** (uložené v jeho účte).
+2. **Vlastná databáza** `food-db.ts` – bežné slovenské jedlá a suroviny, s porciami a aliasmi v slovenčine.
+3. **Katalóg produktov** `FitMind/public/data/foods.json` – produkty predávané na Slovensku a v Česku s hodnotami na 100 g z [Open Food Facts](https://world.openfoodfacts.org). Appka ho stiahne pri prvej správe a potom ho má uložený aj offline.
+4. Ak jedlo nenájde nikde, opýta sa na kalórie a zapamätá si ho.
+
+Katalóg sa obnovuje príkazom:
+
+```bash
+cd FitMind
+npm run build:foods
+```
 
 ### Použitie enginu mimo aplikácie
 
@@ -105,4 +122,6 @@ Chyby a nápady hlás cez Issues, zmeny posielaj ako pull request. Najľahšie s
 
 ## Licencia
 
-[MIT](LICENSE) © 2026 Adrian Marjak
+Kód: [MIT](LICENSE) © 2026 Adrian Marjak
+
+Katalóg produktov `FitMind/public/data/foods.json` je odvodený z databázy [Open Food Facts](https://world.openfoodfacts.org) a platí preň licencia [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Jednotlivé záznamy sú pod licenciou [Database Contents License](https://opendatacommons.org/licenses/dbcl/1-0/).

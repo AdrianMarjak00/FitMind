@@ -219,5 +219,5 @@ export function findTopic(text: string): Topic | null {
 
 export const CAPABILITIES =
   '🤖 Som FitMind AI – tvoj tréner, ktorý beží priamo v tvojom zariadení.\n\n**Zapíšem ti do denníka**\n' +
-  '  • jedlo a nápoje: „na raňajky som mal 2 vajcia a chlieb“\n  • jedlo len podľa opisu, bez váženia: „na obed veľký tanier guláša s knedľou“\n  • pohyb: „bol som behať 30 minút“\n  • váhu, spánok, náladu a stres: „vážim 82 kg“, „spal som 7 hodín“\n\n**Poradím ti**\n' +
+  '  • jedlo a nápoje: „na raňajky som mal 2 vajcia a chlieb“\n  • jedlo len podľa opisu, bez váženia: „na obed veľký tanier guláša s knedľou“\n  • tisíce produktov zo slovenských a českých obchodov (databáza Open Food Facts)\n  • pohyb: „bol som behať 30 minút“\n  • váhu, spánok, náladu a stres: „vážim 82 kg“, „spal som 7 hodín“\n\n**Poradím ti**\n' +
   '  • „koľko mi dnes ostáva kalórií?“\n  • „čo si mám dať na večeru?“\n  • „jedálniček“, „jedálniček na týždeň“, „vegetariánsky jedálniček na 1800 kcal“\n  • „nákupný zoznam“ k týždennému jedálničku\n  • „zostav mi tréningový plán“\n  • „ako sa mi darilo tento týždeň?“\n  • „koľko kalórií má banán?“\n\nA odpoviem aj na otázky o chudnutí, svaloch, spánku či doplnkoch.';

@@ -110,7 +110,9 @@
       @if (userId && !isLoading && !(aiService.messages$ | async)?.length) {
       <div class="chat-welcome">
         <h4>Ahoj! Som tvoj FitMind tréner.</h4>
-        <p>Napíš mi, čo si jedol alebo ako si cvičil, a zapíšem to do denníka. Alebo vyskúšaj:</p>
+        <p>Napíš mi, čo si jedol alebo ako si cvičil, a zapíšem to do denníka. Poznám aj tisíce produktov
+          z obchodov (údaje: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a>,
+          ODbL). Alebo vyskúšaj:</p>
         <div class="quick-prompts">
           @for (prompt of quickPrompts; track prompt) {
           <button (click)="usePrompt(prompt)">{{ prompt }}</button>

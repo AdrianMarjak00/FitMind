@@ -4,6 +4,7 @@ import { map, tap } from 'rxjs/operators';
 import { CoachContext, CustomFood, EMPTY_ENTRIES, EntryType } from '../ai/context';
 import { goalProgress, recommendations, weeklyReport } from '../ai/coach';
 import { EngineResult, respond } from '../ai/engine';
+import { CatalogFile, catalogSize, loadCatalog } from '../ai/food-catalog';
 import { toDate } from '../ai/text';
 import { FitDataService } from './fit-data.service';
 import { LlmService } from './llm.service';
@@ -100,7 +101,25 @@ export class AiService {
     return from(this.handleMessage(userId, message, conversationId));
   }
 
+  /** Katalóg produktov (public/data/foods.json) sa sťahuje raz, pri prvej správe. */
+  private catalogLoading: Promise<void> | null = null;
+
+  private ensureCatalog(): Promise<void> {
+    if (catalogSize() > 0) return Promise.resolve();
+    if (!this.catalogLoading) {
+      this.catalogLoading = fetch('data/foods.json')
+        .then(res => res.ok ? res.json() : Promise.reject(new Error('HTTP ' + res.status)))
+        .then((file: CatalogFile) => { loadCatalog(file); })
+        .catch(err => {
+          console.warn('[AI] katalóg potravín sa nepodarilo načítať', err);
+          this.catalogLoading = null;   // skúsi sa znova pri ďalšej správe
+        });
+    }
+    return this.catalogLoading || Promise.resolve();
+  }
+
   private async loadContext(userId: string): Promise<CoachContext> {
+    await this.ensureCatalog();
     const [profile, entries] = await Promise.all([
       this.data.getProfile(userId).catch(() => null),
       this.data.getCoachEntries(userId).catch(() => ({ ...EMPTY_ENTRIES }))
