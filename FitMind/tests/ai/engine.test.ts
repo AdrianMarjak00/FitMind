@@ -242,6 +242,12 @@ describe('unknown and branded foods', () => {
     expect(unknown.pending?.name).toBe('Bombička');
   });
 
+  it('logs a food once when two words name the same thing', () => {
+    expect(saves('zjedol som oreo sušienky')).toHaveLength(1);
+    expect(saves('dal som si deli tyčinku')).toHaveLength(1);
+    expect(saves('zjedol som 2 vajcia a 2 vajcia')).toHaveLength(2);
+  });
+
   it('tolerates a typo in a food name', () => {
     expect(saves('zjedol som jogrut')[0].data.name).toContain('jogurt');
     expect(saves('zjedol som 2 banny')[0].data.name).toContain('Banán');

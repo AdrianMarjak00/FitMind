@@ -8,7 +8,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:foods": "node scripts/build-food-catalog.mjs"
   },
   "dependencies": {
     "@angular/animations": "^20.3.15",
